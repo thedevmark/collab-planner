@@ -16,21 +16,19 @@ import { useRouter } from "next/navigation";
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 /**
- * Cap an event's end time to midnight of its start day so it stays within
- * one cell in dayGridMonth view. Events naturally spanning midnight (e.g.
- * 10pm–4am streams) would otherwise render as two-day blocks.
- * The actual data is unchanged — this only affects calendar display.
+ * Cap an event's end time to 23:59:59 of its start day so it stays within
+ * one cell in dayGridMonth view. Capping to midnight (00:00 next day) still
+ * causes FullCalendar to render a two-day block — must stop before midnight.
  */
 function capEndToStartDay(startIso: string, endIso: string): string {
   const start = new Date(startIso);
   const end = new Date(endIso);
   if (start.getUTCDate() === end.getUTCDate() && start.getUTCMonth() === end.getUTCMonth()) {
-    return endIso; // same day, no change
+    return endIso; // same UTC day, no change
   }
-  // Cap to start of next UTC day (= end of start day = midnight)
+  // Cap to 23:59:59 of the start day — keeps the event inside one day cell
   const cap = new Date(start);
-  cap.setUTCDate(cap.getUTCDate() + 1);
-  cap.setUTCHours(0, 0, 0, 0);
+  cap.setUTCHours(23, 59, 59, 0);
   return cap.toISOString();
 }
 
@@ -215,6 +213,7 @@ export default function CalendarPage() {
             eventClick={handleEventClick}
             dateClick={handleDateClick}
             height="auto"
+            dayMaxEvents={3}
             eventTimeFormat={{ hour: "numeric", minute: "2-digit", meridiem: "short" }}
           />
         </CardContent>
