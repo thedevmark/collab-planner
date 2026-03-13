@@ -30,6 +30,7 @@ export async function GET(req: Request) {
         where: {
           startTime: { gte: from },
           endTime: { lte: to },
+          friend: { isMe: false }, // exclude your own schedule — shown via inferred windows instead
         },
         include: {
           friend: { select: { id: true, username: true, displayName: true, avatarUrl: true, isMe: true } },
