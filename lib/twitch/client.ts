@@ -75,13 +75,27 @@ export async function getRecentBroadcasts(userId: string, first = 20): Promise<T
   return data.data ?? [];
 }
 
-/** Fetch a user's publicly-set chat name color (their channel color). Returns hex string or "". */
-export async function getChatColor(userId: string): Promise<string> {
+/**
+ * Fetch a streamer's channel brand color (the accent color on their Twitch channel page)
+ * via Twitch's GQL API. Returns a "#RRGGBB" hex string or "".
+ *
+ * The official Helix API does not expose this field — GQL is the only public source.
+ * Uses Twitch's own website Client-Id which is publicly accessible.
+ */
+export async function getChatColor(login: string): Promise<string> {
   try {
-    const data = await twitchFetch<{ data: { user_id: string; user_name: string; color: string }[] }>(
-      `/chat/color?user_id=${encodeURIComponent(userId)}`
-    );
-    return data.data[0]?.color ?? "";
+    const res = await fetch("https://gql.twitch.tv/gql", {
+      method: "POST",
+      headers: {
+        "Client-Id": "kimne78kx3ncx6brgo4mv6wki5h1ko",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query: `{ user(login: "${login}") { primaryColorHex } }` }),
+    });
+    if (!res.ok) return "";
+    const json = await res.json();
+    const hex = json?.data?.user?.primaryColorHex ?? "";
+    return hex ? `#${hex}` : "";
   } catch {
     return "";
   }

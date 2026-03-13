@@ -36,7 +36,7 @@ export async function POST() {
 
         // Backfill channel color if not yet stored
         if (!friend.channelColor) {
-          const color = await getChatColor(friend.twitchId);
+          const color = await getChatColor(friend.username);
           if (color) {
             await prisma.friend.update({ where: { id: friend.id }, data: { channelColor: color } });
           }

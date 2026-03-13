@@ -94,7 +94,7 @@ export async function PUT(req: Request) {
       try {
         const twitchUser = await getUserByUsername(data.twitchUsername);
         if (twitchUser) {
-          const channelColor = await getChatColor(twitchUser.id);
+          const channelColor = await getChatColor(twitchUser.login);
           const me = await prisma.friend.upsert({
             where: { twitchId: twitchUser.id },
             create: {

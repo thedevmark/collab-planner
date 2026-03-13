@@ -5,12 +5,12 @@ import { fetchAndStoreStreamHistory } from "@/lib/twitch/fetchStreamHistory";
 import { z } from "zod";
 
 /** Fire-and-forget: backfill channelColor for any friend missing it */
-async function backfillMissingColors(friends: { id: number; twitchId: string; channelColor: string }[]) {
+async function backfillMissingColors(friends: { id: number; username: string; channelColor: string }[]) {
   const missing = friends.filter((f) => !f.channelColor);
   if (missing.length === 0) return;
   for (const f of missing) {
     try {
-      const color = await getChatColor(f.twitchId);
+      const color = await getChatColor(f.username);
       if (color) await prisma.friend.update({ where: { id: f.id }, data: { channelColor: color } });
     } catch { /* ignore */ }
   }
@@ -72,8 +72,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Friend already added" }, { status: 409 });
     }
 
-    // Fetch channel color in parallel with user creation
-    const channelColor = await getChatColor(twitchUser.id);
+    // Fetch channel brand color from Twitch GQL
+    const channelColor = await getChatColor(twitchUser.login);
 
     const friend = await prisma.friend.create({
       data: {

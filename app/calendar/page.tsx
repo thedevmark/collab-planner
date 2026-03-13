@@ -15,6 +15,25 @@ import { useRouter } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+/**
+ * Cap an event's end time to midnight of its start day so it stays within
+ * one cell in dayGridMonth view. Events naturally spanning midnight (e.g.
+ * 10pm–4am streams) would otherwise render as two-day blocks.
+ * The actual data is unchanged — this only affects calendar display.
+ */
+function capEndToStartDay(startIso: string, endIso: string): string {
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  if (start.getUTCDate() === end.getUTCDate() && start.getUTCMonth() === end.getUTCMonth()) {
+    return endIso; // same day, no change
+  }
+  // Cap to start of next UTC day (= end of start day = midnight)
+  const cap = new Date(start);
+  cap.setUTCDate(cap.getUTCDate() + 1);
+  cap.setUTCHours(0, 0, 0, 0);
+  return cap.toISOString();
+}
+
 // Fallback palette when a friend hasn't set a Twitch channel color
 const FALLBACK_COLORS = [
   "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
@@ -74,19 +93,18 @@ export default function CalendarPage() {
       extendedProps: { type: "event", eventId: e.id },
     })),
 
-    // "Me" inferred windows — very faint primary wash, no border, background only
+    // "Me" inferred windows — subtle pill showing your usual stream time
     ...(meFriend
       ? inferredWindows
           .filter((w: any) => w.friendId === meFriend.id)
           .map((w: any, i: number) => ({
             id: `me-${i}`,
-            title: "",
+            title: "Your stream time",
             start: w.start,
-            end: w.end,
-            backgroundColor: "#7c3aed18",
-            borderColor: "transparent",
-            textColor: "transparent",
-            display: "background",
+            end: capEndToStartDay(w.start, w.end),
+            backgroundColor: "#7c3aed22",
+            borderColor: "#7c3aed55",
+            textColor: "#a78bfa",
             extendedProps: { type: "me" },
           }))
       : []),
@@ -98,7 +116,7 @@ export default function CalendarPage() {
         id: `seg-${s.id}`,
         title: `${s.friend.displayName}: ${s.title}`,
         start: s.startTime,
-        end: s.endTime,
+        end: capEndToStartDay(s.startTime, s.endTime),
         backgroundColor: (friendColorMap.get(s.friendId) ?? "#64748b") + "40",
         borderColor: friendColorMap.get(s.friendId) ?? "#64748b",
         textColor: "#e2e8f0",
@@ -112,11 +130,10 @@ export default function CalendarPage() {
         id: `inferred-${w.friendId}-${i}`,
         title: w.displayName,
         start: w.start,
-        end: w.end,
+        end: capEndToStartDay(w.start, w.end),
         backgroundColor: (friendColorMap.get(w.friendId) ?? "#64748b") + "20",
         borderColor: (friendColorMap.get(w.friendId) ?? "#64748b") + "60",
         textColor: "#94a3b8",
-        display: "block",
         extendedProps: { type: "inferred", friendId: w.friendId },
       })),
   ];
@@ -209,7 +226,7 @@ export default function CalendarPage() {
           Your events
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-violet-600 opacity-10" />
+          <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: "#7c3aed22", border: "1px solid #7c3aed55" }} />
           Your usual stream times
         </div>
         <span>Click a date to create an event</span>
