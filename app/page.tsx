@@ -1,65 +1,260 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+import useSWR from "swr";
+import Link from "next/link";
+import { format, addDays, isWithinInterval } from "date-fns";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CalendarPlus, RefreshCw, MessageSquare, Users, Clock, Gamepad2, Loader2 } from "lucide-react";
+import { useReminderPolling } from "@/hooks/useReminders";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+const STATUS_COLORS: Record<string, "default" | "success" | "warning" | "secondary"> = {
+  planned: "secondary",
+  confirmed: "success",
+};
+
+// Stable date strings (computed once at module load, not on every render)
+const TODAY = new Date();
+TODAY.setHours(0, 0, 0, 0);
+const IN_7_DAYS = addDays(TODAY, 7);
+const EVENTS_KEY = `/api/events?from=${TODAY.toISOString()}&to=${IN_7_DAYS.toISOString()}`;
+
+export default function Dashboard() {
+  const now = new Date();
+
+  const { data: events = [], mutate: mutateEvents } = useSWR(EVENTS_KEY, fetcher);
+  const { data: friends = [], mutate: mutateFriends } = useSWR("/api/friends", fetcher);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useReminderPolling(true);
+
+  const nonMeFriends = friends.filter((f: any) => !f.isMe);
+
+  const streamingNow = nonMeFriends.filter((f: any) =>
+    f.scheduleSegments?.some((s: any) =>
+      isWithinInterval(now, { start: new Date(s.startTime), end: new Date(s.endTime) })
+    )
+  );
+
+  // Use stream history patterns to estimate who's likely streaming soon
+  const streamingSoon = nonMeFriends.filter((f: any) => {
+    if (streamingNow.includes(f)) return false;
+    // Check schedule segments first
+    const hasScheduled = f.scheduleSegments?.some((s: any) => {
+      const start = new Date(s.startTime);
+      return start > now && start <= addDays(now, 1);
+    });
+    if (hasScheduled) return true;
+    // Fall back to stream history pattern: if today's day-of-week matches their most common days
+    if (f.streamHistory?.length >= 3) {
+      const dayCounts: Record<number, number> = {};
+      for (const s of f.streamHistory) {
+        const d = new Date(s.startTime).getDay();
+        dayCounts[d] = (dayCounts[d] ?? 0) + 1;
+      }
+      const topDays = Object.entries(dayCounts)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, 3)
+        .map(([d]) => parseInt(d));
+      return topDays.includes(now.getDay());
+    }
+    return false;
+  });
+
+  async function refreshSchedules() {
+    setRefreshing(true);
+    await fetch("/api/twitch/refresh-schedules", { method: "POST" });
+    await Promise.all([mutateEvents(), mutateFriends()]);
+    setRefreshing(false);
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">{format(now, "EEEE, MMMM d, yyyy")}</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={refreshSchedules} disabled={refreshing}>
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+          <Link href="/events/new">
+            <Button size="sm">
+              <CalendarPlus className="h-4 w-4" />
+              Plan Collab
+            </Button>
+          </Link>
         </div>
-      </main>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Users className="h-8 w-8 text-primary" />
+              <div>
+                <p className="text-2xl font-bold">{nonMeFriends.length}</p>
+                <p className="text-sm text-muted-foreground">Friends</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Clock className="h-8 w-8 text-primary" />
+              <div>
+                <p className="text-2xl font-bold">{events.length}</p>
+                <p className="text-sm text-muted-foreground">Events (7 days)</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Gamepad2 className="h-8 w-8 text-primary" />
+              <div>
+                <p className="text-2xl font-bold">{streamingNow.length}</p>
+                <p className="text-sm text-muted-foreground">Streaming Now</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Upcoming Events</CardTitle>
+              <Link href="/calendar">
+                <Button variant="ghost" size="sm">View all</Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {events.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <CalendarPlus className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No upcoming events</p>
+                <Link href="/events/new">
+                  <Button variant="link" size="sm">Plan a collab</Button>
+                </Link>
+              </div>
+            ) : (
+              events.slice(0, 5).map((event: any) => (
+                <Link key={event.id} href={`/events/${event.id}`}>
+                  <div className="flex items-start gap-3 p-3 rounded-md hover:bg-accent transition-colors cursor-pointer">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm truncate">{event.title}</p>
+                        <Badge variant={STATUS_COLORS[event.status] ?? "secondary"} className="text-xs shrink-0">
+                          {event.status}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {format(new Date(event.startTime), "MMM d 'at' h:mm a")}
+                      </p>
+                      {event.gameName && (
+                        <p className="text-xs text-muted-foreground">{event.gameName}</p>
+                      )}
+                    </div>
+                    <div className="flex -space-x-1">
+                      {event.participants?.slice(0, 3).map((p: any) => (
+                        <Avatar key={p.friend.username} className="h-6 w-6 border-2 border-background">
+                          <AvatarImage src={p.friend.avatarUrl} />
+                          <AvatarFallback className="text-xs">
+                            {p.friend.displayName[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      ))}
+                    </div>
+                  </div>
+                </Link>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Likely Streaming Today</CardTitle>
+              <Link href="/friends">
+                <Button variant="ghost" size="sm">View all</Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {streamingNow.length === 0 && streamingSoon.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No friends expected to stream today</p>
+              </div>
+            ) : (
+              <>
+                {[...streamingNow, ...streamingSoon].slice(0, 6).map((f: any) => {
+                  const isLive = streamingNow.includes(f);
+                  const nextSegment = f.scheduleSegments?.[0];
+                  return (
+                    <Link key={f.id} href={`/friends/${f.id}`}>
+                      <div className="flex items-center gap-3 p-2 rounded-md hover:bg-accent transition-colors cursor-pointer">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={f.avatarUrl} />
+                          <AvatarFallback>{f.displayName[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{f.displayName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {isLive ? nextSegment?.gameName || "Streaming" : (
+                              nextSegment ? format(new Date(nextSegment.startTime), "h:mm a") + " • " + (nextSegment.gameName || "Streaming") : ""
+                            )}
+                          </p>
+                        </div>
+                        <Badge variant={isLive ? "success" : "secondary"} className="text-xs">
+                          {isLive ? "LIVE" : nextSegment ? "Scheduled" : "Usually on"}
+                        </Badge>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent className="flex gap-3 flex-wrap">
+          <Link href="/events/new">
+            <Button variant="outline">
+              <CalendarPlus className="h-4 w-4" />
+              Plan Collab
+            </Button>
+          </Link>
+          <Link href="/messages">
+            <Button variant="outline">
+              <MessageSquare className="h-4 w-4" />
+              Send Reminder
+            </Button>
+          </Link>
+          <Button variant="outline" onClick={refreshSchedules} disabled={refreshing}>
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Refresh All Data
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

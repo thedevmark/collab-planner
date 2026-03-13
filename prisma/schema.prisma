@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Settings {
+  id              Int     @id @default(autoincrement())
+  twitchUsername  String  @default("")
+  broadcasterId   String  @default("")
+  twitchClientId     String @default("")
+  twitchClientSecret String @default("")
+  geminiApiKey       String @default("")
+  refreshInterval Int     @default(360)
+  notificationsEnabled Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Friend {
+  id             Int      @id @default(autoincrement())
+  twitchId       String   @unique
+  username       String   @unique
+  displayName    String
+  avatarUrl      String   @default("")
+  notes          String   @default("")
+  isActive       Boolean  @default(true)
+  isMe           Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  scheduleSegments ScheduleSegment[]
+  streamHistory    StreamHistory[]
+  participants     EventParticipant[]
+  collabHistories  CollabHistory[]
+}
+
+model StreamHistory {
+  id          Int      @id @default(autoincrement())
+  friendId    Int
+  videoId     String   @unique
+  title       String
+  startTime   DateTime
+  endTime     DateTime
+  durationSec Int      @default(0)
+  gameName    String   @default("")
+  gameId      String   @default("")
+  fetchedAt   DateTime @default(now())
+
+  friend Friend @relation(fields: [friendId], references: [id], onDelete: Cascade)
+}
+
+model ScheduleSegment {
+  id           Int      @id @default(autoincrement())
+  friendId     Int
+  segmentId    String   @default("")
+  title        String
+  startTime    DateTime
+  endTime      DateTime
+  gameName     String   @default("")
+  gameId       String   @default("")
+  isRecurring  Boolean  @default(false)
+  fetchedAt    DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  friend Friend @relation(fields: [friendId], references: [id], onDelete: Cascade)
+}
+
+model Event {
+  id                   Int      @id @default(autoincrement())
+  title                String
+  description          String   @default("")
+  startTime            DateTime
+  endTime              DateTime
+  gameName             String   @default("")
+  gameId               String   @default("")
+  status               String   @default("planned")
+  googleCalendarEventId String  @default("")
+  googleCalendarLink   String   @default("")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  participants  EventParticipant[]
+  reminders     Reminder[]
+  messageLogs   MessageLog[]
+  collabHistory CollabHistory[]
+}
+
+model EventParticipant {
+  id           Int      @id @default(autoincrement())
+  eventId      Int
+  friendId     Int
+  inviteStatus String   @default("pending")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  friend Friend @relation(fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, friendId])
+}
+
+model CollabHistory {
+  id        Int      @id @default(autoincrement())
+  eventId   Int?
+  friendId  Int
+  title     String
+  gameName  String   @default("")
+  date      DateTime
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+
+  event  Event?  @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  friend Friend  @relation(fields: [friendId], references: [id], onDelete: Cascade)
+}
+
+model Reminder {
+  id        Int      @id @default(autoincrement())
+  eventId   Int
+  remindAt  DateTime
+  label     String   @default("")
+  sent      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model MessageLog {
+  id          Int      @id @default(autoincrement())
+  eventId     Int?
+  messageType String
+  content     String
+  createdAt   DateTime @default(now())
+
+  event Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+}
+
+model GoogleAuth {
+  id           Int      @id @default(autoincrement())
+  accessToken  String
+  refreshToken String
+  expiryDate   DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
