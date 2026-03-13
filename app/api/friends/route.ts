@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getUserByUsername, getBroadcasterSchedule } from "@/lib/twitch/client";
+import { getUserByUsername, getBroadcasterSchedule, getChatColor } from "@/lib/twitch/client";
 import { fetchAndStoreStreamHistory } from "@/lib/twitch/fetchStreamHistory";
 import { z } from "zod";
 
@@ -53,12 +53,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Friend already added" }, { status: 409 });
     }
 
+    // Fetch channel color in parallel with user creation
+    const channelColor = await getChatColor(twitchUser.id);
+
     const friend = await prisma.friend.create({
       data: {
         twitchId: twitchUser.id,
         username: twitchUser.login,
         displayName: twitchUser.display_name,
         avatarUrl: twitchUser.profile_image_url,
+        channelColor,
       },
     });
 
@@ -88,11 +92,13 @@ export async function POST(req: Request) {
     return NextResponse.json(friend, { status: 201 });
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: err.message }, { status: 400 });
+      return NextResponse.json({ error: "Invalid username" }, { status: 400 });
     }
-    return NextResponse.json(
-      { error: `Failed to add friend: ${err instanceof Error ? err.message : "Unknown error"}` },
-      { status: 500 }
-    );
+    const msg = err instanceof Error ? err.message : "";
+    // Surface Twitch API errors cleanly; hide internal DB/Prisma details
+    if (msg.includes("Twitch API error") || msg.includes("not configured")) {
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+    return NextResponse.json({ error: "Failed to add friend. Please try again." }, { status: 500 });
   }
 }

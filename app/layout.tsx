@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Twitch Friends Organizer",
+  title: "Twitch Collab Organizer",
   description: "Plan collab streams with your Twitch friends",
 };
 

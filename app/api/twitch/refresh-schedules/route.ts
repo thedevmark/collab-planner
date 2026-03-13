@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getBroadcasterSchedule } from "@/lib/twitch/client";
+import { getBroadcasterSchedule, getChatColor } from "@/lib/twitch/client";
 import { fetchAndStoreStreamHistory } from "@/lib/twitch/fetchStreamHistory";
 
 export async function POST() {
@@ -32,6 +32,14 @@ export async function POST() {
             return created.count;
           }),
         ]);
+
+        // Backfill channel color if not yet stored
+        if (!friend.channelColor) {
+          const color = await getChatColor(friend.twitchId);
+          if (color) {
+            await prisma.friend.update({ where: { id: friend.id }, data: { channelColor: color } });
+          }
+        }
 
         results.push({
           friendId: friend.id,

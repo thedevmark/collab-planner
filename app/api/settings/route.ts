@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getUserByUsername } from "@/lib/twitch/client";
+import { getUserByUsername, getChatColor } from "@/lib/twitch/client";
 import { fetchAndStoreStreamHistory } from "@/lib/twitch/fetchStreamHistory";
 import { clearApiKeyCache } from "@/lib/apiKeys";
 import { z } from "zod";
@@ -91,6 +91,7 @@ export async function PUT(req: Request) {
       try {
         const twitchUser = await getUserByUsername(data.twitchUsername);
         if (twitchUser) {
+          const channelColor = await getChatColor(twitchUser.id);
           const me = await prisma.friend.upsert({
             where: { twitchId: twitchUser.id },
             create: {
@@ -98,11 +99,13 @@ export async function PUT(req: Request) {
               username: twitchUser.login,
               displayName: twitchUser.display_name,
               avatarUrl: twitchUser.profile_image_url,
+              channelColor,
               isMe: true,
             },
             update: {
               displayName: twitchUser.display_name,
               avatarUrl: twitchUser.profile_image_url,
+              channelColor,
               isMe: true,
               isActive: true,
             },

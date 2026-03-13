@@ -139,10 +139,13 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Profile header */}
-      <Card>
+      <Card style={friend.channelColor ? { borderColor: friend.channelColor + "60" } : undefined}>
+        {friend.channelColor && (
+          <div className="h-1 rounded-t-lg" style={{ backgroundColor: friend.channelColor }} />
+        )}
         <CardContent className="pt-6">
           <div className="flex items-start gap-4">
-            <Avatar className="h-20 w-20">
+            <Avatar className="h-20 w-20" style={friend.channelColor ? { outline: `2px solid ${friend.channelColor}40`, outlineOffset: "2px" } : undefined}>
               <AvatarImage src={friend.avatarUrl} />
               <AvatarFallback className="text-2xl">{friend.displayName[0]}</AvatarFallback>
             </Avatar>

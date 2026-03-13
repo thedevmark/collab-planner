@@ -126,7 +126,7 @@ function SettingsForm() {
             <ol className="list-decimal list-inside space-y-0.5">
               <li>Go to the <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noopener noreferrer" className="text-primary underline">Twitch Developer Console</a></li>
               <li>Log in and click <strong>Register Your Application</strong></li>
-              <li>Name: anything (e.g. "Friends Organizer"), OAuth Redirect: <code className="bg-background px-1 rounded">http://localhost:3000</code></li>
+              <li>Name: anything (e.g. "Collab Organizer"), OAuth Redirect: <code className="bg-background px-1 rounded">http://localhost:3000</code></li>
               <li>Category: <strong>Application Integration</strong>, then click <strong>Create</strong></li>
               <li>Click <strong>Manage</strong> on your app to find your <strong>Client ID</strong></li>
               <li>Click <strong>New Secret</strong> to generate your <strong>Client Secret</strong></li>

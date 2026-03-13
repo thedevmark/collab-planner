@@ -29,6 +29,7 @@ model Friend {
   notes          String   @default("")
   isActive       Boolean  @default(true)
   isMe           Boolean  @default(false)
+  channelColor   String   @default("")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

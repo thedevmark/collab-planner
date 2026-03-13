@@ -29,7 +29,7 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 h-full w-56 border-r bg-card flex flex-col">
       <div className="flex items-center gap-2 p-4 border-b">
         <Twitch className="h-6 w-6 text-primary" />
-        <span className="font-bold text-sm leading-tight">Twitch Friends<br />Organizer</span>
+        <span className="font-bold text-sm leading-tight">Twitch Collab<br />Organizer</span>
       </div>
       <nav className="flex-1 p-2 space-y-1">
         {navItems.map(({ href, label, icon: Icon, exact }) => {

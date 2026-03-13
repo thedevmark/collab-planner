@@ -15,10 +15,15 @@ import { useRouter } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-const FRIEND_COLORS = [
+// Fallback palette when a friend hasn't set a Twitch channel color
+const FALLBACK_COLORS = [
   "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
   "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
 ];
+
+function getFriendColor(friend: any, index: number): string {
+  return friend.channelColor || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+}
 
 export default function CalendarPage() {
   const router = useRouter();
@@ -48,8 +53,9 @@ export default function CalendarPage() {
   const meFriend = friends.find((f: any) => f.isMe);
   const nonMeFriends = friends.filter((f: any) => !f.isMe);
 
+  // Build color map using each friend's Twitch channel color (with fallback)
   const friendColorMap = new Map(
-    nonMeFriends.map((f: any, i: number) => [f.id, FRIEND_COLORS[i % FRIEND_COLORS.length]])
+    nonMeFriends.map((f: any, i: number) => [f.id, getFriendColor(f, i)])
   );
 
   const events = data?.events ?? [];
@@ -156,7 +162,7 @@ export default function CalendarPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground mr-1">Show friend streams:</span>
               {nonMeFriends.map((f: any, i: number) => {
-                const color = FRIEND_COLORS[i % FRIEND_COLORS.length];
+                const color = getFriendColor(f, i);
                 const hidden = hiddenFriends.has(f.id);
                 return (
                   <button

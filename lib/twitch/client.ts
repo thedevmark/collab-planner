@@ -74,3 +74,15 @@ export async function getRecentBroadcasts(userId: string, first = 20): Promise<T
   );
   return data.data ?? [];
 }
+
+/** Fetch a user's publicly-set chat name color (their channel color). Returns hex string or "". */
+export async function getChatColor(userId: string): Promise<string> {
+  try {
+    const data = await twitchFetch<{ data: { user_id: string; user_name: string; color: string }[] }>(
+      `/chat/color?user_id=${encodeURIComponent(userId)}`
+    );
+    return data.data[0]?.color ?? "";
+  } catch {
+    return "";
+  }
+}

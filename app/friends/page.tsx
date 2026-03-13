@@ -19,6 +19,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { UserPlus, Search, Loader2, TrendingUp } from "lucide-react";
 
+const FALLBACK_COLORS = [
+  "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
+  "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
+];
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function FriendsPage() {
@@ -119,7 +124,7 @@ export default function FriendsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
-          {filtered.map((friend: any) => (
+          {filtered.map((friend: any, idx: number) => (
             <Link key={friend.id} href={`/friends/${friend.id}`}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
                 <CardContent className="pt-6 space-y-3">
@@ -181,6 +186,8 @@ export default function FriendsPage() {
 
                     const topGame = Object.entries(gameCounts).sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0];
 
+                    const accentColor = friend.channelColor || FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
+
                     return (
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -189,7 +196,13 @@ export default function FriendsPage() {
                         </div>
                         <div className="flex gap-1 flex-wrap">
                           {DAYS.map((d) => (
-                            <span key={d} className={`text-[10px] px-1 py-0.5 rounded font-medium ${topDays.includes(d) ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{d}</span>
+                            <span
+                              key={d}
+                              className={`text-[10px] px-1 py-0.5 rounded font-medium ${topDays.includes(d) ? "" : "bg-muted text-muted-foreground"}`}
+                              style={topDays.includes(d)
+                                ? { backgroundColor: accentColor, color: "#fff" }
+                                : undefined}
+                            >{d}</span>
                           ))}
                         </div>
                         {topGame && <Badge variant="outline" className="text-xs">{topGame}</Badge>}
