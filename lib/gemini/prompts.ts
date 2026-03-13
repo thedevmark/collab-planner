@@ -16,6 +16,7 @@ export interface TimeSuggestionInput {
   userTimezone: string;
   windows: TimeWindow[];
   friendPatterns: FriendPattern[];
+  collabContext?: string; // optional: detected collab history across all friends
 }
 
 export interface GameSuggestionInput {
@@ -45,15 +46,19 @@ export function buildTimeSuggestionPrompt(input: TimeSuggestionInput): string {
         .join("\n")
     : "No confirmed overlapping schedule segments found — use the historical patterns above to infer the best windows.";
 
+  const collabBlock = input.collabContext
+    ? `\n## Collaboration History (detected from VOD titles & concurrent streams)\n${input.collabContext}\n`
+    : "";
+
   return `You are a scheduling assistant for a Twitch streamer planning collab streams.
 
 ## Streamer Patterns (from actual past broadcast history)
 ${patternBlock}
-
+${collabBlock}
 ## Candidate Time Windows (inferred from history overlap)
 ${windowBlock}
 
-Based on the historical streaming patterns above, suggest the TOP 3 best times for a collab stream in the next 14 days. Use the patterns heavily — when do these streamers actually tend to be live? Which days/times have the most overlap?
+Based on the historical streaming patterns and any previous collab history above, suggest the TOP 3 best times for a collab stream in the next 14 days. If these streamers have collaborated before, note it in the reasoning.
 
 Return a JSON array with exactly 3 objects:
 [

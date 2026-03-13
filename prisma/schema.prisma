@@ -38,6 +38,7 @@ model Friend {
   streamHistory    StreamHistory[]
   participants     EventParticipant[]
   collabHistories  CollabHistory[]
+  collabSignals    CollabSignal[]
 }
 
 model StreamHistory {
@@ -103,6 +104,22 @@ model EventParticipant {
   friend Friend @relation(fields: [friendId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, friendId])
+}
+
+model CollabSignal {
+  id           Int      @id @default(autoincrement())
+  friendId     Int
+  partnerName  String   // display name or @handle extracted from VOD
+  partnerLogin String   @default("") // resolved Twitch login if known
+  detectedAt   DateTime // date of the source stream/VOD
+  source       String   // "vod_title_mention" | "concurrent_stream"
+  evidence     String   // the VOD title or description that triggered detection
+  confidence   String   @default("medium") // "high" | "medium"
+  fetchedAt    DateTime @default(now())
+
+  friend Friend @relation(fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([friendId, partnerLogin, detectedAt])
 }
 
 model CollabHistory {

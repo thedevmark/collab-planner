@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Search, Loader2, TrendingUp } from "lucide-react";
+import { UserPlus, Search, Loader2, TrendingUp, Users2 } from "lucide-react";
 
 const FALLBACK_COLORS = [
   "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
@@ -245,6 +245,22 @@ export default function FriendsPage() {
                     </div>
 
                     <StreamPattern friend={friend} accentColor={accentColor} />
+
+                    {(friend.collabSignals?.length ?? 0) > 0 && (() => {
+                      // Summarize collab partners from signals
+                      const partnerMap = new Map<string, string>();
+                      for (const s of friend.collabSignals) {
+                        if (!partnerMap.has(s.partnerLogin)) partnerMap.set(s.partnerLogin, s.partnerName);
+                      }
+                      const names = Array.from(partnerMap.values()).slice(0, 2);
+                      const extra = partnerMap.size - names.length;
+                      return (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Users2 className="h-3 w-3 shrink-0" />
+                          <span className="truncate">w/ {names.join(", ")}{extra > 0 ? ` +${extra}` : ""}</span>
+                        </div>
+                      );
+                    })()}
 
                     {friend.notes && (
                       <p className="text-xs text-muted-foreground line-clamp-2 italic">

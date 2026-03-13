@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, ArrowLeft, Clock, Gamepad2, Edit2, Check, X, Trash2, History, TrendingUp } from "lucide-react";
+import { RefreshCw, ArrowLeft, Clock, Edit2, Check, X, Trash2, History, TrendingUp, Users2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -23,9 +23,8 @@ function getStreamingPattern(streamHistory: any[], scheduleSegments: any[]) {
   let totalSec = 0;
   let source: "history" | "schedule" | "mixed" | "estimated" = "estimated";
 
-  // Primary: stream history
   for (const s of streamHistory ?? []) {
-    const d = new Date(s.startTime).getDay();
+    const d = new Date(s.startTime).getUTCDay();
     dayCounts[d] = (dayCounts[d] ?? 0) + 1;
     hourCounts.push(new Date(s.startTime).getUTCHours());
     if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 1;
@@ -36,46 +35,25 @@ function getStreamingPattern(streamHistory: any[], scheduleSegments: any[]) {
     source = scheduleSegments?.length > 0 ? "mixed" : "history";
   }
 
-  // Supplement with schedule if available
   for (const s of scheduleSegments ?? []) {
-    const d = new Date(s.startTime).getDay();
+    const d = new Date(s.startTime).getUTCDay();
     dayCounts[d] = (dayCounts[d] ?? 0) + (s.isRecurring ? 2 : 1) * 0.5;
     hourCounts.push(new Date(s.startTime).getUTCHours());
     if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 0.5;
     if (source === "estimated") source = "schedule";
   }
 
-  // Default estimates if truly no data
   if (hourCounts.length === 0) {
-    return {
-      topDays: ["Fri", "Sat", "Sun"],
-      typicalTime: "~8PM UTC (estimated)",
-      topGames: [] as string[],
-      avgHours: 3,
-      total: 0,
-      source: "estimated" as const,
-    };
+    return { topDays: ["Fri", "Sat", "Sun"], typicalTime: "~8PM UTC (estimated)", topGames: [] as string[], avgHours: 3, total: 0, source: "estimated" as const };
   }
 
-  const topDays = Object.entries(dayCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3)
-    .map(([d]) => DAYS[parseInt(d)]);
-
+  const topDays = Object.entries(dayCounts).sort(([, a], [, b]) => b - a).slice(0, 3).map(([d]) => DAYS[parseInt(d)]);
   hourCounts.sort((a, b) => a - b);
   const medianHour = hourCounts[Math.floor(hourCounts.length / 2)];
-  const ampm = medianHour >= 12 ? "PM" : "AM";
   const h = medianHour % 12 || 12;
-  const typicalTime = `~${h}${ampm} UTC`;
-
-  const topGames = Object.entries(gameCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([g]) => g);
-
-  const avgHours = streamHistory?.length > 0
-    ? Math.round((totalSec / streamHistory.length / 3600) * 10) / 10
-    : 3;
+  const typicalTime = `~${h}${medianHour >= 12 ? "PM" : "AM"} UTC`;
+  const topGames = Object.entries(gameCounts).sort(([, a], [, b]) => b - a).slice(0, 5).map(([g]) => g);
+  const avgHours = streamHistory?.length > 0 ? Math.round((totalSec / streamHistory.length / 3600) * 10) / 10 : 3;
 
   return { topDays, typicalTime, topGames, avgHours, total: streamHistory?.length ?? 0, source };
 }
@@ -83,25 +61,17 @@ function getStreamingPattern(streamHistory: any[], scheduleSegments: any[]) {
 export default function FriendDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: friend, mutate } = useSWR(`/api/friends/${id}`, fetcher);
+  const { data: collabData, mutate: mutateCollabs } = useSWR(`/api/friends/${id}/collabs`, fetcher);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
 
-  if (!friend) {
-    return <div className="flex items-center justify-center h-64"><p className="text-muted-foreground">Loading...</p></div>;
-  }
-
-  if (friend.error) {
-    return <div className="text-destructive">Friend not found</div>;
-  }
+  if (!friend) return <div className="flex items-center justify-center h-64"><p className="text-muted-foreground">Loading...</p></div>;
+  if (friend.error) return <div className="text-destructive">Friend not found</div>;
 
   async function saveNotes() {
-    await fetch(`/api/friends/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notes }),
-    });
+    await fetch(`/api/friends/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ notes }) });
     mutate();
     setEditingNotes(false);
   }
@@ -111,8 +81,10 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
     await Promise.all([
       fetch(`/api/friends/${id}/history/stream`, { method: "POST" }),
       fetch(`/api/friends/${id}/schedule`, { method: "POST" }),
+      fetch(`/api/friends/${id}/collabs`, { method: "POST" }),
     ]);
     mutate();
+    mutateCollabs();
     setRefreshing(false);
   }
 
@@ -123,35 +95,40 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const pattern = getStreamingPattern(friend.streamHistory, friend.scheduleSegments);
-  const upcomingSegments = friend.scheduleSegments?.filter(
-    (s: any) => new Date(s.endTime) > new Date()
-  ) ?? [];
+  const upcomingSegments = friend.scheduleSegments?.filter((s: any) => new Date(s.endTime) > new Date()) ?? [];
+  const collabPartners = collabData?.summary?.partners ?? [];
+  const collabSignals = collabData?.signals ?? [];
+  const accentColor = friend.channelColor || "#7c3aed";
 
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
         <Link href="/friends">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
+          <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4" />Back</Button>
         </Link>
       </div>
 
       {/* Profile header */}
-      <Card style={friend.channelColor ? { borderColor: friend.channelColor + "60" } : undefined}>
-        {friend.channelColor && (
-          <div className="h-1 rounded-t-lg" style={{ backgroundColor: friend.channelColor }} />
-        )}
+      <Card style={{ borderColor: accentColor + "60" }}>
+        <div className="h-1 rounded-t-lg" style={{ backgroundColor: accentColor }} />
         <CardContent className="pt-6">
           <div className="flex items-start gap-4">
-            <Avatar className="h-20 w-20" style={friend.channelColor ? { outline: `2px solid ${friend.channelColor}40`, outlineOffset: "2px" } : undefined}>
+            <Avatar className="h-20 w-20" style={{ outline: `2px solid ${accentColor}40`, outlineOffset: "2px" }}>
               <AvatarImage src={friend.avatarUrl} />
               <AvatarFallback className="text-2xl">{friend.displayName[0]}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold">{friend.displayName}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl font-bold">{friend.displayName}</h1>
+                {friend.isMe && <Badge style={{ backgroundColor: accentColor, color: "#fff", border: "none" }}>You</Badge>}
+              </div>
               <p className="text-muted-foreground">@{friend.username}</p>
+              {collabPartners.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Collaborated with: {collabPartners.slice(0, 3).map((p: any) => p.name).join(", ")}
+                  {collabPartners.length > 3 && ` +${collabPartners.length - 3} more`}
+                </p>
+              )}
               <div className="mt-3 flex gap-2 flex-wrap">
                 <Button variant="outline" size="sm" onClick={refreshHistory} disabled={refreshing}>
                   <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
@@ -170,20 +147,14 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
       </Card>
 
       <div className="grid grid-cols-2 gap-6">
-        {/* Streaming pattern from history */}
+        {/* Streaming pattern */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Streaming Pattern
-              <Badge
-                variant={pattern.source === "estimated" ? "outline" : pattern.source === "history" || pattern.source === "mixed" ? "success" : "secondary"}
-                className="text-xs ml-auto"
-              >
-                {pattern.source === "estimated" ? "estimated" :
-                 pattern.source === "schedule" ? "from schedule" :
-                 pattern.source === "mixed" ? `${pattern.total} streams + schedule` :
-                 `${pattern.total} streams`}
+              <Badge variant={pattern.source === "estimated" ? "outline" : "success"} className="text-xs ml-auto">
+                {pattern.source === "estimated" ? "estimated" : pattern.source === "schedule" ? "from schedule" : pattern.source === "mixed" ? `${pattern.total} streams + schedule` : `${pattern.total} streams`}
               </Badge>
             </CardTitle>
           </CardHeader>
@@ -193,14 +164,10 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
                 <p className="text-xs text-muted-foreground mb-1">Typical streaming days</p>
                 <div className="flex gap-1">
                   {DAYS.map((d) => (
-                    <span
-                      key={d}
-                      className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                        pattern.topDays.includes(d)
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
+                    <span key={d} className="text-xs px-1.5 py-0.5 rounded font-medium"
+                      style={pattern.topDays.includes(d)
+                        ? { backgroundColor: accentColor, color: "#fff" }
+                        : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }}>
                       {d}
                     </span>
                   ))}
@@ -226,12 +193,62 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground italic">
-                  No game data yet —{" "}
-                  <button className="underline" onClick={refreshHistory}>refresh</button> to pull stream history
-                </p>
+                <p className="text-xs text-muted-foreground italic">No game data — <button className="underline" onClick={refreshHistory}>refresh</button></p>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Collab Analysis */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users2 className="h-4 w-4" />
+              Collab Partners
+              <Badge variant="secondary" className="text-xs ml-auto">
+                {collabSignals.length} signals
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {collabPartners.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <p className="text-sm">No collab signals detected yet</p>
+                <p className="text-xs mt-1">Refresh to scan VOD titles for mentions</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {collabPartners.slice(0, 6).map((p: any) => (
+                  <div key={p.login} className="flex items-center gap-2 text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium truncate">{p.name}</span>
+                        <Badge
+                          variant={p.highConfidenceCount > 0 ? "success" : "secondary"}
+                          className="text-[10px] px-1 py-0"
+                        >
+                          {p.highConfidenceCount > 0 ? "confirmed" : "possible"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {p.count}× detected · last {format(new Date(p.lastSeen), "MMM d, yyyy")}
+                      </p>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      {p.sources.includes("vod_title_mention") && (
+                        <span className="text-[10px] bg-muted px-1 rounded">VOD</span>
+                      )}
+                      {p.sources.includes("concurrent_stream") && (
+                        <span className="text-[10px] bg-muted px-1 rounded">Live</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {collabPartners.length > 6 && (
+                  <p className="text-xs text-muted-foreground pt-1">+{collabPartners.length - 6} more partners detected</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -248,51 +265,27 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
               <p className="text-sm text-muted-foreground">No stream history</p>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {friend.streamHistory.slice(0, 10).map((s: any) => (
-                  <div key={s.id} className="text-xs border-l-2 border-muted pl-2 py-0.5">
-                    <p className="font-medium truncate">{s.title}</p>
-                    <p className="text-muted-foreground">
-                      {format(new Date(s.startTime), "EEE MMM d, h:mm a")}
-                      {s.durationSec ? ` · ${Math.round(s.durationSec / 3600 * 10) / 10}h` : ""}
-                      {s.gameName ? ` · ${s.gameName}` : ""}
-                    </p>
-                  </div>
-                ))}
+                {friend.streamHistory.slice(0, 10).map((s: any) => {
+                  // Highlight VOD titles that contain collab signals
+                  const hasCollabMention = collabSignals.some((sig: any) => sig.evidence === s.title);
+                  return (
+                    <div key={s.id} className={`text-xs border-l-2 pl-2 py-0.5 ${hasCollabMention ? "border-primary" : "border-muted"}`}>
+                      <p className="font-medium truncate">{s.title}</p>
+                      <p className="text-muted-foreground">
+                        {format(new Date(s.startTime), "EEE MMM d, h:mm a")}
+                        {s.durationSec ? ` · ${Math.round(s.durationSec / 3600 * 10) / 10}h` : ""}
+                        {s.gameName ? ` · ${s.gameName}` : ""}
+                        {hasCollabMention && <span className="ml-1 text-primary font-medium">collab</span>}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Twitch schedule (if available) */}
-        {upcomingSegments.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Posted Schedule
-                <Badge variant="secondary" className="text-xs ml-auto">Optional</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {upcomingSegments.map((s: any) => (
-                  <div key={s.id} className="border rounded-md p-2 text-xs space-y-0.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium truncate">{s.title}</p>
-                      {s.isRecurring && <Badge variant="outline" className="text-xs shrink-0">Recurring</Badge>}
-                    </div>
-                    <p className="text-muted-foreground">
-                      {format(new Date(s.startTime), "EEE MMM d, h:mm a")} – {format(new Date(s.endTime), "h:mm a")}
-                    </p>
-                    {s.gameName && <p className="text-muted-foreground">{s.gameName}</p>}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Notes + collab history */}
+        {/* Notes + schedule */}
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
@@ -319,27 +312,33 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Collab History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {friend.collabHistories?.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-2">No collabs yet</p>
-              ) : (
+          {upcomingSegments.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Posted Schedule
+                  <Badge variant="secondary" className="text-xs ml-auto">Optional</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-2">
-                  {friend.collabHistories?.map((h: any) => (
-                    <div key={h.id} className="text-sm border-l-2 border-primary pl-3">
-                      <p className="font-medium">{h.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(h.date), "MMM d, yyyy")}{h.gameName ? ` · ${h.gameName}` : ""}
+                  {upcomingSegments.map((s: any) => (
+                    <div key={s.id} className="border rounded-md p-2 text-xs space-y-0.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-medium truncate">{s.title}</p>
+                        {s.isRecurring && <Badge variant="outline" className="text-xs shrink-0">Recurring</Badge>}
+                      </div>
+                      <p className="text-muted-foreground">
+                        {format(new Date(s.startTime), "EEE MMM d, h:mm a")} – {format(new Date(s.endTime), "h:mm a")}
                       </p>
+                      {s.gameName && <p className="text-muted-foreground">{s.gameName}</p>}
                     </div>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

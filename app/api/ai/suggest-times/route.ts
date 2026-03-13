@@ -4,6 +4,7 @@ import { generateText } from "@/lib/gemini/client";
 import { buildTimeSuggestionPrompt } from "@/lib/gemini/prompts";
 import { analyzePatterns } from "@/lib/scheduling/patterns";
 import { findOverlapWindows, scheduleSegmentsToSlots } from "@/lib/scheduling/overlap";
+import { summarizeCollabSignals } from "@/lib/twitch/detectCollabs";
 import { z } from "zod";
 import type { TimeSuggestion } from "@/types";
 
@@ -28,6 +29,10 @@ export async function POST(req: Request) {
           where: { startTime: { gte: new Date() } },
           orderBy: { startTime: "asc" },
         },
+        collabSignals: {
+          orderBy: [{ confidence: "desc" }, { detectedAt: "desc" }],
+          take: 30,
+        },
       },
     });
 
@@ -51,10 +56,15 @@ export async function POST(req: Request) {
       )
     );
 
-    // Build candidate overlap windows from inferred future windows (from patterns)
-    // + any actual schedule segments if they exist
+    // Build collab context block for the AI prompt
+    const collabLines = friends.map((f) => {
+      const summary = summarizeCollabSignals(f.displayName, f.collabSignals);
+      return summary.summaryText;
+    });
+    const collabContext = collabLines.join("\n");
+
+    // Build candidate overlap windows
     const allSlots = [
-      // Inferred windows from history patterns
       ...friendPatterns.flatMap((p) =>
         p.inferredWindows.map((w) => ({
           start: w.start,
@@ -63,7 +73,6 @@ export async function POST(req: Request) {
           participantName: p.displayName,
         }))
       ),
-      // Actual schedule segments if available (bonus)
       ...friends.flatMap((f) =>
         scheduleSegmentsToSlots(
           f.scheduleSegments.map((s) => ({
@@ -92,6 +101,7 @@ export async function POST(req: Request) {
         end: w.end.toISOString(),
         participants: w.participants,
       })),
+      collabContext,
     });
 
     const text = await generateText(prompt);

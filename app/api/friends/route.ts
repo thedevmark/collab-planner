@@ -34,6 +34,10 @@ export async function GET() {
           orderBy: { startTime: "desc" },
           take: 20,
         },
+        collabSignals: {
+          orderBy: [{ confidence: "desc" }, { detectedAt: "desc" }],
+          take: 20,
+        },
       },
       orderBy: { displayName: "asc" },
     });

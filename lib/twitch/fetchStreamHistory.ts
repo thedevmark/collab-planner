@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getRecentBroadcasts, parseDuration } from "./client";
+import { detectCollabSignals } from "./detectCollabs";
 
 /** Fetch and store the last `count` broadcasts for a friend. Skips already-stored videos. */
 export async function fetchAndStoreStreamHistory(
@@ -39,5 +40,11 @@ export async function fetchAndStoreStreamHistory(
       // Skip duplicates or errors
     }
   }
+
+  // After storing new history, re-run collab detection (fire-and-forget)
+  if (stored > 0) {
+    detectCollabSignals(friendId).catch(() => {});
+  }
+
   return stored;
 }

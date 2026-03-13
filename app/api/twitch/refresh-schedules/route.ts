@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getBroadcasterSchedule, getChatColor } from "@/lib/twitch/client";
 import { fetchAndStoreStreamHistory } from "@/lib/twitch/fetchStreamHistory";
+import { detectCollabSignals } from "@/lib/twitch/detectCollabs";
 
 export async function POST() {
   try {
@@ -40,6 +41,9 @@ export async function POST() {
             await prisma.friend.update({ where: { id: friend.id }, data: { channelColor: color } });
           }
         }
+
+        // Re-run collab detection with fresh history
+        await detectCollabSignals(friend.id);
 
         results.push({
           friendId: friend.id,
