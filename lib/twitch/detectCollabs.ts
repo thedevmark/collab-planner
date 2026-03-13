@@ -4,7 +4,7 @@ export interface CollabPartner {
   partnerName: string;
   partnerLogin: string;
   detectedAt: Date;
-  source: "vod_title_mention" | "concurrent_stream";
+  source: "vod_title_mention";
   evidence: string;
   confidence: "high" | "medium";
 }
@@ -130,32 +130,6 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
         evidence: title,
         confidence: isHighConfidence ? "high" : "medium",
       });
-    }
-  }
-
-  // ── Source 4: Concurrent stream detection ─────────────────────────────────
-  for (const other of allFriends) {
-    for (const myStream of friend.streamHistory) {
-      for (const theirStream of other.streamHistory) {
-        const overlapStart = Math.max(myStream.startTime.getTime(), theirStream.startTime.getTime());
-        const overlapEnd = Math.min(myStream.endTime.getTime(), theirStream.endTime.getTime());
-        const overlapMs = overlapEnd - overlapStart;
-
-        if (overlapMs < 30 * 60 * 1000) continue; // less than 30 min overlap — skip
-
-        const key = `${other.username}|${myStream.startTime.toDateString()}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-
-        signals.push({
-          partnerName: other.displayName,
-          partnerLogin: other.username,
-          detectedAt: myStream.startTime,
-          source: "concurrent_stream",
-          evidence: `Both streaming: "${myStream.title}" & "${theirStream.title}" (${Math.round(overlapMs / 60000)}m overlap)`,
-          confidence: "medium",
-        });
-      }
     }
   }
 

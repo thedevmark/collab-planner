@@ -3,7 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
-import { format, addDays, isWithinInterval } from "date-fns";
+import { format, addDays } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,32 +29,29 @@ export default function Dashboard() {
 
   const { data: events = [], mutate: mutateEvents } = useSWR(EVENTS_KEY, fetcher);
   const { data: friends = [], mutate: mutateFriends } = useSWR("/api/friends", fetcher);
+  const { data: liveData, mutate: mutateLive } = useSWR("/api/twitch/live", fetcher, { refreshInterval: 60000 });
   const [refreshing, setRefreshing] = useState(false);
 
   useReminderPolling(true);
 
   const nonMeFriends = friends.filter((f: any) => !f.isMe);
 
-  const streamingNow = nonMeFriends.filter((f: any) =>
-    f.scheduleSegments?.some((s: any) =>
-      isWithinInterval(now, { start: new Date(s.startTime), end: new Date(s.endTime) })
-    )
-  );
+  // Real-time live status from Twitch API (refreshes every 60s)
+  const streamingNow: any[] = liveData?.live ?? [];
+  const liveIds = new Set(streamingNow.map((f: any) => f.id));
 
-  // Use stream history patterns to estimate who's likely streaming soon
+  // Estimate who's likely streaming soon (scheduled or pattern-based), excluding live
   const streamingSoon = nonMeFriends.filter((f: any) => {
-    if (streamingNow.includes(f)) return false;
-    // Check schedule segments first
+    if (liveIds.has(f.id)) return false;
     const hasScheduled = f.scheduleSegments?.some((s: any) => {
       const start = new Date(s.startTime);
       return start > now && start <= addDays(now, 1);
     });
     if (hasScheduled) return true;
-    // Fall back to stream history pattern: if today's UTC day-of-week matches their most common days
     if (f.streamHistory?.length >= 3) {
       const dayCounts: Record<number, number> = {};
       for (const s of f.streamHistory) {
-        const d = new Date(s.startTime).getUTCDay(); // UTC — consistent with stored times
+        const d = new Date(s.startTime).getUTCDay();
         dayCounts[d] = (dayCounts[d] ?? 0) + 1;
       }
       const topDays = Object.entries(dayCounts)
@@ -69,7 +66,7 @@ export default function Dashboard() {
   async function refreshSchedules() {
     setRefreshing(true);
     await fetch("/api/twitch/refresh-schedules", { method: "POST" });
-    await Promise.all([mutateEvents(), mutateFriends()]);
+    await Promise.all([mutateEvents(), mutateFriends(), mutateLive()]);
     setRefreshing(false);
   }
 
@@ -202,25 +199,31 @@ export default function Dashboard() {
             ) : (
               <>
                 {[...streamingNow, ...streamingSoon].slice(0, 6).map((f: any) => {
-                  const isLive = streamingNow.includes(f);
+                  const isLive = liveIds.has(f.id);
+                  const liveInfo = streamingNow.find((l: any) => l.id === f.id);
                   const nextSegment = f.scheduleSegments?.[0];
                   return (
                     <Link key={f.id} href={`/friends/${f.id}`}>
                       <div className="flex items-center gap-3 p-2 rounded-md hover:bg-accent transition-colors cursor-pointer">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={f.avatarUrl} />
-                          <AvatarFallback>{f.displayName[0]}</AvatarFallback>
-                        </Avatar>
+                        <div className="relative shrink-0">
+                          <Avatar className="h-8 w-8" style={isLive && f.channelColor ? { outline: `2px solid ${f.channelColor}`, outlineOffset: "1px" } : undefined}>
+                            <AvatarImage src={f.avatarUrl} />
+                            <AvatarFallback>{f.displayName[0]}</AvatarFallback>
+                          </Avatar>
+                          {isLive && <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background" />}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{f.displayName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {isLive ? nextSegment?.gameName || "Streaming" : (
-                              nextSegment ? format(new Date(nextSegment.startTime), "h:mm a") + " • " + (nextSegment.gameName || "Streaming") : ""
-                            )}
+                          <p className="text-xs text-muted-foreground truncate">
+                            {isLive
+                              ? `${liveInfo?.gameName || "Streaming"}${liveInfo?.viewerCount ? ` · ${liveInfo.viewerCount.toLocaleString()} viewers` : ""}`
+                              : nextSegment
+                              ? `${format(new Date(nextSegment.startTime), "h:mm a")}${nextSegment.gameName ? ` · ${nextSegment.gameName}` : ""}`
+                              : "Usually streams today"}
                           </p>
                         </div>
-                        <Badge variant={isLive ? "success" : "secondary"} className="text-xs">
-                          {isLive ? "LIVE" : nextSegment ? "Scheduled" : "Usually on"}
+                        <Badge variant={isLive ? "success" : "secondary"} className="text-xs shrink-0">
+                          {isLive ? "LIVE" : nextSegment ? "Scheduled" : "Est."}
                         </Badge>
                       </div>
                     </Link>

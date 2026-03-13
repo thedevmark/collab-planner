@@ -234,14 +234,7 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
                         {p.count}× detected · last {format(new Date(p.lastSeen), "MMM d, yyyy")}
                       </p>
                     </div>
-                    <div className="flex gap-1 shrink-0">
-                      {p.sources.includes("vod_title_mention") && (
-                        <span className="text-[10px] bg-muted px-1 rounded">VOD</span>
-                      )}
-                      {p.sources.includes("concurrent_stream") && (
-                        <span className="text-[10px] bg-muted px-1 rounded">Live</span>
-                      )}
-                    </div>
+                    <span className="text-[10px] bg-muted px-1 rounded shrink-0">VOD</span>
                   </div>
                 ))}
                 {collabPartners.length > 6 && (
