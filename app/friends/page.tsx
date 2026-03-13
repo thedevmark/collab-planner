@@ -3,7 +3,6 @@
 import { useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
-import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Search, Calendar, Loader2, TrendingUp } from "lucide-react";
+import { UserPlus, Search, Loader2, TrendingUp } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -140,62 +139,63 @@ export default function FriendsPage() {
                   {(() => {
                     const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                     const history = friend.streamHistory ?? [];
-                    const hasHistory = history.length >= 3;
 
-                    if (hasHistory) {
-                      const dayCounts: Record<number, number> = {};
-                      const hours: number[] = [];
-                      const gameCounts: Record<string, number> = {};
-                      for (const s of history) {
-                        const d = new Date(s.startTime).getDay();
-                        dayCounts[d] = (dayCounts[d] ?? 0) + 1;
-                        hours.push(new Date(s.startTime).getUTCHours());
-                        if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 1;
-                      }
-                      const topDays = Object.entries(dayCounts).sort(([, a], [, b]) => (b as number) - (a as number)).slice(0, 3).map(([d]) => DAYS[parseInt(d)]);
+                    // Build pattern from history if available, otherwise use schedule hints, otherwise estimate
+                    const dayCounts: Record<number, number> = {};
+                    const hours: number[] = [];
+                    const gameCounts: Record<string, number> = {};
+
+                    for (const s of history) {
+                      const d = new Date(s.startTime).getDay();
+                      dayCounts[d] = (dayCounts[d] ?? 0) + 1;
+                      hours.push(new Date(s.startTime).getUTCHours());
+                      if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 1;
+                    }
+
+                    // Supplement with schedule hints (half weight)
+                    for (const s of friend.scheduleSegments ?? []) {
+                      const d = new Date(s.startTime).getDay();
+                      dayCounts[d] = (dayCounts[d] ?? 0) + 0.5;
+                      hours.push(new Date(s.startTime).getUTCHours());
+                      if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 0.5;
+                    }
+
+                    let topDays: string[];
+                    let timeLabel: string;
+                    let isEstimate = false;
+
+                    if (hours.length > 0) {
+                      topDays = Object.entries(dayCounts).sort(([, a], [, b]) => (b as number) - (a as number)).slice(0, 3).map(([d]) => DAYS[parseInt(d)]);
                       hours.sort((a, b) => a - b);
                       const med = hours[Math.floor(hours.length / 2)];
                       const h = med % 12 || 12;
                       const ampm = med >= 12 ? "PM" : "AM";
-                      const topGame = Object.entries(gameCounts).sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0];
-
-                      return (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <TrendingUp className="h-3 w-3" />
-                            Streams {topDays.join(", ")} ~{h}{ampm} UTC
-                          </div>
-                          <div className="flex gap-1 flex-wrap">
-                            {DAYS.map((d) => (
-                              <span key={d} className={`text-[10px] px-1 py-0.5 rounded font-medium ${topDays.includes(d) ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{d}</span>
-                            ))}
-                          </div>
-                          {topGame && <Badge variant="outline" className="text-xs">{topGame}</Badge>}
-                        </div>
-                      );
+                      timeLabel = `~${h}${ampm} UTC`;
+                      isEstimate = history.length < 3;
+                    } else {
+                      // No data at all — use generic estimate
+                      topDays = ["Fri", "Sat", "Sun"];
+                      timeLabel = "~8PM UTC";
+                      isEstimate = true;
                     }
 
-                    if (friend.scheduleSegments?.length > 0) {
-                      return (
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            Next scheduled:
-                          </div>
-                          <div className="text-xs p-2 bg-muted rounded">
-                            <p className="font-medium truncate">{friend.scheduleSegments[0].title}</p>
-                            <p className="text-muted-foreground">{format(new Date(friend.scheduleSegments[0].startTime), "EEE MMM d, h:mm a")}</p>
-                          </div>
-                        </div>
-                      );
-                    }
+                    const topGame = Object.entries(gameCounts).sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0];
 
                     return (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <TrendingUp className="h-3 w-3" />
-                        No stream data yet
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <TrendingUp className="h-3 w-3" />
+                          {isEstimate ? "Est." : "Streams"} {topDays.join(", ")} {timeLabel}
+                        </div>
+                        <div className="flex gap-1 flex-wrap">
+                          {DAYS.map((d) => (
+                            <span key={d} className={`text-[10px] px-1 py-0.5 rounded font-medium ${topDays.includes(d) ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{d}</span>
+                          ))}
+                        </div>
+                        {topGame && <Badge variant="outline" className="text-xs">{topGame}</Badge>}
                       </div>
                     );
+
                   })()}
 
                   {friend.notes && (
