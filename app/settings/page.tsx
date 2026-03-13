@@ -7,7 +7,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Check, Loader2, Eye, EyeOff, ExternalLink, AlertTriangle } from "lucide-react";
+import { Check, Loader2, Eye, EyeOff, AlertTriangle } from "lucide-react";
+
+const TIMEZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Vancouver",
+  "America/Toronto",
+  "America/Phoenix",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Amsterdam",
+  "Europe/Stockholm",
+  "Europe/Moscow",
+  "Asia/Tokyo",
+  "Asia/Seoul",
+  "Asia/Shanghai",
+  "Asia/Singapore",
+  "Asia/Kolkata",
+  "Australia/Sydney",
+  "Australia/Melbourne",
+  "Pacific/Auckland",
+];
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -18,6 +43,7 @@ function SettingsForm() {
   const [twitchClientId, setTwitchClientId] = useState("");
   const [twitchClientSecret, setTwitchClientSecret] = useState("");
   const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [timezone, setTimezone] = useState("UTC");
 
   const [showTwitchSecret, setShowTwitchSecret] = useState(false);
   const [showGeminiKey, setShowGeminiKey] = useState(false);
@@ -32,6 +58,7 @@ function SettingsForm() {
       setTwitchClientId(settings.twitchClientId ?? "");
       setTwitchClientSecret(settings.twitchClientSecret ?? "");
       setGeminiApiKey(settings.geminiApiKey ?? "");
+      setTimezone(settings.timezone ?? "UTC");
     }
   }, [settings]);
 
@@ -41,8 +68,9 @@ function SettingsForm() {
     try {
       const body: Record<string, string> = {};
 
-      // Always send username
+      // Always send username + timezone
       body.twitchUsername = twitchUsername;
+      body.timezone = timezone;
 
       // Only send keys if the user typed a new value (not the masked version)
       if (twitchClientId && !twitchClientId.startsWith("••")) {
@@ -212,6 +240,27 @@ function SettingsForm() {
               </button>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Timezone */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Timezone</CardTitle>
+          <CardDescription>Used to display stream times and "streaming today" predictions in your local time</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Label htmlFor="timezone">Timezone</Label>
+          <select
+            id="timezone"
+            value={timezone}
+            onChange={(e) => setTimezone(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            {TIMEZONES.map((tz) => (
+              <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>
+            ))}
+          </select>
         </CardContent>
       </Card>
 

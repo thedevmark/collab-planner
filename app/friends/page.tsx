@@ -24,7 +24,71 @@ const FALLBACK_COLORS = [
   "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
 ];
 
+const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+function StreamPattern({ friend, accentColor }: { friend: any; accentColor: string }) {
+  const history = friend.streamHistory ?? [];
+  const dayCounts: Record<number, number> = {};
+  const hours: number[] = [];
+  const gameCounts: Record<string, number> = {};
+
+  for (const s of history) {
+    const d = new Date(s.startTime).getUTCDay();
+    dayCounts[d] = (dayCounts[d] ?? 0) + 1;
+    hours.push(new Date(s.startTime).getUTCHours());
+    if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 1;
+  }
+  for (const s of friend.scheduleSegments ?? []) {
+    const d = new Date(s.startTime).getUTCDay();
+    dayCounts[d] = (dayCounts[d] ?? 0) + 0.5;
+    hours.push(new Date(s.startTime).getUTCHours());
+    if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 0.5;
+  }
+
+  let topDays: string[];
+  let timeLabel: string;
+  let isEstimate = false;
+
+  if (hours.length > 0) {
+    topDays = Object.entries(dayCounts)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .slice(0, 3)
+      .map(([d]) => DAYS_SHORT[parseInt(d)]);
+    hours.sort((a, b) => a - b);
+    const med = hours[Math.floor(hours.length / 2)];
+    const h = med % 12 || 12;
+    timeLabel = `~${h}${med >= 12 ? "PM" : "AM"} UTC`;
+    isEstimate = history.length < 3;
+  } else {
+    topDays = ["Fri", "Sat", "Sun"];
+    timeLabel = "~8PM UTC";
+    isEstimate = true;
+  }
+
+  const topGame = Object.entries(gameCounts)
+    .sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0];
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <TrendingUp className="h-3 w-3" />
+        {isEstimate ? "Est." : "Streams"} {topDays.join(", ")} {timeLabel}
+      </div>
+      <div className="flex gap-1 flex-wrap">
+        {DAYS_SHORT.map((d) => (
+          <span
+            key={d}
+            className={`text-[10px] px-1 py-0.5 rounded font-medium ${topDays.includes(d) ? "" : "bg-muted text-muted-foreground"}`}
+            style={topDays.includes(d) ? { backgroundColor: accentColor, color: "#fff" } : undefined}
+          >{d}</span>
+        ))}
+      </div>
+      {topGame && <Badge variant="outline" className="text-xs">{topGame}</Badge>}
+    </div>
+  );
+}
 
 export default function FriendsPage() {
   const { data: friends = [], mutate } = useSWR("/api/friends", fetcher);
@@ -34,6 +98,7 @@ export default function FriendsPage() {
   const [addError, setAddError] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  const meFriend = friends.find((f: any) => f.isMe);
   const nonMeFriends = friends.filter((f: any) => !f.isMe);
   const filtered = nonMeFriends.filter((f: any) =>
     f.displayName.toLowerCase().includes(search.trim().toLowerCase()) ||
@@ -62,6 +127,8 @@ export default function FriendsPage() {
       setAdding(false);
     }
   }
+
+  const meColor = meFriend?.channelColor || "#7c3aed";
 
   return (
     <div className="space-y-6">
@@ -102,6 +169,36 @@ export default function FriendsPage() {
         </Dialog>
       </div>
 
+      {/* Your own card — always at the top */}
+      {meFriend && (
+        <Link href={`/friends/${meFriend.id}`}>
+          <Card
+            className="hover:shadow-md transition-shadow cursor-pointer"
+            style={{ borderColor: meColor + "60" }}
+          >
+            <div className="h-0.5 rounded-t-lg" style={{ backgroundColor: meColor }} />
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-12 w-12" style={{ outline: `2px solid ${meColor}40`, outlineOffset: "2px" }}>
+                  <AvatarImage src={meFriend.avatarUrl} />
+                  <AvatarFallback className="text-lg">{meFriend.displayName[0].toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold truncate">{meFriend.displayName}</p>
+                    <Badge className="text-xs shrink-0" style={{ backgroundColor: meColor, color: "#fff", border: "none" }}>You</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">@{meFriend.username}</p>
+                </div>
+                <div className="shrink-0">
+                  <StreamPattern friend={meFriend} accentColor={meColor} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
+
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -124,102 +221,41 @@ export default function FriendsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
-          {filtered.map((friend: any, idx: number) => (
-            <Link key={friend.id} href={`/friends/${friend.id}`}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                <CardContent className="pt-6 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={friend.avatarUrl} />
-                      <AvatarFallback className="text-lg">
-                        {friend.displayName[0].toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="font-semibold truncate">{friend.displayName}</p>
-                      <p className="text-sm text-muted-foreground">@{friend.username}</p>
-                    </div>
-                  </div>
-
-                  {(() => {
-                    const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                    const history = friend.streamHistory ?? [];
-
-                    // Build pattern from history if available, otherwise use schedule hints, otherwise estimate
-                    const dayCounts: Record<number, number> = {};
-                    const hours: number[] = [];
-                    const gameCounts: Record<string, number> = {};
-
-                    for (const s of history) {
-                      const d = new Date(s.startTime).getDay();
-                      dayCounts[d] = (dayCounts[d] ?? 0) + 1;
-                      hours.push(new Date(s.startTime).getUTCHours());
-                      if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 1;
-                    }
-
-                    // Supplement with schedule hints (half weight)
-                    for (const s of friend.scheduleSegments ?? []) {
-                      const d = new Date(s.startTime).getDay();
-                      dayCounts[d] = (dayCounts[d] ?? 0) + 0.5;
-                      hours.push(new Date(s.startTime).getUTCHours());
-                      if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 0.5;
-                    }
-
-                    let topDays: string[];
-                    let timeLabel: string;
-                    let isEstimate = false;
-
-                    if (hours.length > 0) {
-                      topDays = Object.entries(dayCounts).sort(([, a], [, b]) => (b as number) - (a as number)).slice(0, 3).map(([d]) => DAYS[parseInt(d)]);
-                      hours.sort((a, b) => a - b);
-                      const med = hours[Math.floor(hours.length / 2)];
-                      const h = med % 12 || 12;
-                      const ampm = med >= 12 ? "PM" : "AM";
-                      timeLabel = `~${h}${ampm} UTC`;
-                      isEstimate = history.length < 3;
-                    } else {
-                      // No data at all — use generic estimate
-                      topDays = ["Fri", "Sat", "Sun"];
-                      timeLabel = "~8PM UTC";
-                      isEstimate = true;
-                    }
-
-                    const topGame = Object.entries(gameCounts).sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0];
-
-                    const accentColor = friend.channelColor || FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
-
-                    return (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <TrendingUp className="h-3 w-3" />
-                          {isEstimate ? "Est." : "Streams"} {topDays.join(", ")} {timeLabel}
-                        </div>
-                        <div className="flex gap-1 flex-wrap">
-                          {DAYS.map((d) => (
-                            <span
-                              key={d}
-                              className={`text-[10px] px-1 py-0.5 rounded font-medium ${topDays.includes(d) ? "" : "bg-muted text-muted-foreground"}`}
-                              style={topDays.includes(d)
-                                ? { backgroundColor: accentColor, color: "#fff" }
-                                : undefined}
-                            >{d}</span>
-                          ))}
-                        </div>
-                        {topGame && <Badge variant="outline" className="text-xs">{topGame}</Badge>}
+          {filtered.map((friend: any, idx: number) => {
+            const accentColor = friend.channelColor || FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
+            return (
+              <Link key={friend.id} href={`/friends/${friend.id}`}>
+                <Card
+                  className="hover:shadow-md transition-shadow cursor-pointer h-full"
+                  style={{ borderColor: accentColor + "50" }}
+                >
+                  <div className="h-0.5 rounded-t-lg" style={{ backgroundColor: accentColor }} />
+                  <CardContent className="pt-5 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-12 w-12" style={{ outline: `2px solid ${accentColor}40`, outlineOffset: "2px" }}>
+                        <AvatarImage src={friend.avatarUrl} />
+                        <AvatarFallback className="text-lg">
+                          {friend.displayName[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="font-semibold truncate">{friend.displayName}</p>
+                        <p className="text-sm text-muted-foreground">@{friend.username}</p>
                       </div>
-                    );
+                    </div>
 
-                  })()}
+                    <StreamPattern friend={friend} accentColor={accentColor} />
 
-                  {friend.notes && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 italic">
-                      {friend.notes}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                    {friend.notes && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 italic">
+                        {friend.notes}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

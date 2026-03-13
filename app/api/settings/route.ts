@@ -11,6 +11,7 @@ const settingsSchema = z.object({
   twitchClientId: z.string().optional(),
   twitchClientSecret: z.string().optional(),
   geminiApiKey: z.string().optional(),
+  timezone: z.string().optional(),
   refreshInterval: z.number().int().min(60).max(1440).optional(),
   notificationsEnabled: z.boolean().optional(),
 });
@@ -38,6 +39,7 @@ export async function GET() {
       id: settings.id,
       twitchUsername: settings.twitchUsername,
       broadcasterId: settings.broadcasterId,
+      timezone: settings.timezone,
       refreshInterval: settings.refreshInterval,
       notificationsEnabled: settings.notificationsEnabled,
       twitchClientId: maskKey(settings.twitchClientId),
@@ -60,6 +62,7 @@ export async function PUT(req: Request) {
     const updateData: Record<string, any> = {};
     if (data.twitchUsername !== undefined) updateData.twitchUsername = data.twitchUsername;
     if (data.broadcasterId !== undefined) updateData.broadcasterId = data.broadcasterId;
+    if (data.timezone !== undefined) updateData.timezone = data.timezone;
     if (data.refreshInterval !== undefined) updateData.refreshInterval = data.refreshInterval;
     if (data.notificationsEnabled !== undefined) updateData.notificationsEnabled = data.notificationsEnabled;
 

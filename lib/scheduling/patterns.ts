@@ -37,6 +37,10 @@ export interface StreamingPattern {
 /**
  * Analyze streaming patterns from actual history + optional schedule hints.
  * Always returns a usable pattern — never a dead-end "no data" result.
+ *
+ * All day-of-week math is UTC to match the stored UTC start times.
+ * A stream starting 10pm UTC Friday and ending 4am UTC Saturday is classified
+ * as "Friday" — we always use the start time's UTC day.
  */
 export function analyzePatterns(
   friendId: number,
@@ -44,22 +48,15 @@ export function analyzePatterns(
   sessions: StreamSession[],
   scheduleHints: ScheduleHint[] = []
 ): StreamingPattern {
-  // --- Use stream history if we have it ---
   if (sessions.length >= 3) {
     return analyzeFromHistory(friendId, displayName, sessions, scheduleHints);
   }
-
-  // --- Fall back to schedule if we have it ---
   if (scheduleHints.length > 0) {
     return analyzeFromSchedule(friendId, displayName, scheduleHints, sessions);
   }
-
-  // --- Sparse history (1-2 streams): use what we have + generic estimates ---
   if (sessions.length > 0) {
     return analyzeFromHistory(friendId, displayName, sessions, scheduleHints, true);
   }
-
-  // --- Truly no data: return a generic "evening streamer" estimate ---
   return estimatedPattern(friendId, displayName);
 }
 
@@ -76,17 +73,16 @@ function analyzeFromHistory(
   let totalSec = 0;
 
   for (const s of sessions) {
-    const day = s.startTime.getDay();
+    const day = s.startTime.getUTCDay(); // UTC — matches stored hours
     dayCounts[day] = (dayCounts[day] ?? 0) + 1;
     hours.push(s.startTime.getUTCHours());
     if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 1;
     totalSec += s.durationSec;
   }
 
-  // If schedule hints exist, boost the days they confirm
   for (const h of scheduleHints) {
-    const day = h.startTime.getDay();
-    dayCounts[day] = (dayCounts[day] ?? 0) + 0.5; // half-weight
+    const day = h.startTime.getUTCDay();
+    dayCounts[day] = (dayCounts[day] ?? 0) + 0.5;
   }
 
   const sortedDays = Object.entries(dayCounts)
@@ -142,7 +138,7 @@ function analyzeFromSchedule(
   const durations: number[] = [];
 
   for (const h of hints) {
-    const day = h.startTime.getDay();
+    const day = h.startTime.getUTCDay();
     dayCounts[day] = (dayCounts[day] ?? 0) + (h.isRecurring ? 2 : 1);
     hours.push(h.startTime.getUTCHours());
     if (h.gameName) gameCounts[h.gameName] = (gameCounts[h.gameName] ?? 0) + 1;
@@ -150,7 +146,6 @@ function analyzeFromSchedule(
     if (dur > 0) durations.push(dur);
   }
 
-  // Supplement game list from any history we do have
   for (const s of sessions) {
     if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 0.5;
   }
@@ -193,11 +188,9 @@ function analyzeFromSchedule(
   };
 }
 
-/** Fallback when we have no data at all — reasonable defaults for a typical streamer */
 function estimatedPattern(friendId: number, displayName: string): StreamingPattern {
-  // Default: evenings on weekends + one weekday, 3h sessions
   const typicalDays = ["Friday", "Saturday", "Sunday"];
-  const medianHour = 20; // 8PM UTC
+  const medianHour = 20;
 
   const summary =
     `${displayName}: no stream history available yet. ` +
@@ -231,6 +224,12 @@ function inferFutureWindows(
   return inferWindowsForRange(topDays, startHour, durationHours, new Date(), new Date(Date.now() + 14 * 86400000));
 }
 
+/**
+ * Generate inferred stream windows for a date range.
+ * Uses UTC day arithmetic throughout — a window starting at 22:00 UTC and
+ * lasting 6h will span midnight as a single unbroken block (22:00–04:00),
+ * matching how overnight streams actually work.
+ */
 export function inferWindowsForRange(
   topDays: string[],
   startHour: number,
@@ -243,17 +242,19 @@ export function inferWindowsForRange(
   const windows: Array<{ start: Date; end: Date }> = [];
   const topDayIndices = new Set(topDays.slice(0, 4).map((d) => DAYS.indexOf(d)));
 
+  // Start from beginning of the UTC day after `from`
   const cursor = new Date(from);
-  cursor.setDate(cursor.getDate() + 1);
+  cursor.setUTCHours(0, 0, 0, 0);
+  cursor.setUTCDate(cursor.getUTCDate() + 1);
 
   while (cursor <= to) {
-    if (topDayIndices.has(cursor.getDay())) {
+    if (topDayIndices.has(cursor.getUTCDay())) {
       const start = new Date(cursor);
       start.setUTCHours(startHour, 0, 0, 0);
       const end = new Date(start.getTime() + durationHours * 3600 * 1000);
       windows.push({ start, end });
     }
-    cursor.setDate(cursor.getDate() + 1);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
 
   return windows;

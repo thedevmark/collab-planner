@@ -4,6 +4,18 @@ import { getUserByUsername, getBroadcasterSchedule, getChatColor } from "@/lib/t
 import { fetchAndStoreStreamHistory } from "@/lib/twitch/fetchStreamHistory";
 import { z } from "zod";
 
+/** Fire-and-forget: backfill channelColor for any friend missing it */
+async function backfillMissingColors(friends: { id: number; twitchId: string; channelColor: string }[]) {
+  const missing = friends.filter((f) => !f.channelColor);
+  if (missing.length === 0) return;
+  for (const f of missing) {
+    try {
+      const color = await getChatColor(f.twitchId);
+      if (color) await prisma.friend.update({ where: { id: f.id }, data: { channelColor: color } });
+    } catch { /* ignore */ }
+  }
+}
+
 const addFriendSchema = z.object({
   username: z.string().min(1),
 });
@@ -25,6 +37,9 @@ export async function GET() {
       },
       orderBy: { displayName: "asc" },
     });
+    // Background: fill in any missing channel colors (new field, existing rows may be empty)
+    backfillMissingColors(friends).catch(() => {});
+
     return NextResponse.json(friends);
   } catch (err) {
     return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });

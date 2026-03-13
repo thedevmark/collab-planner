@@ -50,18 +50,18 @@ export default function Dashboard() {
       return start > now && start <= addDays(now, 1);
     });
     if (hasScheduled) return true;
-    // Fall back to stream history pattern: if today's day-of-week matches their most common days
+    // Fall back to stream history pattern: if today's UTC day-of-week matches their most common days
     if (f.streamHistory?.length >= 3) {
       const dayCounts: Record<number, number> = {};
       for (const s of f.streamHistory) {
-        const d = new Date(s.startTime).getDay();
+        const d = new Date(s.startTime).getUTCDay(); // UTC — consistent with stored times
         dayCounts[d] = (dayCounts[d] ?? 0) + 1;
       }
       const topDays = Object.entries(dayCounts)
         .sort(([, a], [, b]) => (b as number) - (a as number))
         .slice(0, 3)
         .map(([d]) => parseInt(d));
-      return topDays.includes(now.getDay());
+      return topDays.includes(now.getUTCDay());
     }
     return false;
   });
