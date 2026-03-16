@@ -43,16 +43,21 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       const created = await prisma.scheduleSegment.createMany({
         data: schedule.segments
           .filter((s) => !s.canceled_until)
-          .map((s) => ({
-            friendId: friend.id,
-            segmentId: s.id,
-            title: s.title,
-            startTime: new Date(s.start_time),
-            endTime: new Date(s.end_time),
-            gameName: s.category?.name ?? "",
-            gameId: s.category?.id ?? "",
-            isRecurring: s.is_recurring,
-          })),
+          .map((s) => {
+            const startTime = new Date(s.start_time);
+            // Twitch may omit end_time — default to start + 3 hours to avoid epoch-zero in DB
+            const endTime = s.end_time ? new Date(s.end_time) : new Date(startTime.getTime() + 3 * 3600 * 1000);
+            return {
+              friendId: friend.id,
+              segmentId: s.id,
+              title: s.title,
+              startTime,
+              endTime,
+              gameName: s.category?.name ?? "",
+              gameId: s.category?.id ?? "",
+              isRecurring: s.is_recurring,
+            };
+          }),
       });
       return NextResponse.json({ message: "Schedule refreshed", count: created.count });
     }

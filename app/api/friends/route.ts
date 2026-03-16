@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserByUsername, getBroadcasterSchedule, getChatColor } from "@/lib/twitch/client";
-import { fetchAndStoreStreamHistory } from "@/lib/twitch/fetchStreamHistory";
+import { backfillStoredStreamHistoryGameNames, fetchAndStoreStreamHistory } from "@/lib/twitch/fetchStreamHistory";
 import { z } from "zod";
 
 /** Fire-and-forget: backfill channelColor for any friend missing it */
@@ -22,6 +22,9 @@ const addFriendSchema = z.object({
 
 export async function GET() {
   try {
+    await backfillStoredStreamHistoryGameNames().catch(() => {});
+    const now = new Date();
+
     const friends = await prisma.friend.findMany({
       where: { isActive: true },
       include: {
@@ -41,10 +44,69 @@ export async function GET() {
       },
       orderBy: { displayName: "asc" },
     });
+
+    const pastParticipants = await prisma.eventParticipant.findMany({
+      where: {
+        friendId: { in: friends.map((friend) => friend.id) },
+        event: {
+          startTime: { lte: now },
+          status: "completed",
+        },
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            gameName: true,
+            startTime: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: [
+        { event: { startTime: "desc" } },
+        { id: "desc" },
+      ],
+    });
+
+    const recentCollabsByFriend = new Map<number, Array<{
+      eventId: number;
+      title: string;
+      description: string;
+      gameName: string;
+      startTime: Date;
+      status: string;
+    }>>();
+
+    for (const participant of pastParticipants) {
+      const event = participant.event;
+      if (!event) continue;
+
+      const existing = recentCollabsByFriend.get(participant.friendId) ?? [];
+      if (existing.some((entry) => entry.eventId === event.id)) continue;
+
+      existing.push({
+        eventId: event.id,
+        title: event.title,
+        description: event.description,
+        gameName: event.gameName,
+        startTime: event.startTime,
+        status: event.status,
+      });
+      recentCollabsByFriend.set(participant.friendId, existing);
+    }
+
     // Background: fill in any missing channel colors (new field, existing rows may be empty)
     backfillMissingColors(friends).catch(() => {});
 
-    return NextResponse.json(friends);
+    return NextResponse.json(
+      friends.map((friend) => ({
+        ...friend,
+        recentCollabs: (recentCollabsByFriend.get(friend.id) ?? []).slice(0, 3),
+      }))
+    );
   } catch (err) {
     return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
   }

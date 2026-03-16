@@ -7,12 +7,12 @@ import { getTopGames } from "@/lib/twitch/client";
 import { z } from "zod";
 import type { GameSuggestion } from "@/types";
 
-const schema = z.object({ friendIds: z.array(z.number()).min(1) });
+const schema = z.object({ friendIds: z.array(z.number()).min(1), gameHint: z.string().optional() });
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { friendIds } = schema.parse(body);
+    const { friendIds, gameHint } = schema.parse(body);
 
     const friends = await prisma.friend.findMany({
       where: { id: { in: friendIds } },
@@ -58,6 +58,7 @@ export async function POST(req: Request) {
       friends: friends.map((f) => f.displayName),
       recentGames,
       trendingGames,
+      gameHint: gameHint || undefined,
       friendPatterns: friendPatterns.map((p) => ({
         name: p.displayName,
         summary: p.summary,

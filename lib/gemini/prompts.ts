@@ -24,6 +24,7 @@ export interface GameSuggestionInput {
   recentGames: string[];   // from stream history
   trendingGames: string[];
   friendPatterns: FriendPattern[];
+  gameHint?: string; // free-text hint from the user: game name, genre, vibe, etc.
 }
 
 export interface MessageInput {
@@ -33,6 +34,37 @@ export interface MessageInput {
   gameName: string;
   friends: string[];
   additionalContext?: string;
+}
+
+const ANTI_SLOP_BAN_LIST = [
+  "delve",
+  "unlock",
+  "tapestry",
+  "pivotal",
+  "multifaceted",
+  "transformative",
+  "foster",
+  "navigate",
+  "comprehensive",
+];
+
+function buildAntiSlopStyleBlock(messageType: MessageInput["messageType"]): string {
+  const structuralGoal = messageType === "invite"
+    ? "Open with the ask. Sound like a real person sending a DM to a friend they actually want to play with."
+    : "Keep it tight. Sound like a genuine heads-up from a friend, not a calendar notification.";
+
+  return `Style Guidelines:
+- Tone: Warm and genuine. Friendly without being performative. Like a streamer DM-ing someone they actually like and want to collab with.
+- Voice: Active voice. Conversational. A little casual, but not trying too hard.
+- Structure: No sandwich formatting. No generic intro paragraph. No concluding summary. Get to the point but be human about it.
+- Flow: Natural rhythm. Mix short lines with longer ones. Don't sound robotic or over-structured.
+- Verbs: Prefer simple verbs like join, play, stream, lock in, hop on, let me know.
+- Details: Use concrete details from the event. If there is a game, name it. If there is a time, use it.
+- Perspective: Write like a person inviting a friend — genuine interest, no pressure, just a real ask.
+- Negative Constraints: Do not use these words or anything close to them: ${ANTI_SLOP_BAN_LIST.join(", ")}.
+- Negative Constraints: Do not write phrases like "it's important to note", "overall", "in conclusion", "while X, it's also Y", or "just checking in".
+- Negative Constraints: Do not sound cold, dismissive, demanding, or like you're issuing an ultimatum. Do not sound like a brand, life coach, or LinkedIn post.
+- ${structuralGoal}`;
 }
 
 export function buildTimeSuggestionPrompt(input: TimeSuggestionInput): string {
@@ -79,11 +111,15 @@ export function buildGameSuggestionPrompt(input: GameSuggestionInput): string {
     .map((p) => `- ${p.name}: plays ${p.topGames.join(", ") || "various games"}`)
     .join("\n");
 
+  const hintBlock = input.gameHint
+    ? `\n## User's game/genre hint\n"${input.gameHint}" — lean toward this if it fits the group.\n`
+    : "";
+
   return `You are a game recommendation assistant for Twitch streamers planning a collab.
 
 ## What each streamer actually plays (from stream history)
 ${patternBlock}
-
+${hintBlock}
 ## Currently trending on Twitch
 ${input.trendingGames.join(", ") || "None available"}
 
@@ -97,7 +133,7 @@ Respond with ONLY the JSON array.`;
 
 export function buildDiscordMessagePrompt(input: MessageInput): string {
   if (input.messageType === "invite") {
-    return `Write a casual, friendly Discord message inviting Twitch streamers to a collab stream.
+    return `Write a Discord message inviting Twitch streamers to a collab stream.
 
 Event: ${input.eventTitle}
 Date/Time: ${input.startTime}
@@ -105,7 +141,14 @@ Game: ${input.gameName || "TBD"}
 Inviting: ${input.friends.join(", ")}
 ${input.additionalContext ? `Context: ${input.additionalContext}` : ""}
 
-Keep it casual, under 200 words, exciting. End by asking if they're in. No emojis unless it feels natural.
+${buildAntiSlopStyleBlock("invite")}
+
+Message rules:
+- Under 120 words.
+- Make it sound like a real DM you would actually send.
+- Ask clearly whether they are in.
+- Use at most one question mark.
+- Emojis are off by default. Use none unless the context really calls for it.
 
 Respond with ONLY the message text.`;
   }
@@ -118,7 +161,14 @@ Game: ${input.gameName || "TBD"}
 With: ${input.friends.join(", ")}
 ${input.additionalContext ? `Context: ${input.additionalContext}` : ""}
 
-Under 100 words, punchy, creates hype.
+${buildAntiSlopStyleBlock("reminder")}
+
+Message rules:
+- Under 80 words.
+- Punchy, but not hype-man nonsense.
+- Sound like a practical reminder from a real person.
+- Reference the time and the plan.
+- No emojis.
 
 Respond with ONLY the message text.`;
 }

@@ -5,7 +5,7 @@ import { z } from "zod";
 const addParticipantSchema = z.object({ friendId: z.number() });
 const updateParticipantSchema = z.object({
   participantId: z.number(),
-  inviteStatus: z.enum(["pending", "accepted", "declined"]),
+  inviteStatus: z.enum(["pending", "confirmed", "cannot"]),
 });
 const removeParticipantSchema = z.object({ participantId: z.number() });
 

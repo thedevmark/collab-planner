@@ -59,6 +59,22 @@ export async function getTopGames(first = 20): Promise<TwitchGame[]> {
   return data.data;
 }
 
+export async function getGamesByIds(gameIds: string[]): Promise<Map<string, string>> {
+  const uniqueIds = [...new Set(gameIds.filter((id) => id && id !== "0"))];
+  if (uniqueIds.length === 0) return new Map();
+
+  const games: TwitchGame[] = [];
+
+  for (let i = 0; i < uniqueIds.length; i += 100) {
+    const chunk = uniqueIds.slice(i, i + 100);
+    const query = chunk.map((id) => `id=${encodeURIComponent(id)}`).join("&");
+    const data = await twitchFetch<{ data: TwitchGame[] }>(`/games?${query}`);
+    games.push(...(data.data ?? []));
+  }
+
+  return new Map(games.map((game) => [game.id, game.name]));
+}
+
 /** Parse Twitch duration string like "3h12m45s" into total seconds */
 export function parseDuration(dur: string): number {
   const h = parseInt(dur.match(/(\d+)h/)?.[1] ?? "0");
@@ -73,6 +89,49 @@ export async function getRecentBroadcasts(userId: string, first = 20): Promise<T
     `/videos?user_id=${userId}&type=archive&first=${first}`
   );
   return data.data ?? [];
+}
+
+/**
+ * Fetch the primary game for a batch of VODs via Twitch GQL chapter markers.
+ * The Helix /videos endpoint rarely returns game_id for archived streams;
+ * GQL chapters are the only reliable source for this data.
+ *
+ * Returns a Map<videoId, gameName>. Videos with no chapter data are omitted.
+ */
+export async function getVideoGamesFromGQL(videoIds: string[]): Promise<Map<string, string>> {
+  if (videoIds.length === 0) return new Map();
+
+  // Build a batched GQL query using aliases: v_<id>: video(id: "<id>") { ... }
+  const aliases = videoIds.map(
+    (id) => `v_${id}: video(id: "${id}") {
+      moments(momentRequestType: VIDEO_CHAPTER_MARKERS) {
+        edges { node { details { ... on GameChangeMoment { game { displayName } } } } }
+      }
+    }`
+  ).join("\n");
+
+  try {
+    const res = await fetch("https://gql.twitch.tv/gql", {
+      method: "POST",
+      headers: {
+        "Client-Id": "kimne78kx3ncx6brgo4mv6wki5h1ko",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query: `{ ${aliases} }` }),
+    });
+    if (!res.ok) return new Map();
+    const json = await res.json();
+    const result = new Map<string, string>();
+    for (const id of videoIds) {
+      const videoData = json?.data?.[`v_${id}`];
+      const firstEdge = videoData?.moments?.edges?.[0];
+      const gameName = firstEdge?.node?.details?.game?.displayName;
+      if (gameName) result.set(id, gameName);
+    }
+    return result;
+  } catch {
+    return new Map();
+  }
 }
 
 /**

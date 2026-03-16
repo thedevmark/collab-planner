@@ -24,9 +24,9 @@ function getStreamingPattern(streamHistory: any[], scheduleSegments: any[]) {
   let source: "history" | "schedule" | "mixed" | "estimated" = "estimated";
 
   for (const s of streamHistory ?? []) {
-    const d = new Date(s.startTime).getUTCDay();
+    const d = new Date(s.startTime).getDay();
     dayCounts[d] = (dayCounts[d] ?? 0) + 1;
-    hourCounts.push(new Date(s.startTime).getUTCHours());
+    hourCounts.push(new Date(s.startTime).getHours());
     if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 1;
     totalSec += s.durationSec;
   }
@@ -36,22 +36,22 @@ function getStreamingPattern(streamHistory: any[], scheduleSegments: any[]) {
   }
 
   for (const s of scheduleSegments ?? []) {
-    const d = new Date(s.startTime).getUTCDay();
+    const d = new Date(s.startTime).getDay();
     dayCounts[d] = (dayCounts[d] ?? 0) + (s.isRecurring ? 2 : 1) * 0.5;
-    hourCounts.push(new Date(s.startTime).getUTCHours());
+    hourCounts.push(new Date(s.startTime).getHours());
     if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 0.5;
     if (source === "estimated") source = "schedule";
   }
 
   if (hourCounts.length === 0) {
-    return { topDays: ["Fri", "Sat", "Sun"], typicalTime: "~8PM UTC (estimated)", topGames: [] as string[], avgHours: 3, total: 0, source: "estimated" as const };
+    return { topDays: [] as string[], typicalTime: "", topGames: [] as string[], avgHours: 0, total: 0, source: "estimated" as const };
   }
 
   const topDays = Object.entries(dayCounts).sort(([, a], [, b]) => b - a).slice(0, 3).map(([d]) => DAYS[parseInt(d)]);
   hourCounts.sort((a, b) => a - b);
   const medianHour = hourCounts[Math.floor(hourCounts.length / 2)];
   const h = medianHour % 12 || 12;
-  const typicalTime = `~${h}${medianHour >= 12 ? "PM" : "AM"} UTC`;
+  const typicalTime = `~${h}${medianHour >= 12 ? "PM" : "AM"}`;
   const topGames = Object.entries(gameCounts).sort(([, a], [, b]) => b - a).slice(0, 5).map(([g]) => g);
   const avgHours = streamHistory?.length > 0 ? Math.round((totalSec / streamHistory.length / 3600) * 10) / 10 : 3;
 
@@ -159,43 +159,45 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Typical streaming days</p>
-                <div className="flex gap-1">
-                  {DAYS.map((d) => (
-                    <span key={d} className="text-xs px-1.5 py-0.5 rounded font-medium"
-                      style={pattern.topDays.includes(d)
-                        ? { backgroundColor: accentColor, color: "#fff" }
-                        : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }}>
-                      {d}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
+            {pattern.source === "estimated" ? (
+              <p className="text-sm text-muted-foreground py-2">No stream history or schedule found for this streamer yet.</p>
+            ) : (
+              <div className="space-y-3">
                 <div>
-                  <p className="text-xs text-muted-foreground">Usual start time</p>
-                  <p className="font-medium">{pattern.typicalTime}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Avg session</p>
-                  <p className="font-medium">{pattern.avgHours}h</p>
-                </div>
-              </div>
-              {pattern.topGames.length > 0 ? (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Most played games</p>
-                  <div className="flex flex-wrap gap-1">
-                    {pattern.topGames.map((g) => (
-                      <Badge key={g} variant="outline" className="text-xs">{g}</Badge>
+                  <p className="text-xs text-muted-foreground mb-1">Typical streaming days</p>
+                  <div className="flex gap-1">
+                    {DAYS.map((d) => (
+                      <span key={d} className="text-xs px-1.5 py-0.5 rounded font-medium"
+                        style={pattern.topDays.includes(d)
+                          ? { backgroundColor: accentColor, color: "#fff" }
+                          : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }}>
+                        {d}
+                      </span>
                     ))}
                   </div>
                 </div>
-              ) : (
-                <p className="text-xs text-muted-foreground italic">No game data — <button className="underline" onClick={refreshHistory}>refresh</button></p>
-              )}
-            </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Usual start time</p>
+                    <p className="font-medium">{pattern.typicalTime}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Avg session</p>
+                    <p className="font-medium">{pattern.avgHours}h</p>
+                  </div>
+                </div>
+                {pattern.topGames.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Most played games</p>
+                    <div className="flex flex-wrap gap-1">
+                      {pattern.topGames.map((g) => (
+                        <Badge key={g} variant="outline" className="text-xs">{g}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

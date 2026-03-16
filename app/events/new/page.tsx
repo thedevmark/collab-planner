@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import useSWR from "swr";
 import { useRouter, useSearchParams } from "next/navigation";
-import { format, addHours, parseISO } from "date-fns";
+import { format, addHours } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,19 +11,168 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Sparkles, Loader2, Plus, X } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, Check, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import type { TimeSuggestion, GameSuggestion } from "@/types";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import type { GameSuggestion } from "@/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+const FALLBACK_COLORS = [
+  "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
+  "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
+];
+
+const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const FULL_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 function toLocalDatetimeValue(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  const y = date.getFullYear();
+  const mo = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  const h = String(date.getHours()).padStart(2, "0");
+  const mi = String(date.getMinutes()).padStart(2, "0");
+  return `${y}-${mo}-${d}T${h}:${mi}`;
+}
+
+function snapToQuarter(date: Date): Date {
+  const ms = 15 * 60 * 1000;
+  return new Date(Math.round(date.getTime() / ms) * ms);
+}
+
+function getFriendPattern(friend: any) {
+  const history = friend.streamHistory ?? [];
+  const segments = friend.scheduleSegments ?? [];
+  const dayCounts: Record<number, number> = {};
+  const hours: number[] = [];
+
+  for (const s of history) {
+    const d = new Date(s.startTime).getDay();
+    dayCounts[d] = (dayCounts[d] ?? 0) + 1;
+    hours.push(new Date(s.startTime).getHours());
+  }
+  for (const s of segments) {
+    const d = new Date(s.startTime).getDay();
+    dayCounts[d] = (dayCounts[d] ?? 0) + 0.5;
+    hours.push(new Date(s.startTime).getHours());
+  }
+
+  if (hours.length === 0) return null;
+
+  const topDayIndices = Object.entries(dayCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([d]) => parseInt(d));
+
+  hours.sort((a, b) => a - b);
+  const medHour = hours[Math.floor(hours.length / 2)];
+  const h = medHour % 12 === 0 ? 12 : medHour % 12;
+  const typicalTime = `~${h}${medHour >= 12 ? "PM" : "AM"}`;
+
+  return { topDayIndices, typicalTime };
+}
+
+function StreamPatternPanel({
+  friends,
+  selectedFriendIds,
+  allFriends,
+}: {
+  friends: any[];
+  selectedFriendIds: number[];
+  allFriends: any[];
+}) {
+  const selected = allFriends.filter((f) => selectedFriendIds.includes(f.id));
+  if (selected.length === 0) return null;
+
+  const patterns = selected.map((f, i) => {
+    const color = f.channelColor || FALLBACK_COLORS[
+      allFriends.filter((x) => !x.isMe).findIndex((x) => x.id === f.id) % FALLBACK_COLORS.length
+    ];
+    return { friend: f, color, pattern: getFriendPattern(f) };
+  });
+
+  const patternsWithData = patterns.filter((p) => p.pattern);
+  const overlapDays = [0, 1, 2, 3, 4, 5, 6].filter((d) => {
+    if (patternsWithData.length === 0) return false;
+    const matches = patternsWithData.filter((p) => p.pattern!.topDayIndices.includes(d)).length;
+    return matches >= Math.max(2, Math.ceil(patternsWithData.length * 0.6));
+  });
+
+  return (
+    <Card className="sticky top-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <TrendingUp className="h-4 w-4" />
+          Stream Pattern Overlap
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {patterns.map(({ friend, color, pattern }) => (
+          <div key={friend.id} className="space-y-1.5 animate-fade-in-up">
+            <div className="flex items-center gap-2">
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={friend.avatarUrl} />
+                <AvatarFallback className="text-[10px]">{friend.displayName[0]}</AvatarFallback>
+              </Avatar>
+              <span className="text-xs font-semibold truncate" style={{ color }}>
+                {friend.isMe ? "You" : friend.displayName}
+              </span>
+              {pattern && (
+                <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{pattern.typicalTime}</span>
+              )}
+            </div>
+
+            {pattern ? (
+              <div className="flex gap-0.5">
+                {DAYS.map((d, i) => {
+                  const active = pattern.topDayIndices.includes(i);
+                  const overlap = overlapDays.includes(i);
+                  return (
+                    <span
+                      key={d}
+                      className="flex-1 text-center text-[10px] py-0.5 rounded font-medium"
+                      style={
+                        active
+                          ? {
+                              backgroundColor: overlap ? color : color + "55",
+                              color: overlap ? "#fff" : color,
+                              outline: overlap ? `1px solid ${color}` : "none",
+                            }
+                          : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
+                      }
+                    >
+                      {d}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-[10px] text-muted-foreground italic">Not enough data yet</p>
+            )}
+          </div>
+        ))}
+
+        {overlapDays.length > 0 && patterns.length > 1 && (
+          <div className="pt-1 border-t border-border">
+            <p className="text-[10px] text-muted-foreground mb-1">Best overlap days</p>
+            <div className="flex gap-1 flex-wrap">
+              {overlapDays.map((d) => (
+                <Badge key={d} variant="secondary" className="text-[10px] px-2 py-0.5">
+                  {FULL_DAYS[d]}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {patterns.length > 1 && overlapDays.length === 0 && patternsWithData.length > 1 && (
+          <p className="text-[10px] text-muted-foreground italic pt-1 border-t border-border">
+            No consistent overlap — try AI Suggest Times for the best fit.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 function NewEventForm() {
@@ -48,10 +197,11 @@ function NewEventForm() {
   const [saving, setSaving] = useState(false);
 
   const [suggestingTimes, setSuggestingTimes] = useState(false);
-  const [timeSuggestions, setTimeSuggestions] = useState<TimeSuggestion[]>([]);
+  const [timeSuggestions, setTimeSuggestions] = useState<any[]>([]);
 
   const [suggestingGames, setSuggestingGames] = useState(false);
   const [gameSuggestions, setGameSuggestions] = useState<GameSuggestion[]>([]);
+  const [gameSuggestHint, setGameSuggestHint] = useState<string>("");
 
   const [gameSearch, setGameSearch] = useState("");
   const { data: gameResults = [] } = useSWR(
@@ -59,21 +209,28 @@ function NewEventForm() {
     fetcher
   );
 
-  // Always include "me" + pre-select friend from URL
   useEffect(() => {
     const ids: number[] = meFriend ? [meFriend.id] : [];
     const friendId = searchParams.get("friendId");
     if (friendId) ids.push(parseInt(friendId));
+    const friendIds = searchParams.get("friendIds");
+    if (friendIds) {
+      for (const raw of friendIds.split(",")) {
+        const n = parseInt(raw.trim());
+        if (!isNaN(n) && !ids.includes(n)) ids.push(n);
+      }
+    }
     if (ids.length > 0) setSelectedFriendIds(ids);
   }, [meFriend?.id, searchParams]);
 
-  // All IDs sent to AI always include me
   const aiIds = meFriend
     ? [...new Set([meFriend.id, ...selectedFriendIds])]
     : selectedFriendIds;
 
+  const selectedNonMe = selectedFriendIds.filter((id) => meFriend?.id !== id);
+
   function toggleFriend(id: number) {
-    if (meFriend && id === meFriend.id) return; // me is always selected
+    if (meFriend && id === meFriend.id) return;
     setSelectedFriendIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
@@ -82,6 +239,7 @@ function NewEventForm() {
   async function suggestTimes() {
     if (aiIds.length === 0) return;
     setSuggestingTimes(true);
+    setTimeSuggestions([]);
     try {
       const res = await fetch("/api/ai/suggest-times", {
         method: "POST",
@@ -95,26 +253,31 @@ function NewEventForm() {
     }
   }
 
+  function applyTimeSuggestion(suggestion: any) {
+    const start = snapToQuarter(new Date(suggestion.start));
+    const end = snapToQuarter(new Date(suggestion.end));
+    setStartTime(toLocalDatetimeValue(start));
+    setEndTime(toLocalDatetimeValue(end));
+    setTimeSuggestions([]);
+  }
+
   async function suggestGames() {
     if (aiIds.length === 0) return;
     setSuggestingGames(true);
+    const hint = gameName.trim() || undefined;
+    setGameSuggestHint(hint ?? "");
+    setGameSearch("");
     try {
       const res = await fetch("/api/ai/suggest-games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friendIds: aiIds }),
+        body: JSON.stringify({ friendIds: aiIds, gameHint: hint }),
       });
       const data = await res.json();
       setGameSuggestions(data.suggestions ?? []);
     } finally {
       setSuggestingGames(false);
     }
-  }
-
-  function applySuggestion(s: TimeSuggestion) {
-    setStartTime(toLocalDatetimeValue(new Date(s.start)));
-    setEndTime(toLocalDatetimeValue(new Date(s.end)));
-    setTimeSuggestions([]);
   }
 
   async function handleSubmit() {
@@ -135,15 +298,16 @@ function NewEventForm() {
       });
       const event = await res.json();
       if (!res.ok) throw new Error(event.error);
-
       router.push(`/events/${event.id}`);
     } finally {
       setSaving(false);
     }
   }
 
+  const showPanel = selectedNonMe.length > 0 || !!meFriend;
+
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/calendar">
           <Button variant="ghost" size="sm">
@@ -154,205 +318,213 @@ function NewEventForm() {
         <h1 className="text-3xl font-bold">New Collab Event</h1>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle className="text-base">Event Details</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              placeholder="e.g. Weekend Gaming Session"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start">Start Time *</Label>
-              <Input
-                id="start"
-                type="datetime-local"
-                value={startTime}
-                onChange={(e) => {
-                  setStartTime(e.target.value);
-                  if (e.target.value) {
-                    const newEnd = addHours(new Date(e.target.value), 3);
-                    setEndTime(toLocalDatetimeValue(newEnd));
-                  }
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="end">End Time *</Label>
-              <Input
-                id="end"
-                type="datetime-local"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="What's the plan?"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-
-          {/* Game field */}
-          <div className="space-y-2">
-            <Label htmlFor="game">Game</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
+      <div className={`gap-6 max-w-5xl ${showPanel ? "grid grid-cols-[minmax(0,1fr)_320px]" : "flex flex-col max-w-2xl"}`}>
+        {/* Left column */}
+        <div className="space-y-6 min-w-0">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Event Details</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title *</Label>
                 <Input
-                  id="game"
-                  placeholder="Search Twitch categories..."
-                  value={gameSearch || gameName}
-                  onChange={(e) => { setGameSearch(e.target.value); setGameName(e.target.value); }}
+                  id="title"
+                  placeholder="e.g. Weekend Gaming Session"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                 />
-                {gameResults.length > 0 && gameSearch && (
-                  <div className="absolute top-full left-0 right-0 z-10 mt-1 border rounded-md bg-background shadow-md">
-                    {gameResults.slice(0, 6).map((g: any) => (
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Time *</Label>
+                  <DateTimePicker
+                    value={startTime}
+                    onChange={(v) => {
+                      setStartTime(v);
+                      if (v) setEndTime(toLocalDatetimeValue(addHours(new Date(v), 3)));
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>End Time *</Label>
+                  <DateTimePicker value={endTime} onChange={setEndTime} />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="What's the plan?"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
+
+              {/* Game / Genre */}
+              <div className="space-y-2">
+                <Label htmlFor="game">Game or Genre</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="game"
+                      placeholder="e.g. Minecraft, horror games, co-op shooters..."
+                      value={gameName}
+                      onChange={(e) => { setGameName(e.target.value); setGameSearch(e.target.value); }}
+                    />
+                    {gameResults.length > 0 && gameSearch && (
+                      <div className="absolute top-full left-0 right-0 z-10 mt-1 border rounded-md bg-background shadow-md">
+                        {gameResults.slice(0, 6).map((g: any) => (
+                          <button
+                            key={g.id}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent"
+                            onClick={() => { setGameName(g.name); setGameSearch(""); }}
+                          >
+                            {g.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={suggestGames}
+                    disabled={suggestingGames || aiIds.length === 0}
+                  >
+                    {suggestingGames ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    AI Suggest
+                  </Button>
+                </div>
+                {gameSuggestions.length > 0 && (
+                  <div className="border rounded-md p-3 space-y-2 bg-muted/30">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      AI Game Suggestions{gameSuggestHint ? <> using <span className="text-foreground">'{gameSuggestHint}'</span></> : ""}:
+                    </p>
+                    {gameSuggestions.map((g) => (
                       <button
-                        key={g.id}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
-                        onClick={() => { setGameName(g.name); setGameSearch(""); }}
+                        key={g.name}
+                        onClick={() => { setGameName(g.name); setGameSuggestions([]); }}
+                        className="w-full text-left p-2 rounded hover:bg-accent text-sm"
                       >
-                        {g.name}
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{g.name}</span>
+                          {g.isTrending && <Badge variant="secondary" className="text-xs">Trending</Badge>}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{g.reason}</p>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={suggestGames}
-                disabled={suggestingGames || aiIds.length === 0}
-              >
-                {suggestingGames ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                AI Suggest
-              </Button>
-            </div>
-            {gameSuggestions.length > 0 && (
-              <div className="border rounded-md p-3 space-y-2 bg-muted/30">
-                <p className="text-xs font-medium text-muted-foreground">AI Game Suggestions:</p>
-                {gameSuggestions.map((g) => (
-                  <button
-                    key={g.name}
-                    onClick={() => { setGameName(g.name); setGameSuggestions([]); }}
-                    className="w-full text-left p-2 rounded hover:bg-accent text-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{g.name}</span>
-                      {g.isTrending && <Badge variant="secondary" className="text-xs">Trending</Badge>}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{g.reason}</p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Friends */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Invite Friends</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={suggestTimes}
-              disabled={suggestingTimes || aiIds.length === 0}
-            >
-              {suggestingTimes ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Suggest Times
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {/* "Me" card — always selected, non-toggleable */}
-          {meFriend && (
-            <div className="flex items-center gap-2 p-2 rounded-md border border-muted bg-muted/20 opacity-60 mb-1">
-              <Avatar className="h-7 w-7">
-                <AvatarImage src={meFriend.avatarUrl} />
-                <AvatarFallback className="text-xs">{meFriend.displayName[0]}</AvatarFallback>
-              </Avatar>
-              <span className="text-sm truncate">{meFriend.displayName}</span>
-              <span className="text-xs text-muted-foreground ml-auto">you</span>
-            </div>
-          )}
-
-          {otherFriends.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              <Link href="/friends" className="underline">Add friends</Link> to invite them
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              {otherFriends.map((f: any) => {
-                const selected = selectedFriendIds.includes(f.id);
-                return (
-                  <button
-                    key={f.id}
-                    onClick={() => toggleFriend(f.id)}
-                    className={`flex items-center gap-2 p-2 rounded-md border text-left transition-colors ${
-                      selected ? "border-primary bg-primary/10" : "hover:bg-accent"
-                    }`}
-                  >
-                    <Avatar className="h-7 w-7">
-                      <AvatarImage src={f.avatarUrl} />
-                      <AvatarFallback className="text-xs">{f.displayName[0]}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium truncate">{f.displayName}</span>
-                    {selected && <Plus className="h-4 w-4 text-primary ml-auto shrink-0 rotate-45" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {timeSuggestions.length > 0 && (
-            <div className="border rounded-md p-3 space-y-2 bg-muted/30 mt-3">
-              <p className="text-xs font-medium text-muted-foreground">AI Time Suggestions:</p>
-              {timeSuggestions.map((s) => (
-                <button
-                  key={s.rank}
-                  onClick={() => applySuggestion(s)}
-                  className="w-full text-left p-3 rounded-md border hover:bg-accent text-sm space-y-1"
+          {/* Friends */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Invite Friends</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={suggestTimes}
+                  disabled={suggestingTimes || aiIds.length === 0}
                 >
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">#{s.rank}</Badge>
-                    <span className="font-medium">
-                      {format(new Date(s.start), "EEE, MMM d h:mm a")} –{" "}
-                      {format(new Date(s.end), "h:mm a")}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{s.reason}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Available: {s.participants.join(", ")}
-                  </p>
-                </button>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  {suggestingTimes ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {suggestingTimes ? "Suggesting..." : "Suggest Times"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {timeSuggestions.length > 0 && (
+                <div className="border rounded-md p-3 space-y-1 bg-muted/30">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">AI Time Suggestions:</p>
+                  {timeSuggestions.map((s, i) => {
+                    const start = snapToQuarter(new Date(s.start));
+                    const end = snapToQuarter(new Date(s.end));
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => applyTimeSuggestion(s)}
+                        className="w-full text-left p-2 rounded hover:bg-accent text-sm transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {format(start, "EEE, MMM d")}
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            {format(start, "h:mm a")} – {format(end, "h:mm a")}
+                          </span>
+                        </div>
+                        {s.reason && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{s.reason}</p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {meFriend && (
+                <div className="flex items-center gap-2 p-2 rounded-md border border-muted bg-muted/20 opacity-60">
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src={meFriend.avatarUrl} />
+                    <AvatarFallback className="text-xs">{meFriend.displayName[0]}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm truncate">{meFriend.displayName}</span>
+                  <span className="text-xs text-muted-foreground ml-auto">you</span>
+                </div>
+              )}
 
-      <div className="flex gap-3">
-        <Button onClick={handleSubmit} disabled={saving || !title || !startTime || !endTime}>
-          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          Create Event
-        </Button>
-        <Link href="/calendar">
-          <Button variant="outline">Cancel</Button>
-        </Link>
+              {otherFriends.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  <Link href="/friends" className="underline">Add friends</Link> to invite them
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {otherFriends.map((f: any) => {
+                    const selected = selectedFriendIds.includes(f.id);
+                    return (
+                      <button
+                        key={f.id}
+                        onClick={() => toggleFriend(f.id)}
+                        className={`flex items-center gap-2 p-2 rounded-md border text-left transition-colors ${
+                          selected ? "border-slate-500 bg-slate-700/40" : "hover:bg-accent"
+                        }`}
+                      >
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={f.avatarUrl} />
+                          <AvatarFallback className="text-xs">{f.displayName[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium truncate">{f.displayName}</span>
+                        {selected && <Check className="h-3.5 w-3.5 text-slate-300 ml-auto shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="flex gap-3">
+            <Button onClick={handleSubmit} disabled={saving || !title || !startTime || !endTime}>
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Create Event
+            </Button>
+            <Link href="/calendar">
+              <Button variant="outline">Cancel</Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Right column — pattern panel */}
+        {showPanel && (
+          <StreamPatternPanel
+            friends={friends}
+            selectedFriendIds={aiIds}
+            allFriends={friends}
+          />
+        )}
       </div>
     </div>
   );

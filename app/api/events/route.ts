@@ -50,11 +50,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "End time must be after start time" }, { status: 400 });
     }
 
+    const now = new Date();
+    const autoReminders = [
+      { offset: 14 * 24 * 60 * 60 * 1000, label: "2 weeks before" },
+      { offset:  7 * 24 * 60 * 60 * 1000, label: "1 week before" },
+      { offset:      24 * 60 * 60 * 1000, label: "1 day before" },
+      { offset:       2 * 60 * 60 * 1000, label: "2 hours before" },
+    ];
+    const reminders = autoReminders
+      .map(({ offset, label }) => ({ remindAt: new Date(start.getTime() - offset), label }))
+      .filter(({ remindAt }) => remindAt > now);
+
     const event = await prisma.event.create({
       data: {
         title: data.title,
         description: data.description ?? "",
-        startTime: new Date(data.startTime),
+        startTime: start,
         endTime: new Date(data.endTime),
         gameName: data.gameName ?? "",
         gameId: data.gameId ?? "",
@@ -63,6 +74,7 @@ export async function POST(req: Request) {
               create: data.participantIds.map((friendId) => ({ friendId })),
             }
           : undefined,
+        reminders: reminders.length > 0 ? { create: reminders } : undefined,
       },
       include: {
         participants: {

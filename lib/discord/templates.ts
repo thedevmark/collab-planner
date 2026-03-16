@@ -20,27 +20,28 @@ export function formatDateTime(date: Date): string {
 // Simple fallback templates (used when AI is unavailable)
 export function buildInviteMessage(ctx: DiscordMessageContext): string {
   const timeStr = formatDateTime(ctx.startTime);
-  const game = ctx.gameName ? ` playing **${ctx.gameName}**` : "";
-  const gcal = ctx.googleCalendarLink ? `\n\nAdd to your calendar: ${ctx.googleCalendarLink}` : "";
+  const gameLine = ctx.gameName ? `Game: ${ctx.gameName}` : "Game: TBD";
+  const calendarLine = ctx.googleCalendarLink ? `\nCalendar: ${ctx.googleCalendarLink}` : "";
 
-  return `Hey ${ctx.friends.join(", ")}! 👋
+  return `${ctx.friends.join(", ")} -
 
-Want to do a collab stream${game}?
+Want to run this collab?
 
-🗓️ **${ctx.eventTitle}**
-📅 ${timeStr}${gcal}
+${ctx.eventTitle}
+${timeStr}
+${gameLine}${calendarLine}
 
-You in? 🎮`;
+You in?`;
 }
 
 export function buildReminderMessage(ctx: DiscordMessageContext): string {
   const timeStr = formatDateTime(ctx.startTime);
-  const game = ctx.gameName ? ` (${ctx.gameName})` : "";
-  const gcal = ctx.googleCalendarLink ? `\nCalendar: ${ctx.googleCalendarLink}` : "";
+  const gameLine = ctx.gameName ? `Game: ${ctx.gameName}\n` : "";
+  const calendarLine = ctx.googleCalendarLink ? `Calendar: ${ctx.googleCalendarLink}\n` : "";
 
-  return `🔔 Reminder: **${ctx.eventTitle}**${game} is coming up!
+  return `Reminder.
 
-📅 ${timeStr}${gcal}
-
-See you there! 🎮`;
+${ctx.eventTitle}
+${timeStr}
+${gameLine}${calendarLine}`.trim();
 }

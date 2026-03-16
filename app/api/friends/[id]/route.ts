@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { backfillStoredStreamHistoryGameNames } from "@/lib/twitch/fetchStreamHistory";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -10,6 +11,7 @@ const updateSchema = z.object({
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    await backfillStoredStreamHistoryGameNames(parseInt(id)).catch(() => {});
     const friend = await prisma.friend.findUnique({
       where: { id: parseInt(id) },
       include: {

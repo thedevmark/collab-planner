@@ -16,6 +16,49 @@ const schema = z.object({
   additionalContext: z.string().optional(),
 });
 
+const SLOP_PATTERNS = [
+  /\bdelve\b/i,
+  /\bunlock\b/i,
+  /\btapestry\b/i,
+  /\bpivotal\b/i,
+  /\bmultifaceted\b/i,
+  /\btransformative\b/i,
+  /\bfoster\b/i,
+  /\bnavigate\b/i,
+  /\bcomprehensive\b/i,
+  /\bit'?s important to (?:note|remember)\b/i,
+  /\bin conclusion\b/i,
+  /\boverall\b/i,
+  /\bjust checking in\b/i,
+  /\bhope you(?:'re| are) doing well\b/i,
+];
+
+function soundsLikeAiSlop(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+
+  if (SLOP_PATTERNS.some((pattern) => pattern.test(trimmed))) {
+    return true;
+  }
+
+  const paragraphs = trimmed.split(/\n\s*\n/).filter(Boolean);
+  if (paragraphs.length >= 3) {
+    return true;
+  }
+
+  const sentences = trimmed.split(/(?<=[.!?])\s+/).filter(Boolean);
+  if (sentences.length >= 4) {
+    const lengths = sentences.map((sentence) => sentence.trim().split(/\s+/).length);
+    const max = Math.max(...lengths);
+    const min = Math.min(...lengths);
+    if (max - min <= 3) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -50,15 +93,31 @@ export async function POST(req: Request) {
 
     let content: string;
     try {
-      const prompt = buildDiscordMessagePrompt({
+      const promptInput = {
         messageType: data.messageType,
         eventTitle,
         startTime: formattedTime,
         gameName,
         friends,
         additionalContext: data.additionalContext,
-      });
+      };
+
+      const prompt = buildDiscordMessagePrompt(promptInput);
       content = await generateText(prompt);
+
+      if (soundsLikeAiSlop(content)) {
+        const retryPrompt = `${prompt}
+
+Your first draft was too generic and polished. Rewrite it.
+
+Fix these issues:
+- More human. Less assistant.
+- Shorter opening.
+- More variation in sentence length.
+- Strip any corporate, motivational, or summary language.
+- Use plain words. Keep the original event details.`;
+        content = await generateText(retryPrompt);
+      }
     } catch {
       // Fallback to template if AI fails
       const ctx = {

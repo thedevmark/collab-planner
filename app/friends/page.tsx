@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
+import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Search, Loader2, TrendingUp, Users2 } from "lucide-react";
+import { UserPlus, Search, Loader2, TrendingUp, Users2, CalendarClock, Gamepad2 } from "lucide-react";
 
 const FALLBACK_COLORS = [
   "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
@@ -35,15 +36,15 @@ function StreamPattern({ friend, accentColor }: { friend: any; accentColor: stri
   const gameCounts: Record<string, number> = {};
 
   for (const s of history) {
-    const d = new Date(s.startTime).getUTCDay();
+    const d = new Date(s.startTime).getDay();
     dayCounts[d] = (dayCounts[d] ?? 0) + 1;
-    hours.push(new Date(s.startTime).getUTCHours());
+    hours.push(new Date(s.startTime).getHours());
     if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 1;
   }
   for (const s of friend.scheduleSegments ?? []) {
-    const d = new Date(s.startTime).getUTCDay();
+    const d = new Date(s.startTime).getDay();
     dayCounts[d] = (dayCounts[d] ?? 0) + 0.5;
-    hours.push(new Date(s.startTime).getUTCHours());
+    hours.push(new Date(s.startTime).getHours());
     if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 0.5;
   }
 
@@ -59,16 +60,25 @@ function StreamPattern({ friend, accentColor }: { friend: any; accentColor: stri
     hours.sort((a, b) => a - b);
     const med = hours[Math.floor(hours.length / 2)];
     const h = med % 12 || 12;
-    timeLabel = `~${h}${med >= 12 ? "PM" : "AM"} UTC`;
+    timeLabel = `~${h}${med >= 12 ? "PM" : "AM"}`;
     isEstimate = history.length < 3;
   } else {
-    topDays = ["Fri", "Sat", "Sun"];
-    timeLabel = "~8PM UTC";
+    topDays = [];
+    timeLabel = "";
     isEstimate = true;
   }
 
   const topGame = Object.entries(gameCounts)
     .sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0];
+
+  if (isEstimate && topDays.length === 0) {
+    return (
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <TrendingUp className="h-3 w-3" />
+        No stream data yet
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-1.5">
@@ -86,6 +96,36 @@ function StreamPattern({ friend, accentColor }: { friend: any; accentColor: stri
         ))}
       </div>
       {topGame && <Badge variant="outline" className="text-xs">{topGame}</Badge>}
+    </div>
+  );
+}
+
+function RecentCollabSummary({ friend, accentColor }: { friend: any; accentColor: string }) {
+  const recentCollabs = friend.recentCollabs ?? [];
+  if (recentCollabs.length === 0) return null;
+
+  const latest = recentCollabs[0];
+  const activity = latest.gameName || latest.description;
+
+  return (
+    <div
+      className="rounded-md border px-2.5 py-2 space-y-1.5"
+      style={{ borderColor: accentColor + "40", backgroundColor: accentColor + "10" }}
+    >
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <CalendarClock className="h-3 w-3 shrink-0" />
+        <span className="truncate">
+          Last collab {format(new Date(latest.startTime), "MMM d, yyyy")}
+          {recentCollabs.length > 1 ? ` · ${recentCollabs.length} total` : ""}
+        </span>
+      </div>
+      <p className="text-xs font-medium truncate">{latest.title}</p>
+      {activity ? (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+          <Gamepad2 className="h-3 w-3 shrink-0" />
+          <span className="truncate">{activity}</span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -245,6 +285,7 @@ export default function FriendsPage() {
                     </div>
 
                     <StreamPattern friend={friend} accentColor={accentColor} />
+                    <RecentCollabSummary friend={friend} accentColor={accentColor} />
 
                     {(friend.collabSignals?.length ?? 0) > 0 && (() => {
                       // Summarize collab partners from signals
