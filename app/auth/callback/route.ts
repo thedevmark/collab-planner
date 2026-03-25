@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
         const existingMe = await prisma.friend.findFirst({
           where: { userId, isMe: true },
-          select: { id: true },
+          select: { id: true, channelColor: true },
         });
 
         if (!existingMe) {
@@ -45,9 +45,14 @@ export async function GET(request: Request) {
             select: { id: true },
           });
         } else {
+          // Keep avatar/name in sync; refresh channelColor if it was never fetched
+          const colorUpdate: { displayName: string; avatarUrl: string; channelColor?: string } = { displayName, avatarUrl };
+          if (!existingMe.channelColor) {
+            try { colorUpdate.channelColor = await getChatColor(username); } catch { /* non-critical */ }
+          }
           await prisma.friend.update({
             where: { id: existingMe.id },
-            data: { displayName, avatarUrl },
+            data: colorUpdate,
             select: { id: true },
           });
         }

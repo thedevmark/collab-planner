@@ -169,7 +169,7 @@ export default function FriendsPage() {
     }
   }
 
-  const meColor = meFriend?.channelColor || "#7c3aed";
+  const meColor = meFriend?.channelColor || "#7aa2f7";
 
   return (
     <div className="space-y-6">
