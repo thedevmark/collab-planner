@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Collab Planner</title>
+  <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0e0e10;
+      color: #efeff1;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      line-height: 1.4;
+      padding: 12px;
+      min-height: 300px;
+      overflow-x: hidden;
+    }
+
+    /* ── Skeleton shimmer ─────────────────────── */
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position:  400px 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, #1f1f23 25%, #2d2d31 50%, #1f1f23 75%);
+      background-size: 800px 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+    }
+    .skel-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; }
+    .skel-item   { height: 11px; margin-bottom: 6px; }
+    .skel-btn    { height: 34px; border-radius: 6px; margin-top: 8px; }
+
+    /* ── Header ───────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--accent, #9147ff);
+      flex-shrink: 0;
+    }
+    .avatar-placeholder {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #2d2d31;
+      border: 2px solid var(--accent, #9147ff);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--accent, #9147ff);
+    }
+    .header-text  { flex: 1; min-width: 0; }
+    .streamer-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--accent, #9147ff);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .subtitle { font-size: 11px; color: #adadb8; margin-top: 1px; }
+
+    /* ── Divider ──────────────────────────────── */
+    hr { border: none; border-top: 1px solid #1f1f23; margin: 10px 0; }
+
+    /* ── Sections ─────────────────────────────── */
+    .section       { margin-bottom: 10px; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #adadb8;
+      margin-bottom: 6px;
+    }
+    .empty-state { font-size: 12px; color: #5a5a72; font-style: italic; }
+
+    /* ── Schedule items ───────────────────────── */
+    .schedule-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid #1f1f23;
+    }
+    .schedule-item:last-child { border-bottom: none; }
+    .schedule-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent, #9147ff);
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+    .schedule-info  { flex: 1; min-width: 0; }
+    .schedule-title {
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .schedule-time { font-size: 11px; color: #adadb8; margin-top: 1px; }
+    .recurring-badge {
+      font-size: 10px;
+      background: #1f1f23;
+      color: #adadb8;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-top: 2px;
+      display: inline-block;
+    }
+
+    /* ── Collab items ─────────────────────────── */
+    .collab-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid #1f1f23;
+    }
+    .collab-item:last-child { border-bottom: none; }
+    .collab-icon  { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+    .collab-info  { flex: 1; min-width: 0; }
+    .collab-title {
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .collab-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+      flex-wrap: wrap;
+    }
+    .collab-date { font-size: 11px; color: #adadb8; }
+    .game-badge {
+      font-size: 10px;
+      background: color-mix(in srgb, var(--accent, #9147ff) 15%, transparent);
+      color: var(--accent, #9147ff);
+      padding: 1px 5px;
+      border-radius: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 120px;
+    }
+
+    /* ── CTA button ───────────────────────────── */
+    .cta-btn {
+      display: block;
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--accent, #9147ff);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      margin-top: 6px;
+      transition: opacity 0.15s;
+    }
+    .cta-btn:hover { opacity: 0.85; }
+
+    /* ── Not-found state ──────────────────────── */
+    .centered-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 28px 12px;
+      gap: 10px;
+      min-height: 240px;
+    }
+    .state-icon  { font-size: 32px; }
+    .state-title { font-size: 13px; font-weight: 700; }
+    .state-sub   { font-size: 12px; color: #adadb8; line-height: 1.5; }
+    .state-link  {
+      font-size: 12px;
+      color: var(--accent, #9147ff);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .state-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <!-- Loading skeleton -->
+  <div id="state-loading">
+    <div class="header">
+      <div class="skeleton skel-avatar"></div>
+      <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+        <div class="skeleton" style="height:14px; width:55%;"></div>
+        <div class="skeleton" style="height:11px; width:38%;"></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="skeleton" style="height:11px; width:40%; margin-bottom:10px;"></div>
+      <div class="skeleton skel-item" style="width:100%;"></div>
+      <div class="skeleton skel-item" style="width:90%;"></div>
+      <div class="skeleton skel-item" style="width:75%;"></div>
+    </div>
+    <div class="section">
+      <div class="skeleton" style="height:11px; width:48%; margin-bottom:10px;"></div>
+      <div class="skeleton skel-item" style="width:100%;"></div>
+      <div class="skeleton skel-item" style="width:82%;"></div>
+    </div>
+    <div class="skeleton skel-btn"></div>
+  </div>
+
+  <!-- Main content -->
+  <div id="state-content" style="display:none;">
+    <div class="header">
+      <div id="avatar-wrap"></div>
+      <div class="header-text">
+        <div id="streamer-name" class="streamer-name"></div>
+        <div class="subtitle">Collab Planner</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📅 Schedule</div>
+      <div id="schedule-list"></div>
+    </div>
+
+    <hr />
+
+    <div class="section">
+      <div class="section-title">🤝 Planned Collabs</div>
+      <div id="collab-list"></div>
+    </div>
+
+    <a id="cta-btn" class="cta-btn" href="#" target="_blank" rel="noopener noreferrer">
+      Plan a collab
+    </a>
+  </div>
+
+  <!-- Not found -->
+  <div id="state-not-found" style="display:none;">
+    <div class="centered-state">
+      <div class="state-icon">🎮</div>
+      <div class="state-title">Not on Collab Planner yet</div>
+      <div class="state-sub">This streamer hasn't joined Collab Planner.<br/>Ask them to sign up!</div>
+      <a class="state-link" href="https://collab.deutschmark.online" target="_blank" rel="noopener noreferrer">
+        Learn more →
+      </a>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div id="state-error" style="display:none;">
+    <div class="centered-state">
+      <div class="state-icon">⚠️</div>
+      <div class="state-title">Couldn't load data</div>
+      <div class="state-sub">Please try again later.</div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'https://collab.deutschmark.online';
+
+    let channelLogin = null;
+    let fetchStarted = false;
+
+    function showState(id) {
+      ['state-loading', 'state-content', 'state-not-found', 'state-error'].forEach(function(s) {
+        document.getElementById(s).style.display = (s === id) ? '' : 'none';
+      });
+    }
+
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function fmtDate(isoStr) {
+      var d = new Date(isoStr);
+      var now = new Date();
+      var tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      var timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      if (d.toDateString() === now.toDateString()) return 'Today \xb7 ' + timeStr;
+      if (d.toDateString() === tomorrow.toDateString()) return 'Tomorrow \xb7 ' + timeStr;
+      return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ' \xb7 ' + timeStr;
+    }
+
+    function makePlaceholder(name) {
+      var el = document.createElement('div');
+      el.className = 'avatar-placeholder';
+      el.textContent = ((name || '?')[0]).toUpperCase();
+      return el;
+    }
+
+    function render(data, username) {
+      if (!data.found) {
+        showState('state-not-found');
+        return;
+      }
+
+      var accent = (data.channelColor && data.channelColor !== '') ? data.channelColor : '#9147ff';
+      document.documentElement.style.setProperty('--accent', accent);
+
+      // Avatar
+      var wrap = document.getElementById('avatar-wrap');
+      if (data.avatarUrl) {
+        var img = document.createElement('img');
+        img.className = 'avatar';
+        img.src = data.avatarUrl;
+        img.alt = data.displayName || username;
+        img.onerror = function() { img.replaceWith(makePlaceholder(data.displayName || username)); };
+        wrap.appendChild(img);
+      } else {
+        wrap.appendChild(makePlaceholder(data.displayName || username));
+      }
+
+      document.getElementById('streamer-name').textContent = data.displayName || username;
+
+      // Schedule
+      var schedEl = document.getElementById('schedule-list');
+      var segs = (data.schedule || []).slice(0, 4);
+      if (segs.length === 0) {
+        schedEl.innerHTML = '<div class="empty-state">Nothing scheduled yet</div>';
+      } else {
+        schedEl.innerHTML = segs.map(function(s) {
+          return '<div class="schedule-item">'
+            + '<div class="schedule-dot"></div>'
+            + '<div class="schedule-info">'
+            + '<div class="schedule-title">' + esc(s.title || 'Stream') + '</div>'
+            + '<div class="schedule-time">' + fmtDate(s.startTime) + '</div>'
+            + (s.isRecurring ? '<span class="recurring-badge">Weekly</span>' : '')
+            + '</div></div>';
+        }).join('');
+      }
+
+      // Collabs
+      var collabEl = document.getElementById('collab-list');
+      var collabs = (data.collabs || []).slice(0, 3);
+      if (collabs.length === 0) {
+        collabEl.innerHTML = '<div class="empty-state">No upcoming collabs</div>';
+      } else {
+        collabEl.innerHTML = collabs.map(function(c) {
+          return '<div class="collab-item">'
+            + '<div class="collab-icon">\uD83E\uDD1D</div>'
+            + '<div class="collab-info">'
+            + '<div class="collab-title">' + esc(c.title || 'Collab') + '</div>'
+            + '<div class="collab-meta">'
+            + '<span class="collab-date">' + fmtDate(c.startTime) + '</span>'
+            + (c.gameName ? '<span class="game-badge">' + esc(c.gameName) + '</span>' : '')
+            + '</div></div></div>';
+        }).join('');
+      }
+
+      // CTA
+      var btn = document.getElementById('cta-btn');
+      btn.textContent = 'Plan a collab with ' + (data.displayName || username);
+      btn.href = API_BASE + '/events/new?addFriend=' + encodeURIComponent(username);
+
+      showState('state-content');
+    }
+
+    async function loadStreamerData(username) {
+      if (fetchStarted) return;
+      fetchStarted = true;
+      try {
+        var res = await fetch(API_BASE + '/api/extension/streamer/' + encodeURIComponent(username));
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var data = await res.json();
+        render(data, username);
+      } catch (e) {
+        showState('state-error');
+      }
+    }
+
+    window.Twitch.ext.onContext(function(ctx) {
+      if (!channelLogin && ctx.channel) {
+        channelLogin = ctx.channel;
+        loadStreamerData(channelLogin);
+      }
+    });
+
+    // Fallback: if context doesn't fire with channel, show error after timeout
+    window.Twitch.ext.onAuthorized(function(auth) {
+      if (channelLogin) return;
+      setTimeout(function() {
+        if (!fetchStarted) showState('state-error');
+      }, 4000);
+    });
+  </script>
+
+</body>
+</html>

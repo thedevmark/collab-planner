@@ -1,0 +1,15 @@
+{
+  "name": "Collab Planner",
+  "version": "0.0.1",
+  "description": "Plan stream collaborations — see schedules, upcoming collabs, and connect with streamers.",
+  "views": {
+    "panel": {
+      "viewerUrl": "panel.html",
+      "height": 300,
+      "canLinkExternalContent": true
+    }
+  },
+  "allowlistedConfigUrls": [],
+  "allowlistedPanelUrls": ["https://collab.deutschmark.online/api/extension/*"],
+  "ebs": "https://collab.deutschmark.online"
+}

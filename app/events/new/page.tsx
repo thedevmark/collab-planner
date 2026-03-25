@@ -272,6 +272,27 @@ function NewEventForm() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.get("fromInvite"), friends.length > 0]);
 
+  useEffect(() => {
+    const addFriend = searchParams.get("addFriend");
+    if (!addFriend || friends.length === 0) return;
+
+    const existing = friends.find(
+      (f: any) => f.username?.toLowerCase() === addFriend.toLowerCase()
+    );
+    if (existing && !existing.isMe) {
+      setSelectedFriendIds((prev) =>
+        prev.includes(existing.id) ? prev : [...prev, existing.id]
+      );
+    } else if (!existing) {
+      fetch("/api/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: addFriend, isSuggested: false }),
+      }).catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get("addFriend"), friends.length > 0]);
+
   const aiIds = meFriend
     ? [...new Set([meFriend.id, ...selectedFriendIds])]
     : selectedFriendIds;

@@ -51,7 +51,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/invite") ||
-    pathname.startsWith("/api/health");
+    pathname.startsWith("/api/health") ||
+    pathname.startsWith("/api/extension");
 
   // Redirect unauthenticated users to login
   if (!user && !isAuthRoute) {
