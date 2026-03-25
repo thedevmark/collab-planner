@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import useSWR from "swr";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Check, Copy, CheckCheck, Loader2, ExternalLink } from "lucide-react";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface Friend {
   id: number;
@@ -50,6 +53,11 @@ export function InviteDialog({ friends, defaultFriendIds = [], children }: Invit
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("Collab Stream");
   const [gameName, setGameName] = useState("");
+  const [gameSearch, setGameSearch] = useState("");
+  const { data: gameResults = [] } = useSWR(
+    gameSearch.length >= 2 ? `/api/twitch/categories?q=${encodeURIComponent(gameSearch)}` : null,
+    fetcher
+  );
   const [message, setMessage] = useState("");
   const [selectedIds, setSelectedIds] = useState<number[]>(initialSelectedIds);
   const [expiry, setExpiry] = useState<number>(7 * 24);
@@ -61,6 +69,7 @@ export function InviteDialog({ friends, defaultFriendIds = [], children }: Invit
   function resetForm() {
     setTitle("Collab Stream");
     setGameName("");
+    setGameSearch("");
     setMessage("");
     setSelectedIds(initialSelectedIds());
     setExpiry(7 * 24);
@@ -136,12 +145,30 @@ export function InviteDialog({ friends, defaultFriendIds = [], children }: Invit
                 Game{" "}
                 <span className="text-muted-foreground text-xs font-normal">(optional)</span>
               </Label>
-              <Input
-                id="invite-game"
-                value={gameName}
-                onChange={(e) => setGameName(e.target.value)}
-                placeholder="e.g. Minecraft"
-              />
+              <div className="relative">
+                <Input
+                  id="invite-game"
+                  value={gameName || gameSearch}
+                  onChange={(e) => { setGameName(""); setGameSearch(e.target.value); }}
+                  placeholder="e.g. Minecraft"
+                  autoComplete="off"
+                />
+                {gameResults.length > 0 && gameSearch && !gameName && (
+                  <div className="absolute top-full left-0 right-0 z-10 mt-1 border border-border rounded-md bg-background shadow-md">
+                    {gameResults.slice(0, 6).map((g: any) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => { setGameName(g.name); setGameSearch(""); }}
+                      >
+                        {g.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
