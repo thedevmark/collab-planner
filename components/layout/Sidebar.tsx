@@ -135,108 +135,106 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         </nav>
 
         {user && (
-          <div className="p-3 border-t space-y-1">
-            {/* User identity + platform badges */}
-            <div className="px-1 pt-1 pb-2 space-y-2">
-              <div className="flex items-center gap-2">
-                {avatarUrl ? (
-                  <Image
-                    src={avatarUrl}
-                    alt={displayName}
-                    width={28}
-                    height={28}
-                    className="rounded-full shrink-0"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                    {displayName[0]?.toUpperCase() ?? "?"}
+          <div className="p-3 border-t space-y-0.5">
+            {/* User identity */}
+            <div className="flex items-center gap-2.5 px-2 py-2 mb-1">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt={displayName}
+                  width={30}
+                  height={30}
+                  className="rounded-full shrink-0"
+                />
+              ) : (
+                <div className="w-[30px] h-[30px] rounded-full bg-zinc-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                  {displayName[0]?.toUpperCase() ?? "?"}
+                </div>
+              )}
+              <span className="text-xs font-medium text-zinc-300 truncate">{displayName}</span>
+            </div>
+
+            {/* Platform connection badges */}
+            <div className="flex items-center gap-2 px-2 pb-2.5">
+              {/* Twitch — always connected */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#9147ff]/10 border border-[#9147ff]/25 cursor-default select-none">
+                    <Twitch className="h-3 w-3 text-[#9147ff]" />
+                    <span className="text-[10px] font-semibold tracking-wide text-[#9147ff]">Twitch</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.7)] ml-0.5" />
                   </div>
-                )}
-                <span className="text-xs font-medium text-zinc-300 truncate">{displayName}</span>
-              </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  <p className="font-medium">Twitch connected</p>
+                  {twitchUsername && <p className="text-muted-foreground">@{twitchUsername}</p>}
+                </TooltipContent>
+              </Tooltip>
 
-              {/* Platform connection badges */}
-              <div className="flex items-center gap-1.5">
-                {/* Twitch — always connected */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#9147ff]/10 border border-[#9147ff]/25 cursor-default select-none">
-                      <Twitch className="h-2.5 w-2.5 text-[#9147ff]" />
-                      <span className="text-[10px] font-medium text-[#9147ff]">Twitch</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]" />
+              {/* Discord — connected or not */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {discordConnected ? (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#5865F2]/10 border border-[#5865F2]/25 cursor-default select-none">
+                      <DiscordIcon className="h-3 w-3 text-[#5865F2]" />
+                      <span className="text-[10px] font-semibold tracking-wide text-[#5865F2]">Discord</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.7)] ml-0.5" />
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">
-                    <p className="font-medium">Twitch connected</p>
-                    {twitchUsername && <p className="text-muted-foreground">@{twitchUsername}</p>}
-                  </TooltipContent>
-                </Tooltip>
-
-                {/* Discord — connected or not */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    {discordConnected ? (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#5865F2]/10 border border-[#5865F2]/25 cursor-default select-none">
-                        <DiscordIcon className="h-2.5 w-2.5 text-[#5865F2]" />
-                        <span className="text-[10px] font-medium text-[#5865F2]">Discord</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]" />
-                      </div>
-                    ) : (
-                      <Link
-                        href="/settings"
-                        onClick={onClose}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-full border border-dashed border-zinc-600 hover:border-[#5865F2]/40 hover:bg-[#5865F2]/5 transition-colors group"
-                      >
-                        <DiscordIcon className="h-2.5 w-2.5 text-zinc-500 group-hover:text-[#5865F2]/70 transition-colors" />
-                        <span className="text-[10px] font-medium text-zinc-500 group-hover:text-[#5865F2]/70 transition-colors">Discord</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
-                      </Link>
-                    )}
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">
-                    {discordConnected ? (
-                      <>
-                        <p className="font-medium">Discord connected</p>
-                        <p className="text-muted-foreground">@{settings.discordUsername}</p>
-                        {settings.discordGuildName && settings.discordChannelName && (
-                          <p className="text-muted-foreground">{settings.discordGuildName} · #{settings.discordChannelName}</p>
-                        )}
-                        {settings.discordGuildName && !settings.discordChannelName && (
-                          <p className="text-yellow-400/80">No channel selected yet</p>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <p className="font-medium">Discord not connected</p>
-                        <p className="text-muted-foreground">Click to set up in Settings</p>
-                      </>
-                    )}
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+                  ) : (
+                    <Link
+                      href="/settings"
+                      onClick={onClose}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-dashed border-zinc-600 hover:border-[#5865F2]/40 hover:bg-[#5865F2]/5 transition-colors group"
+                    >
+                      <DiscordIcon className="h-3 w-3 text-zinc-500 group-hover:text-[#5865F2]/70 transition-colors" />
+                      <span className="text-[10px] font-semibold tracking-wide text-zinc-500 group-hover:text-[#5865F2]/70 transition-colors">Discord</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 ml-0.5" />
+                    </Link>
+                  )}
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  {discordConnected ? (
+                    <>
+                      <p className="font-medium">Discord connected</p>
+                      <p className="text-muted-foreground">@{settings.discordUsername}</p>
+                      {settings.discordGuildName && settings.discordChannelName && (
+                        <p className="text-muted-foreground">{settings.discordGuildName} · #{settings.discordChannelName}</p>
+                      )}
+                      {settings.discordGuildName && !settings.discordChannelName && (
+                        <p className="text-yellow-400/80">No channel selected yet</p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-medium">Discord not connected</p>
+                      <p className="text-muted-foreground">Click to set up in Settings</p>
+                    </>
+                  )}
+                </TooltipContent>
+              </Tooltip>
             </div>
 
             <button
               onClick={handleRestartOnboarding}
               disabled={restartingOnboarding}
-              className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <RotateCcw className="h-3.5 w-3.5 shrink-0" />
               {restartingOnboarding ? "Restarting..." : "Restart onboarding"}
             </button>
             <button
               onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-              className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
               aria-label="Toggle theme"
             >
-              {resolvedTheme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+              {resolvedTheme === "dark" ? <Sun className="h-3.5 w-3.5 shrink-0" /> : <Moon className="h-3.5 w-3.5 shrink-0" />}
               {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
             </button>
             <button
               onClick={handleSignOut}
-              className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >
-              <LogOut className="h-3.5 w-3.5" />
+              <LogOut className="h-3.5 w-3.5 shrink-0" />
               Sign out
             </button>
           </div>
