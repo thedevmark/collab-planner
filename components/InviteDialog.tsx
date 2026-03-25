@@ -30,11 +30,11 @@ interface InviteDialogProps {
   children: React.ReactNode;
 }
 
-const EXPIRY_OPTIONS: { label: string; hours: number | null }[] = [
+const EXPIRY_OPTIONS: { label: string; hours: number }[] = [
+  { label: "1 hour", hours: 1 },
   { label: "24 hours", hours: 24 },
+  { label: "3 days", hours: 3 * 24 },
   { label: "7 days", hours: 7 * 24 },
-  { label: "30 days", hours: 30 * 24 },
-  { label: "Never", hours: null },
 ];
 
 export function InviteDialog({ friends, defaultFriendIds = [], children }: InviteDialogProps) {
@@ -52,7 +52,7 @@ export function InviteDialog({ friends, defaultFriendIds = [], children }: Invit
   const [gameName, setGameName] = useState("");
   const [message, setMessage] = useState("");
   const [selectedIds, setSelectedIds] = useState<number[]>(initialSelectedIds);
-  const [expiry, setExpiry] = useState<number | null>(7 * 24);
+  const [expiry, setExpiry] = useState<number>(7 * 24);
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState<{ token: string; url: string } | null>(null);
   const [copied, setCopied] = useState(false);

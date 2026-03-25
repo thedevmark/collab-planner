@@ -9,7 +9,7 @@ const createInviteSchema = z.object({
   gameName: z.string().optional(),
   description: z.string().optional(),
   message: z.string().optional(),
-  expiresIn: z.number().nullable().optional(),
+  expiresIn: z.number().max(7 * 24).optional(),
   maxUses: z.number().nullable().optional(),
 });
 
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     const expiresAt =
       data.expiresIn != null
         ? new Date(Date.now() + data.expiresIn * 60 * 60 * 1000)
-        : null;
+        : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // default 7 days
 
     const invite = await prisma.collabInvite.create({
       data: {
