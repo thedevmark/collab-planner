@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser, unauthorized } from "@/lib/auth";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -9,12 +10,18 @@ const createSchema = z.object({
 });
 
 export async function GET(req: Request) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const { searchParams } = new URL(req.url);
     const eventId = searchParams.get("eventId");
 
     const reminders = await prisma.reminder.findMany({
-      where: { ...(eventId && { eventId: parseInt(eventId) }) },
+      where: {
+        event: { userId: user.id },
+        ...(eventId && { eventId: parseInt(eventId) }),
+      },
       include: { event: { select: { id: true, title: true } } },
       orderBy: { remindAt: "asc" },
     });
@@ -25,9 +32,15 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const body = await req.json();
     const data = createSchema.parse(body);
+
+    const event = await prisma.event.findFirst({ where: { id: data.eventId, userId: user.id } });
+    if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
     const reminder = await prisma.reminder.create({
       data: {

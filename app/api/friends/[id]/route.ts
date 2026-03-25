@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser, unauthorized } from "@/lib/auth";
 import { backfillStoredStreamHistoryGameNames } from "@/lib/twitch/fetchStreamHistory";
 import { z } from "zod";
 
@@ -9,11 +10,16 @@ const updateSchema = z.object({
 });
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const { id } = await params;
-    await backfillStoredStreamHistoryGameNames(parseInt(id)).catch(() => {});
-    const friend = await prisma.friend.findUnique({
-      where: { id: parseInt(id) },
+    const friendId = parseInt(id);
+    await backfillStoredStreamHistoryGameNames(friendId).catch(() => {});
+
+    const friend = await prisma.friend.findFirst({
+      where: { id: friendId, userId: user.id },
       include: {
         streamHistory: {
           orderBy: { startTime: "desc" },
@@ -42,10 +48,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const { id } = await params;
     const body = await req.json();
     const data = updateSchema.parse(body);
+
+    const existing = await prisma.friend.findFirst({ where: { id: parseInt(id), userId: user.id } });
+    if (!existing) return NextResponse.json({ error: "Friend not found" }, { status: 404 });
 
     const friend = await prisma.friend.update({
       where: { id: parseInt(id) },
@@ -61,8 +73,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const { id } = await params;
+    const existing = await prisma.friend.findFirst({ where: { id: parseInt(id), userId: user.id } });
+    if (!existing) return NextResponse.json({ error: "Friend not found" }, { status: 404 });
+
     await prisma.friend.update({
       where: { id: parseInt(id) },
       data: { isActive: false },

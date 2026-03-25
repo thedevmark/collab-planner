@@ -11,10 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Sparkles, Loader2, Check, TrendingUp } from "lucide-react";
+import { ArrowLeft, Loader2, Check, TrendingUp, Zap } from "lucide-react";
 import Link from "next/link";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
-import type { GameSuggestion } from "@/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -167,7 +166,7 @@ function StreamPatternPanel({
 
         {patterns.length > 1 && overlapDays.length === 0 && patternsWithData.length > 1 && (
           <p className="text-[10px] text-muted-foreground italic pt-1 border-t border-border">
-            No consistent overlap — try AI Suggest Times for the best fit.
+            No consistent overlap — try Suggest Times for the best fit.
           </p>
         )}
       </CardContent>
@@ -198,10 +197,10 @@ function NewEventForm() {
 
   const [suggestingTimes, setSuggestingTimes] = useState(false);
   const [timeSuggestions, setTimeSuggestions] = useState<any[]>([]);
+  const [timeSuggestTimezone, setTimeSuggestTimezone] = useState("UTC");
 
   const [suggestingGames, setSuggestingGames] = useState(false);
-  const [gameSuggestions, setGameSuggestions] = useState<GameSuggestion[]>([]);
-  const [gameSuggestHint, setGameSuggestHint] = useState<string>("");
+  const [gameSuggestions, setGameSuggestions] = useState<any[]>([]);
 
   const [gameSearch, setGameSearch] = useState("");
   const { data: gameResults = [] } = useSWR(
@@ -241,13 +240,14 @@ function NewEventForm() {
     setSuggestingTimes(true);
     setTimeSuggestions([]);
     try {
-      const res = await fetch("/api/ai/suggest-times", {
+      const res = await fetch("/api/suggest-times", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ friendIds: aiIds }),
       });
       const data = await res.json();
       setTimeSuggestions(data.suggestions ?? []);
+      if (data.timezone) setTimeSuggestTimezone(data.timezone);
     } finally {
       setSuggestingTimes(false);
     }
@@ -264,17 +264,15 @@ function NewEventForm() {
   async function suggestGames() {
     if (aiIds.length === 0) return;
     setSuggestingGames(true);
-    const hint = gameName.trim() || undefined;
-    setGameSuggestHint(hint ?? "");
     setGameSearch("");
     try {
-      const res = await fetch("/api/ai/suggest-games", {
+      const res = await fetch("/api/suggest-games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friendIds: aiIds, gameHint: hint }),
+        body: JSON.stringify({ friendIds: aiIds }),
       });
       const data = await res.json();
-      setGameSuggestions(data.suggestions ?? []);
+      setGameSuggestions(data.games ?? []);
     } finally {
       setSuggestingGames(false);
     }
@@ -392,16 +390,16 @@ function NewEventForm() {
                     onClick={suggestGames}
                     disabled={suggestingGames || aiIds.length === 0}
                   >
-                    {suggestingGames ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                    AI Suggest
+                    {suggestingGames ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                    Suggest
                   </Button>
                 </div>
                 {gameSuggestions.length > 0 && (
-                  <div className="border rounded-md p-3 space-y-2 bg-muted/30">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      AI Game Suggestions{gameSuggestHint ? <> using <span className="text-foreground">'{gameSuggestHint}'</span></> : ""}:
+                  <div className="border rounded-md p-3 space-y-1 bg-muted/30">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                      Games from your stream history:
                     </p>
-                    {gameSuggestions.map((g) => (
+                    {gameSuggestions.slice(0, 8).map((g) => (
                       <button
                         key={g.name}
                         onClick={() => { setGameName(g.name); setGameSuggestions([]); }}
@@ -409,9 +407,13 @@ function NewEventForm() {
                       >
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{g.name}</span>
-                          {g.isTrending && <Badge variant="secondary" className="text-xs">Trending</Badge>}
+                          {g.friendCount > 1 && (
+                            <Badge variant="secondary" className="text-xs">{g.friendCount} friends</Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {g.totalSessions} streams
+                          </span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{g.reason}</p>
                       </button>
                     ))}
                   </div>
@@ -431,38 +433,36 @@ function NewEventForm() {
                   onClick={suggestTimes}
                   disabled={suggestingTimes || aiIds.length === 0}
                 >
-                  {suggestingTimes ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                  {suggestingTimes ? "Suggesting..." : "Suggest Times"}
+                  {suggestingTimes ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                  {suggestingTimes ? "Analyzing..." : "Suggest Times"}
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
               {timeSuggestions.length > 0 && (
                 <div className="border rounded-md p-3 space-y-1 bg-muted/30">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">AI Time Suggestions:</p>
-                  {timeSuggestions.map((s, i) => {
-                    const start = snapToQuarter(new Date(s.start));
-                    const end = snapToQuarter(new Date(s.end));
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => applyTimeSuggestion(s)}
-                        className="w-full text-left p-2 rounded hover:bg-accent text-sm transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            {format(start, "EEE, MMM d")}
-                          </span>
-                          <span className="text-muted-foreground text-xs">
-                            {format(start, "h:mm a")} – {format(end, "h:mm a")}
-                          </span>
-                        </div>
-                        {s.reason && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{s.reason}</p>
-                        )}
-                      </button>
-                    );
-                  })}
+                  <p className="text-xs font-medium text-muted-foreground mb-2">
+                    Best times based on stream history ({timeSuggestTimezone}):
+                  </p>
+                  {timeSuggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => applyTimeSuggestion(s)}
+                      className="w-full text-left p-2 rounded hover:bg-accent text-sm transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{s.displayStart}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          score {s.combinedScore}
+                        </span>
+                      </div>
+                      {s.friendScores?.length > 0 && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {s.friendScores.map((f: any) => `${f.displayName} ${f.probability}%`).join(" · ")}
+                        </p>
+                      )}
+                    </button>
+                  ))}
                 </div>
               )}
               {meFriend && (

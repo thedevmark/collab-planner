@@ -1,18 +1,23 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser, unauthorized } from "@/lib/auth";
 import { getBroadcasterSchedule, getChatColor } from "@/lib/twitch/client";
 import { fetchAndStoreStreamHistory } from "@/lib/twitch/fetchStreamHistory";
 import { detectCollabSignals } from "@/lib/twitch/detectCollabs";
 
 export async function POST() {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
+
   try {
-    const friends = await prisma.friend.findMany({ where: { isActive: true } });
+    const friends = await prisma.friend.findMany({ where: { isActive: true, userId } });
     const results: { friendId: number; username: string; historyCount: number; scheduleCount: number; error?: string }[] = [];
 
     for (const friend of friends) {
       try {
         const [historyCount, scheduleResult] = await Promise.allSettled([
-          fetchAndStoreStreamHistory(friend.id, friend.twitchId, 20),
+          fetchAndStoreStreamHistory(friend.id, friend.twitchId, 100),
           getBroadcasterSchedule(friend.twitchId).then(async (schedule) => {
             await prisma.scheduleSegment.deleteMany({ where: { friendId: friend.id } });
             if (!schedule?.segments) return 0;
@@ -34,7 +39,6 @@ export async function POST() {
           }),
         ]);
 
-        // Backfill channel color if not yet stored
         if (!friend.channelColor) {
           const color = await getChatColor(friend.username);
           if (color) {
@@ -42,7 +46,6 @@ export async function POST() {
           }
         }
 
-        // Re-run collab detection with fresh history
         await detectCollabSignals(friend.id);
 
         results.push({

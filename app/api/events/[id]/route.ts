@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser, unauthorized } from "@/lib/auth";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -13,10 +14,13 @@ const updateSchema = z.object({
 });
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const { id } = await params;
-    const event = await prisma.event.findUnique({
-      where: { id: parseInt(id) },
+    const event = await prisma.event.findFirst({
+      where: { id: parseInt(id), userId: user.id },
       include: {
         participants: {
           include: {
@@ -35,11 +39,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const { id } = await params;
     const eventId = parseInt(id);
     const body = await req.json();
     const data = updateSchema.parse(body);
+
+    const existing = await prisma.event.findFirst({ where: { id: eventId, userId: user.id } });
+    if (!existing) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
     const event = await prisma.$transaction(async (tx) => {
       const updatedEvent = await tx.event.update({
@@ -58,18 +68,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         },
       });
 
-      await tx.collabHistory.deleteMany({
-        where: { eventId },
-      });
+      await tx.collabHistory.deleteMany({ where: { eventId } });
 
       if (updatedEvent.status === "completed") {
-        const completedParticipants = updatedEvent.participants.filter((participant) => !participant.friend.isMe);
-
+        const completedParticipants = updatedEvent.participants.filter((p) => !p.friend.isMe);
         if (completedParticipants.length > 0) {
           await tx.collabHistory.createMany({
-            data: completedParticipants.map((participant) => ({
+            data: completedParticipants.map((p) => ({
               eventId,
-              friendId: participant.friendId,
+              friendId: p.friendId,
               title: updatedEvent.title,
               gameName: updatedEvent.gameName,
               date: updatedEvent.startTime,
@@ -92,8 +99,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const { id } = await params;
+    const existing = await prisma.event.findFirst({ where: { id: parseInt(id), userId: user.id } });
+    if (!existing) return NextResponse.json({ error: "Event not found" }, { status: 404 });
+
     await prisma.event.update({
       where: { id: parseInt(id) },
       data: { status: "canceled" },

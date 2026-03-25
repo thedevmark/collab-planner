@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser, unauthorized } from "@/lib/auth";
 import { getBroadcasterSchedule } from "@/lib/twitch/client";
 
 const STALE_HOURS = 6;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const { id } = await params;
+    const friend = await prisma.friend.findFirst({ where: { id: parseInt(id), userId: user.id } });
+    if (!friend) return NextResponse.json({ error: "Friend not found" }, { status: 404 });
+
     const segments = await prisma.scheduleSegment.findMany({
       where: { friendId: parseInt(id), endTime: { gte: new Date() } },
       orderBy: { startTime: "asc" },
@@ -18,12 +25,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const { id } = await params;
-    const friend = await prisma.friend.findUnique({ where: { id: parseInt(id) } });
+    const friend = await prisma.friend.findFirst({ where: { id: parseInt(id), userId: user.id } });
     if (!friend) return NextResponse.json({ error: "Friend not found" }, { status: 404 });
 
-    // Check if recently fetched
     const latest = await prisma.scheduleSegment.findFirst({
       where: { friendId: friend.id },
       orderBy: { fetchedAt: "desc" },
@@ -36,7 +45,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     const schedule = await getBroadcasterSchedule(friend.twitchId);
 
-    // Delete old segments and insert fresh ones
     await prisma.scheduleSegment.deleteMany({ where: { friendId: friend.id } });
 
     if (schedule?.segments) {
@@ -45,7 +53,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
           .filter((s) => !s.canceled_until)
           .map((s) => {
             const startTime = new Date(s.start_time);
-            // Twitch may omit end_time — default to start + 3 hours to avoid epoch-zero in DB
             const endTime = s.end_time ? new Date(s.end_time) : new Date(startTime.getTime() + 3 * 3600 * 1000);
             return {
               friendId: friend.id,

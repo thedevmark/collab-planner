@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser, unauthorized } from "@/lib/auth";
 import { z } from "zod";
 
 const createEventSchema = z.object({
@@ -13,6 +14,10 @@ const createEventSchema = z.object({
 });
 
 export async function GET(req: Request) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
+
   try {
     const { searchParams } = new URL(req.url);
     const from = searchParams.get("from");
@@ -20,6 +25,7 @@ export async function GET(req: Request) {
 
     const events = await prisma.event.findMany({
       where: {
+        userId,
         ...(from && { startTime: { gte: new Date(from) } }),
         ...(to && { endTime: { lte: new Date(to) } }),
         status: { not: "canceled" },
@@ -40,6 +46,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
+
   try {
     const body = await req.json();
     const data = createEventSchema.parse(body);
@@ -63,16 +73,15 @@ export async function POST(req: Request) {
 
     const event = await prisma.event.create({
       data: {
+        userId,
         title: data.title,
         description: data.description ?? "",
         startTime: start,
-        endTime: new Date(data.endTime),
+        endTime: end,
         gameName: data.gameName ?? "",
         gameId: data.gameId ?? "",
         participants: data.participantIds
-          ? {
-              create: data.participantIds.map((friendId) => ({ friendId })),
-            }
+          ? { create: data.participantIds.map((friendId) => ({ friendId })) }
           : undefined,
         reminders: reminders.length > 0 ? { create: reminders } : undefined,
       },

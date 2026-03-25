@@ -1,13 +1,11 @@
 import { getTwitchToken } from "./auth";
-import { getApiKeys } from "@/lib/apiKeys";
 import type { TwitchUser, TwitchSchedule, TwitchGame, TwitchVideo } from "./types";
 
 const TWITCH_API = "https://api.twitch.tv/helix";
 
 async function twitchFetch<T>(path: string): Promise<T> {
   const token = await getTwitchToken();
-  const keys = await getApiKeys();
-  const clientId = keys.twitchClientId;
+  const clientId = process.env.TWITCH_CLIENT_ID!;
 
   const res = await fetch(`${TWITCH_API}${path}`, {
     headers: {

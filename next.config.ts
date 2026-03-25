@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
     lockDistDir: false,
     isolatedDevBuild: false,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "static-cdn.jtvnw.net",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

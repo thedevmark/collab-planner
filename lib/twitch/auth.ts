@@ -1,20 +1,13 @@
-import { getApiKeys } from "@/lib/apiKeys";
 import type { TwitchTokenResponse } from "./types";
 
-let cachedToken: { token: string; expiresAt: number; clientId: string } | null = null;
+let cachedToken: { token: string; expiresAt: number } | null = null;
 
 export async function getTwitchToken(): Promise<string> {
-  const keys = await getApiKeys();
-  const clientId = keys.twitchClientId;
-  const clientSecret = keys.twitchClientSecret;
+  const clientId = process.env.TWITCH_CLIENT_ID;
+  const clientSecret = process.env.TWITCH_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    throw new Error("Twitch API keys not configured. Go to Settings to add your Client ID and Secret.");
-  }
-
-  // Invalidate cache if client ID changed (user updated keys)
-  if (cachedToken && cachedToken.clientId !== clientId) {
-    cachedToken = null;
+    throw new Error("TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET must be set in environment variables.");
   }
 
   if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
@@ -27,15 +20,13 @@ export async function getTwitchToken(): Promise<string> {
   );
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Twitch auth failed (${res.status}). Check your Client ID and Secret in Settings.`);
+    throw new Error(`Twitch auth failed (${res.status}). Check TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET.`);
   }
 
   const data: TwitchTokenResponse = await res.json();
   cachedToken = {
     token: data.access_token,
     expiresAt: Date.now() + data.expires_in * 1000,
-    clientId,
   };
 
   return cachedToken.token;

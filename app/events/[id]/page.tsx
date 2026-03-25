@@ -14,9 +14,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
-  ArrowLeft, Calendar, Clock, Gamepad2, MessageSquare,
+  ArrowLeft, Calendar, Clock, Gamepad2,
   Bell, Trash2, Loader2, Edit2, Check, X,
 } from "lucide-react";
+import { MessageBlock } from "@/components/events/MessageBlock";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -40,8 +41,6 @@ function toLocalDatetimeValue(date: Date): string {
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: event, mutate } = useSWR(`/api/events/${id}`, fetcher);
-  const [generatingType, setGeneratingType] = useState<"invite" | "reminder" | null>(null);
-  const [generatedMessage, setGeneratedMessage] = useState("");
 
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -100,19 +99,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       body: JSON.stringify({ status }),
     });
     mutate();
-  }
-
-  async function generateMessage(type: "invite" | "reminder") {
-    setGeneratingType(type);
-    setGeneratedMessage("");
-    const res = await fetch("/api/ai/generate-message", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messageType: type, eventId: event.id }),
-    });
-    const data = await res.json();
-    setGeneratedMessage(data.content ?? "");
-    setGeneratingType(null);
   }
 
   const INVITE_STATUS_CYCLE: Record<string, string> = {
@@ -312,51 +298,17 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Actions */}
         <div className="space-y-4">
-          {/* Message generation */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Discord Messages</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => generateMessage("invite")}
-                  disabled={generatingType !== null}
-                >
-                  {generatingType === "invite" ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                  {generatingType === "invite" ? "Generating..." : "Invite"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => generateMessage("reminder")}
-                  disabled={generatingType !== null}
-                >
-                  {generatingType === "reminder" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
-                  {generatingType === "reminder" ? "Generating..." : "Reminder"}
-                </Button>
-              </div>
-              {generatedMessage && (
-                <div className="mt-2">
-                  <pre className="text-xs bg-muted p-3 rounded-md whitespace-pre-wrap font-sans">
-                    {generatedMessage}
-                  </pre>
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      size="sm"
-                      onClick={() => navigator.clipboard.writeText(generatedMessage)}
-                    >
-                      Copy
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {/* Message block */}
+          <MessageBlock
+            title={event.title}
+            gameName={event.gameName}
+            startTime={new Date(event.startTime)}
+            endTime={new Date(event.endTime)}
+            participants={event.participants?.map((p: any) => ({
+              displayName: p.friend.displayName,
+              twitchUsername: p.friend.username,
+            })) ?? []}
+          />
 
           {/* Reminders */}
           <Card>

@@ -41,13 +41,13 @@ export async function backfillStoredStreamHistoryGameNames(friendId?: number): P
   return updated;
 }
 
-/** Fetch and store the last `count` broadcasts for a friend. Skips already-stored videos. */
+/** Fetch and store the last `count` broadcasts for a friend. Accumulates — never deletes old records. */
 export async function fetchAndStoreStreamHistory(
   friendId: number,
   twitchId: string,
-  count = 20
+  count = 100
 ): Promise<number> {
-  const videos = await getRecentBroadcasts(twitchId, count);
+  const videos = await getRecentBroadcasts(twitchId, Math.min(count, 100));
   if (videos.length === 0) return 0;
   const gameNameById = await getGamesByIds(videos.map((video) => video.game_id ?? ""));
 
@@ -66,7 +66,7 @@ export async function fetchAndStoreStreamHistory(
 
     try {
       await prisma.streamHistory.upsert({
-        where: { videoId: v.id },
+        where: { friendId_videoId: { friendId, videoId: v.id } },
         create: {
           friendId,
           videoId: v.id,

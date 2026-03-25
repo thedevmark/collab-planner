@@ -1,32 +1,33 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser, unauthorized } from "@/lib/auth";
 import { getTwitchToken } from "@/lib/twitch/auth";
-import { getApiKeys } from "@/lib/apiKeys";
 
 export async function GET() {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
+
   try {
     const friends = await prisma.friend.findMany({
-      where: { isActive: true, isMe: false },
+      where: { isActive: true, isMe: false, userId },
       select: { id: true, twitchId: true, username: true, displayName: true, avatarUrl: true, channelColor: true },
     });
 
     if (friends.length === 0) return NextResponse.json({ live: [] });
 
     const token = await getTwitchToken();
-    const keys = await getApiKeys();
+    const clientId = process.env.TWITCH_CLIENT_ID!;
 
-    // Fetch live status for all friends in one request (up to 100 user_ids)
     const params = friends.map((f) => `user_id=${encodeURIComponent(f.twitchId)}`).join("&");
     const res = await fetch(`https://api.twitch.tv/helix/streams?${params}&first=100`, {
       headers: {
         Authorization: `Bearer ${token}`,
-        "Client-Id": keys.twitchClientId,
+        "Client-Id": clientId,
       },
     });
 
-    if (!res.ok) {
-      return NextResponse.json({ live: [] });
-    }
+    if (!res.ok) return NextResponse.json({ live: [] });
 
     const data: { data: { user_id: string; user_name: string; game_name: string; title: string; viewer_count: number }[] } = await res.json();
     const liveIds = new Set(data.data.map((s) => s.user_id));

@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser, unauthorized } from "@/lib/auth";
 
 export async function GET() {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const now = new Date();
     const pending = await prisma.reminder.findMany({
-      where: { remindAt: { lte: now }, sent: false },
+      where: {
+        remindAt: { lte: now },
+        sent: false,
+        event: { userId: user.id },
+      },
       include: { event: { select: { id: true, title: true } } },
     });
 

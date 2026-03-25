@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser, unauthorized } from "@/lib/auth";
 import { getUserByUsername, getBroadcasterSchedule, getChatColor } from "@/lib/twitch/client";
 import { backfillStoredStreamHistoryGameNames, fetchAndStoreStreamHistory } from "@/lib/twitch/fetchStreamHistory";
 import { z } from "zod";
@@ -21,12 +22,16 @@ const addFriendSchema = z.object({
 });
 
 export async function GET() {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
+
   try {
     await backfillStoredStreamHistoryGameNames().catch(() => {});
     const now = new Date();
 
     const friends = await prisma.friend.findMany({
-      where: { isActive: true },
+      where: { isActive: true, userId },
       include: {
         scheduleSegments: {
           where: { endTime: { gte: new Date() } },
@@ -98,7 +103,6 @@ export async function GET() {
       recentCollabsByFriend.set(participant.friendId, existing);
     }
 
-    // Background: fill in any missing channel colors (new field, existing rows may be empty)
     backfillMissingColors(friends).catch(() => {});
 
     return NextResponse.json(
@@ -113,6 +117,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
+
   try {
     const body = await req.json();
     const { username } = addFriendSchema.parse(body);
@@ -122,7 +130,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Twitch user not found" }, { status: 404 });
     }
 
-    const existing = await prisma.friend.findUnique({ where: { twitchId: twitchUser.id } });
+    const existing = await prisma.friend.findFirst({ where: { userId, twitchId: twitchUser.id } });
     if (existing) {
       if (!existing.isActive) {
         const updated = await prisma.friend.update({
@@ -134,11 +142,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Friend already added" }, { status: 409 });
     }
 
-    // Fetch channel brand color from Twitch GQL
     const channelColor = await getChatColor(twitchUser.login);
 
     const friend = await prisma.friend.create({
       data: {
+        userId,
         twitchId: twitchUser.id,
         username: twitchUser.login,
         displayName: twitchUser.display_name,
@@ -147,9 +155,8 @@ export async function POST(req: Request) {
       },
     });
 
-    // Fetch stream history (primary data source) + schedule (bonus if available)
     await Promise.allSettled([
-      fetchAndStoreStreamHistory(friend.id, twitchUser.id, 20),
+      fetchAndStoreStreamHistory(friend.id, twitchUser.id, 100),
       getBroadcasterSchedule(twitchUser.id).then(async (schedule) => {
         if (schedule?.segments) {
           await prisma.scheduleSegment.createMany({
@@ -176,8 +183,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid username" }, { status: 400 });
     }
     const msg = err instanceof Error ? err.message : "";
-    // Surface Twitch API errors cleanly; hide internal DB/Prisma details
-    if (msg.includes("Twitch API error") || msg.includes("not configured")) {
+    if (msg.includes("Twitch API error") || msg.includes("must be set")) {
       return NextResponse.json({ error: msg }, { status: 500 });
     }
     return NextResponse.json({ error: "Failed to add friend. Please try again." }, { status: 500 });

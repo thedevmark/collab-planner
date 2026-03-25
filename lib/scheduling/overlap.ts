@@ -1,3 +1,5 @@
+import type { StreamingPattern } from "./patterns";
+
 export interface TimeSlot {
   start: Date;
   end: Date;
@@ -11,7 +13,101 @@ export interface OverlapWindow {
   participants: string[];
 }
 
+/** A scored candidate collab window derived from pattern analysis */
+export interface ScoredSlot {
+  /** Start of 1-hour window (UTC) */
+  start: Date;
+  /** End of 1-hour window (UTC) */
+  end: Date;
+  /** Sum of (dayFrequency × hourDistribution) across all friends */
+  combinedScore: number;
+  /** Per-friend probability breakdown */
+  friendScores: Array<{ friendId: number; displayName: string; score: number }>;
+}
+
 const MIN_DURATION_MS = 60 * 60 * 1000; // 1 hour minimum
+
+/**
+ * Score-based overlap detection using streaming pattern probability distributions.
+ * For each 1-hour block in the next 14 days (UTC), computes a combined score
+ * by summing dayFrequency[day] × hourDistribution[hour] across all friends.
+ * Returns the top N slots sorted by score descending.
+ *
+ * All times are in UTC. Callers must convert to user's timezone for display.
+ */
+export function rankCollabSlots(
+  patterns: StreamingPattern[],
+  topN = 5,
+  from: Date = new Date(),
+  to: Date = new Date(Date.now() + 14 * 86400000)
+): ScoredSlot[] {
+  if (patterns.length === 0) return [];
+
+  const scored: ScoredSlot[] = [];
+
+  // Walk every hour in [from, to)
+  const cursor = new Date(from);
+  cursor.setUTCMinutes(0, 0, 0);
+
+  while (cursor < to) {
+    const day = cursor.getUTCDay();
+    const hour = cursor.getUTCHours();
+
+    const friendScores = patterns.map((p) => ({
+      friendId: p.friendId,
+      displayName: p.displayName,
+      score: p.dayFrequency[day] * p.hourDistribution[hour],
+    }));
+
+    const combinedScore = friendScores.reduce((sum, f) => sum + f.score, 0);
+
+    // Only include slots where every friend has at least a minimal probability
+    const allEngaged = friendScores.every((f) => f.score > 0);
+
+    if (allEngaged && combinedScore > 0) {
+      scored.push({
+        start: new Date(cursor),
+        end: new Date(cursor.getTime() + MIN_DURATION_MS),
+        combinedScore,
+        friendScores,
+      });
+    }
+
+    cursor.setUTCHours(cursor.getUTCHours() + 1);
+  }
+
+  // Sort by combinedScore descending, take top N
+  scored.sort((a, b) => b.combinedScore - a.combinedScore);
+  return scored.slice(0, topN);
+}
+
+/**
+ * Merge adjacent or overlapping hour-blocks with the same top slot,
+ * useful for grouping consecutive high-score windows into a single suggestion.
+ */
+export function mergeAdjacentSlots(slots: ScoredSlot[]): ScoredSlot[] {
+  if (slots.length === 0) return [];
+
+  // Sort by start time
+  const sorted = [...slots].sort((a, b) => a.start.getTime() - b.start.getTime());
+  const merged: ScoredSlot[] = [{ ...sorted[0] }];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const last = merged[merged.length - 1];
+    const curr = sorted[i];
+    if (curr.start.getTime() === last.end.getTime()) {
+      // Extend the window, keep the higher score
+      last.end = curr.end;
+      last.combinedScore = Math.max(last.combinedScore, curr.combinedScore);
+    } else {
+      merged.push({ ...curr });
+    }
+  }
+
+  return merged;
+}
+
+// ── Legacy binary overlap detection (kept for calendar schedule overlay) ──
 
 export function findOverlapWindows(
   slots: TimeSlot[],
@@ -77,9 +173,6 @@ export function findOverlapWindows(
 }
 
 // Convert schedule segments to free-time slots
-// Twitch schedules represent when streamers ARE streaming, so we invert these
-// to get free time. For this tool's purpose, we use the schedule segments directly
-// as "available for collab" windows since they already stream at those times.
 export function scheduleSegmentsToSlots(
   segments: Array<{
     startTime: Date;

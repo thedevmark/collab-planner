@@ -4,47 +4,48 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
-model Settings {
-  id              Int     @id @default(autoincrement())
-  twitchUsername  String  @default("")
-  broadcasterId   String  @default("")
-  twitchClientId     String @default("")
-  twitchClientSecret String @default("")
-  geminiApiKey       String @default("")
-  timezone        String  @default("UTC")
-  refreshInterval Int     @default(360)
-  notificationsEnabled Boolean @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+model Profile {
+  id           String   @id
+  twitchId     String   @unique
+  username     String
+  displayName  String
+  avatarUrl    String   @default("")
+  channelColor String   @default("")
+  timezone     String   @default("UTC")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Friend {
-  id             Int      @id @default(autoincrement())
-  twitchId       String   @unique
-  username       String   @unique
-  displayName    String
-  avatarUrl      String   @default("")
-  notes          String   @default("")
-  isActive       Boolean  @default(true)
-  isMe           Boolean  @default(false)
-  channelColor   String   @default("")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  scheduleSegments ScheduleSegment[]
-  streamHistory    StreamHistory[]
-  participants     EventParticipant[]
+  id               Int                @id @default(autoincrement())
+  userId           String
+  twitchId         String
+  username         String
+  displayName      String
+  avatarUrl        String             @default("")
+  notes            String             @default("")
+  isActive         Boolean            @default(true)
+  isMe             Boolean            @default(false)
+  channelColor     String             @default("")
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
   collabHistories  CollabHistory[]
   collabSignals    CollabSignal[]
+  participants     EventParticipant[]
+  scheduleSegments ScheduleSegment[]
+  streamHistory    StreamHistory[]
+
+  @@unique([userId, twitchId])
+  @@unique([userId, username])
 }
 
 model StreamHistory {
   id          Int      @id @default(autoincrement())
   friendId    Int
-  videoId     String   @unique
+  videoId     String
   title       String
   startTime   DateTime
   endTime     DateTime
@@ -52,44 +53,44 @@ model StreamHistory {
   gameName    String   @default("")
   gameId      String   @default("")
   fetchedAt   DateTime @default(now())
+  friend      Friend   @relation(fields: [friendId], references: [id], onDelete: Cascade)
 
-  friend Friend @relation(fields: [friendId], references: [id], onDelete: Cascade)
+  @@unique([friendId, videoId])
 }
 
 model ScheduleSegment {
-  id           Int      @id @default(autoincrement())
-  friendId     Int
-  segmentId    String   @default("")
-  title        String
-  startTime    DateTime
-  endTime      DateTime
-  gameName     String   @default("")
-  gameId       String   @default("")
-  isRecurring  Boolean  @default(false)
-  fetchedAt    DateTime @default(now())
-  createdAt    DateTime @default(now())
-
-  friend Friend @relation(fields: [friendId], references: [id], onDelete: Cascade)
+  id          Int      @id @default(autoincrement())
+  friendId    Int
+  segmentId   String   @default("")
+  title       String
+  startTime   DateTime
+  endTime     DateTime
+  gameName    String   @default("")
+  gameId      String   @default("")
+  isRecurring Boolean  @default(false)
+  fetchedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+  friend      Friend   @relation(fields: [friendId], references: [id], onDelete: Cascade)
 }
 
 model Event {
-  id                   Int      @id @default(autoincrement())
-  title                String
-  description          String   @default("")
-  startTime            DateTime
-  endTime              DateTime
-  gameName             String   @default("")
-  gameId               String   @default("")
-  status               String   @default("planned")
-  googleCalendarEventId String  @default("")
-  googleCalendarLink   String   @default("")
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  participants  EventParticipant[]
-  reminders     Reminder[]
-  messageLogs   MessageLog[]
-  collabHistory CollabHistory[]
+  id                    Int                @id @default(autoincrement())
+  userId                String
+  title                 String
+  description           String             @default("")
+  startTime             DateTime
+  endTime               DateTime
+  gameName              String             @default("")
+  gameId                String             @default("")
+  status                String             @default("planned")
+  googleCalendarEventId String             @default("")
+  googleCalendarLink    String             @default("")
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  collabHistory         CollabHistory[]
+  participants          EventParticipant[]
+  messageLogs           MessageLog[]
+  reminders             Reminder[]
 }
 
 model EventParticipant {
@@ -99,9 +100,8 @@ model EventParticipant {
   inviteStatus String   @default("pending")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-
-  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  friend Friend @relation(fields: [friendId], references: [id], onDelete: Cascade)
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  friend       Friend   @relation(fields: [friendId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, friendId])
 }
@@ -109,15 +109,14 @@ model EventParticipant {
 model CollabSignal {
   id           Int      @id @default(autoincrement())
   friendId     Int
-  partnerName  String   // display name or @handle extracted from VOD
-  partnerLogin String   @default("") // resolved Twitch login if known
-  detectedAt   DateTime // date of the source stream/VOD
-  source       String   // "vod_title_mention" | "concurrent_stream"
-  evidence     String   // the VOD title or description that triggered detection
-  confidence   String   @default("medium") // "high" | "medium"
+  partnerName  String
+  partnerLogin String   @default("")
+  detectedAt   DateTime
+  source       String
+  evidence     String
+  confidence   String   @default("medium")
   fetchedAt    DateTime @default(now())
-
-  friend Friend @relation(fields: [friendId], references: [id], onDelete: Cascade)
+  friend       Friend   @relation(fields: [friendId], references: [id], onDelete: Cascade)
 
   @@unique([friendId, partnerLogin, detectedAt])
 }
@@ -131,9 +130,8 @@ model CollabHistory {
   date      DateTime
   notes     String   @default("")
   createdAt DateTime @default(now())
-
-  event  Event?  @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  friend Friend  @relation(fields: [friendId], references: [id], onDelete: Cascade)
+  event     Event?   @relation(fields: [eventId], references: [id])
+  friend    Friend   @relation(fields: [friendId], references: [id], onDelete: Cascade)
 }
 
 model Reminder {
@@ -143,22 +141,22 @@ model Reminder {
   label     String   @default("")
   sent      Boolean  @default(false)
   createdAt DateTime @default(now())
-
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model MessageLog {
   id          Int      @id @default(autoincrement())
+  userId      String
   eventId     Int?
   messageType String
   content     String
   createdAt   DateTime @default(now())
-
-  event Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  event       Event?   @relation(fields: [eventId], references: [id])
 }
 
 model GoogleAuth {
   id           Int      @id @default(autoincrement())
+  userId       String   @unique
   accessToken  String
   refreshToken String
   expiryDate   DateTime

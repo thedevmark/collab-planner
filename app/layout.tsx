@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { headers } from "next/headers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,24 +15,32 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Twitch Collab Organizer",
-  description: "Plan collab streams with your Twitch friends",
+  title: "Collab Planner",
+  description: "Plan stream collabs with your Twitch friends",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? headersList.get("x-invoke-path") ?? "";
+  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/auth");
+
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <main className="ml-56 flex-1 p-6">
-            {children}
-          </main>
-        </div>
+        {isAuthPage ? (
+          children
+        ) : (
+          <div className="flex min-h-screen">
+            <Sidebar />
+            <main className="ml-56 flex-1 p-6">
+              {children}
+            </main>
+          </div>
+        )}
       </body>
     </html>
   );

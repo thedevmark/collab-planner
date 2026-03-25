@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser, unauthorized } from "@/lib/auth";
 import { analyzePatterns, inferWindowsForRange } from "@/lib/scheduling/patterns";
 
 export async function GET(req: Request) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
+
   try {
     const { searchParams } = new URL(req.url);
     const from = searchParams.get("from") ? new Date(searchParams.get("from")!) : new Date();
@@ -10,9 +15,13 @@ export async function GET(req: Request) {
       ? new Date(searchParams.get("to")!)
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+    // Get the user's own profile to identify their isMe friend
+    const profile = await prisma.profile.findUnique({ where: { id: userId } });
+
     const [events, scheduleSegments, friends] = await Promise.all([
       prisma.event.findMany({
         where: {
+          userId,
           startTime: { gte: from },
           endTime: { lte: to },
           status: { not: "canceled" },
@@ -30,7 +39,10 @@ export async function GET(req: Request) {
         where: {
           startTime: { gte: from },
           endTime: { lte: to },
-          friend: { isMe: false }, // exclude your own schedule — shown via inferred windows instead
+          friend: {
+            userId,
+            isMe: false, // exclude the user's own schedule — shown via inferred windows
+          },
         },
         include: {
           friend: { select: { id: true, username: true, displayName: true, avatarUrl: true, isMe: true } },
@@ -38,15 +50,14 @@ export async function GET(req: Request) {
         orderBy: { startTime: "asc" },
       }),
       prisma.friend.findMany({
-        where: { isActive: true },
+        where: { isActive: true, userId },
         include: {
-          streamHistory: { orderBy: { startTime: "desc" }, take: 30 },
+          streamHistory: { orderBy: { startTime: "desc" }, take: 100 },
           scheduleSegments: { orderBy: { startTime: "asc" }, take: 10 },
         },
       }),
     ]);
 
-    // Build inferred stream windows for each friend based on pattern analysis
     const inferredWindows = friends.flatMap((f) => {
       const pattern = analyzePatterns(
         f.id,

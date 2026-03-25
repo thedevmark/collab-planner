@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser, unauthorized } from "@/lib/auth";
 import { z } from "zod";
 
 const historySchema = z.object({
@@ -11,8 +12,14 @@ const historySchema = z.object({
 });
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const { id } = await params;
+    const friend = await prisma.friend.findFirst({ where: { id: parseInt(id), userId: user.id } });
+    if (!friend) return NextResponse.json({ error: "Friend not found" }, { status: 404 });
+
     const history = await prisma.collabHistory.findMany({
       where: { friendId: parseInt(id) },
       orderBy: { date: "desc" },
@@ -25,8 +32,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
   try {
     const { id } = await params;
+    const friend = await prisma.friend.findFirst({ where: { id: parseInt(id), userId: user.id } });
+    if (!friend) return NextResponse.json({ error: "Friend not found" }, { status: 404 });
+
     const body = await req.json();
     const data = historySchema.parse(body);
 
