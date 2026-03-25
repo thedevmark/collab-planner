@@ -98,7 +98,7 @@ function SettingsForm() {
             {avatarUrl ? (
               <Image src={avatarUrl} alt={displayName} width={48} height={48} className="rounded-full" />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-violet-600 flex items-center justify-center text-lg font-bold text-white">
+              <div className="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center text-lg font-bold text-white">
                 {displayName[0]?.toUpperCase() ?? "?"}
               </div>
             )}
@@ -106,7 +106,7 @@ function SettingsForm() {
               <p className="font-semibold">{displayName}</p>
               {twitchUsername && (
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Twitch className="h-3.5 w-3.5 text-violet-400" />
+                  <Twitch className="h-3.5 w-3.5 text-primary" />
                   @{twitchUsername}
                 </p>
               )}

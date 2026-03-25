@@ -169,7 +169,7 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
 }
 
 /**
- * Summarize collab signals for a friend into a human-readable AI prompt block.
+ * Summarize collab signals for a friend into a human-readable text block.
  */
 export interface CollabSummary {
   totalSignals: number;

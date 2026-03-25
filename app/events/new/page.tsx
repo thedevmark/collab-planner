@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import useSWR from "swr";
 import { useRouter, useSearchParams } from "next/navigation";
-import { format, addHours } from "date-fns";
+import { addHours, formatDistanceToNowStrict } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,18 +72,16 @@ function getFriendPattern(friend: any) {
 }
 
 function StreamPatternPanel({
-  friends,
   selectedFriendIds,
   allFriends,
 }: {
-  friends: any[];
   selectedFriendIds: number[];
   allFriends: any[];
 }) {
   const selected = allFriends.filter((f) => selectedFriendIds.includes(f.id));
   if (selected.length === 0) return null;
 
-  const patterns = selected.map((f, i) => {
+  const patterns = selected.map((f) => {
     const color = f.channelColor || FALLBACK_COLORS[
       allFriends.filter((x) => !x.isMe).findIndex((x) => x.id === f.id) % FALLBACK_COLORS.length
     ];
@@ -407,13 +405,29 @@ function NewEventForm() {
                       >
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{g.name}</span>
+                          <Badge
+                            variant={
+                              g.bucket === "everyone"
+                                ? "success"
+                                : g.bucket === "group"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                            className="text-xs capitalize"
+                          >
+                            {g.bucket === "everyone" ? "everyone plays" : g.bucket}
+                          </Badge>
                           {g.friendCount > 1 && (
                             <Badge variant="secondary" className="text-xs">{g.friendCount} friends</Badge>
                           )}
                           <span className="text-xs text-muted-foreground ml-auto">
-                            {g.totalSessions} streams
+                            {Math.round(g.score * 100)}%
                           </span>
                         </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {g.totalSessions} streams · {g.recentFriendCount} active recently · last seen{" "}
+                          {formatDistanceToNowStrict(new Date(g.lastPlayedAt), { addSuffix: true })}
+                        </p>
                       </button>
                     ))}
                   </div>
@@ -452,10 +466,14 @@ function NewEventForm() {
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{s.displayStart}</span>
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          score {s.combinedScore}
-                        </span>
+                        <Badge variant={s.confidence === "high" ? "success" : s.confidence === "medium" ? "secondary" : "outline"} className="text-[10px] capitalize">
+                          {s.confidence}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground ml-auto">{s.combinedScore}% match</span>
                       </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        through {s.displayEnd} · {s.windowHours}h window
+                      </p>
                       {s.friendScores?.length > 0 && (
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {s.friendScores.map((f: any) => `${f.displayName} ${f.probability}%`).join(" · ")}
@@ -489,7 +507,7 @@ function NewEventForm() {
                         key={f.id}
                         onClick={() => toggleFriend(f.id)}
                         className={`flex items-center gap-2 p-2 rounded-md border text-left transition-colors ${
-                          selected ? "border-slate-500 bg-slate-700/40" : "hover:bg-accent"
+                          selected ? "border-zinc-600 bg-zinc-800/40" : "hover:bg-accent"
                         }`}
                       >
                         <Avatar className="h-7 w-7">
@@ -497,7 +515,7 @@ function NewEventForm() {
                           <AvatarFallback className="text-xs">{f.displayName[0]}</AvatarFallback>
                         </Avatar>
                         <span className="text-sm font-medium truncate">{f.displayName}</span>
-                        {selected && <Check className="h-3.5 w-3.5 text-slate-300 ml-auto shrink-0" />}
+                        {selected && <Check className="h-3.5 w-3.5 text-zinc-300 ml-auto shrink-0" />}
                       </button>
                     );
                   })}
@@ -520,7 +538,6 @@ function NewEventForm() {
         {/* Right column — pattern panel */}
         {showPanel && (
           <StreamPatternPanel
-            friends={friends}
             selectedFriendIds={aiIds}
             allFriends={friends}
           />

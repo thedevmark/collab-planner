@@ -56,8 +56,8 @@ export function Sidebar() {
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-slate-700/50 text-slate-100 border-l-2 border-violet-500 pl-[10px]"
-                  : "text-muted-foreground hover:bg-slate-800 hover:text-slate-200"
+                  ? "bg-zinc-800/50 text-zinc-100 border-l-2 border-primary pl-[10px]"
+                  : "text-muted-foreground hover:bg-zinc-900 hover:text-zinc-200"
               )}
             >
               <Icon className="h-4 w-4" />
@@ -78,15 +78,15 @@ export function Sidebar() {
                 className="rounded-full"
               />
             ) : (
-              <div className="w-7 h-7 rounded-full bg-violet-600 flex items-center justify-center text-xs font-bold text-white">
+              <div className="w-7 h-7 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-bold text-white">
                 {displayName[0]?.toUpperCase() ?? "?"}
               </div>
             )}
-            <span className="text-xs font-medium text-slate-300 truncate">{displayName}</span>
+            <span className="text-xs font-medium text-zinc-300 truncate">{displayName}</span>
           </div>
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-slate-800 hover:text-slate-200 transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-zinc-900 hover:text-zinc-200 transition-colors"
           >
             <LogOut className="h-3.5 w-3.5" />
             Sign out

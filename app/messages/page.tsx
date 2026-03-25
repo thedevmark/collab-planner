@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageSquare, Bell, Copy, Check, Loader2, Wand2 } from "lucide-react";
 import { useClipboard } from "@/hooks/useClipboard";
@@ -35,7 +34,7 @@ function MessagesForm() {
     setGenerating(true);
     setGeneratedMessage("");
     try {
-      const res = await fetch("/api/ai/generate-message", {
+      const res = await fetch("/api/messages/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -46,7 +45,12 @@ function MessagesForm() {
         }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Failed to build message");
+      }
       setGeneratedMessage(data.content ?? data.error ?? "");
+    } catch (err) {
+      setGeneratedMessage(err instanceof Error ? err.message : "Failed to build message");
     } finally {
       setGenerating(false);
     }
@@ -135,7 +139,7 @@ function MessagesForm() {
             <CardHeader className="pb-3"><CardTitle className="text-base">Additional Context</CardTitle></CardHeader>
             <CardContent>
               <Textarea
-                placeholder="Any extra details for the AI..."
+                placeholder="Any extra details to include..."
                 value={additionalContext}
                 onChange={(e) => setAdditionalContext(e.target.value)}
                 className="min-h-[80px]"
@@ -145,7 +149,7 @@ function MessagesForm() {
 
           <Button className="w-full" onClick={generate} disabled={generating}>
             {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-            Generate Message
+            Build Message Draft
           </Button>
         </div>
 
@@ -175,7 +179,7 @@ function MessagesForm() {
               ) : (
                 <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
                   <Wand2 className="h-8 w-8 mb-2 opacity-30" />
-                  <p className="text-sm">Configure options and click Generate</p>
+                  <p className="text-sm">Configure options and build a draft</p>
                 </div>
               )}
             </CardContent>
@@ -190,7 +194,6 @@ function MessagesForm() {
 }
 
 function MessageLogSection() {
-  const [page, setPage] = useState(0);
   const { copy, copied } = useClipboard();
 
   // We'll fetch message logs via a new API route

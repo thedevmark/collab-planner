@@ -19,8 +19,10 @@ export interface ScoredSlot {
   start: Date;
   /** End of 1-hour window (UTC) */
   end: Date;
-  /** Sum of (dayFrequency × hourDistribution) across all friends */
+  /** Aggregate overlap score across all friends */
   combinedScore: number;
+  /** Human-readable confidence tier for the suggestion */
+  confidence: "high" | "medium" | "low";
   /** Per-friend probability breakdown */
   friendScores: Array<{ friendId: number; displayName: string; score: number }>;
 }
@@ -28,10 +30,9 @@ export interface ScoredSlot {
 const MIN_DURATION_MS = 60 * 60 * 1000; // 1 hour minimum
 
 /**
- * Score-based overlap detection using streaming pattern probability distributions.
- * For each 1-hour block in the next 14 days (UTC), computes a combined score
- * by summing dayFrequency[day] × hourDistribution[hour] across all friends.
- * Returns the top N slots sorted by score descending.
+ * Score-based overlap detection using recency-weighted, active-hour pattern
+ * distributions. The scorer prefers slots where the whole group has plausible
+ * overlap, not just identical start hours.
  *
  * All times are in UTC. Callers must convert to user's timezone for display.
  */
@@ -43,7 +44,7 @@ export function rankCollabSlots(
 ): ScoredSlot[] {
   if (patterns.length === 0) return [];
 
-  const scored: ScoredSlot[] = [];
+  const hourlyCandidates: ScoredSlot[] = [];
 
   // Walk every hour in [from, to)
   const cursor = new Date(from);
@@ -53,22 +54,27 @@ export function rankCollabSlots(
     const day = cursor.getUTCDay();
     const hour = cursor.getUTCHours();
 
-    const friendScores = patterns.map((p) => ({
-      friendId: p.friendId,
-      displayName: p.displayName,
-      score: p.dayFrequency[day] * p.hourDistribution[hour],
-    }));
+    const friendScores = patterns.map((pattern) => {
+      const baseScore = pattern.dayFrequency[day] * pattern.hourDistribution[hour];
+      return {
+        friendId: pattern.friendId,
+        displayName: pattern.displayName,
+        score: clampScore(baseScore * reliabilityWeight(pattern)),
+      };
+    });
 
-    const combinedScore = friendScores.reduce((sum, f) => sum + f.score, 0);
+    const minFriendScore = Math.min(...friendScores.map((friend) => friend.score));
+    const averageFriendScore =
+      friendScores.reduce((sum, friend) => sum + friend.score, 0) / friendScores.length;
+    const harmony = averageFriendScore > 0 ? minFriendScore / averageFriendScore : 0;
+    const combinedScore = averageFriendScore * (0.7 + 0.3 * harmony);
 
-    // Only include slots where every friend has at least a minimal probability
-    const allEngaged = friendScores.every((f) => f.score > 0);
-
-    if (allEngaged && combinedScore > 0) {
-      scored.push({
+    if (isViableSlot(patterns.length, averageFriendScore, minFriendScore)) {
+      hourlyCandidates.push({
         start: new Date(cursor),
         end: new Date(cursor.getTime() + MIN_DURATION_MS),
         combinedScore,
+        confidence: scoreToConfidence(averageFriendScore, minFriendScore),
         friendScores,
       });
     }
@@ -76,9 +82,9 @@ export function rankCollabSlots(
     cursor.setUTCHours(cursor.getUTCHours() + 1);
   }
 
-  // Sort by combinedScore descending, take top N
-  scored.sort((a, b) => b.combinedScore - a.combinedScore);
-  return scored.slice(0, topN);
+  const merged = mergeAdjacentSlots(hourlyCandidates);
+  merged.sort((a, b) => b.combinedScore - a.combinedScore || a.start.getTime() - b.start.getTime());
+  return merged.slice(0, topN);
 }
 
 /**
@@ -90,21 +96,72 @@ export function mergeAdjacentSlots(slots: ScoredSlot[]): ScoredSlot[] {
 
   // Sort by start time
   const sorted = [...slots].sort((a, b) => a.start.getTime() - b.start.getTime());
-  const merged: ScoredSlot[] = [{ ...sorted[0] }];
+  const merged: Array<ScoredSlot & { slotCount: number }> = [{ ...sorted[0], slotCount: 1 }];
 
   for (let i = 1; i < sorted.length; i++) {
     const last = merged[merged.length - 1];
     const curr = sorted[i];
     if (curr.start.getTime() === last.end.getTime()) {
-      // Extend the window, keep the higher score
       last.end = curr.end;
-      last.combinedScore = Math.max(last.combinedScore, curr.combinedScore);
+      last.combinedScore =
+        (last.combinedScore * last.slotCount + curr.combinedScore) / (last.slotCount + 1);
+      last.friendScores = last.friendScores.map((friendScore, index) => ({
+        ...friendScore,
+        score:
+          (friendScore.score * last.slotCount + curr.friendScores[index].score) /
+          (last.slotCount + 1),
+      }));
+      last.slotCount += 1;
+      last.confidence = strongestConfidence(last.confidence, curr.confidence);
     } else {
-      merged.push({ ...curr });
+      merged.push({ ...curr, slotCount: 1 });
     }
   }
 
-  return merged;
+  return merged.map(({ slotCount, ...slot }) => {
+    void slotCount;
+    return slot;
+  });
+}
+
+function reliabilityWeight(pattern: StreamingPattern): number {
+  const confidenceWeight: Record<StreamingPattern["confidence"], number> = {
+    strong: 1,
+    moderate: 0.92,
+    weak: 0.84,
+    schedule: 0.9,
+    estimated: 0.7,
+  };
+
+  const consistencyPenalty = Math.min(pattern.consistency / 8, 0.3);
+  return confidenceWeight[pattern.confidence] * (1 - consistencyPenalty);
+}
+
+function isViableSlot(groupSize: number, averageFriendScore: number, minFriendScore: number): boolean {
+  const minThreshold = groupSize >= 4 ? 0.08 : 0.1;
+  const avgThreshold = groupSize >= 4 ? 0.18 : 0.2;
+  return averageFriendScore >= avgThreshold && minFriendScore >= minThreshold;
+}
+
+function clampScore(score: number): number {
+  return Math.max(0, Math.min(1, score));
+}
+
+function scoreToConfidence(
+  averageFriendScore: number,
+  minFriendScore: number
+): "high" | "medium" | "low" {
+  if (averageFriendScore >= 0.48 && minFriendScore >= 0.3) return "high";
+  if (averageFriendScore >= 0.3 && minFriendScore >= 0.16) return "medium";
+  return "low";
+}
+
+function strongestConfidence(
+  left: "high" | "medium" | "low",
+  right: "high" | "medium" | "low"
+): "high" | "medium" | "low" {
+  const order = { high: 3, medium: 2, low: 1 };
+  return order[left] >= order[right] ? left : right;
 }
 
 // ── Legacy binary overlap detection (kept for calendar schedule overlay) ──

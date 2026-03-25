@@ -1,4 +1,7 @@
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const HOURS_PER_DAY = 24;
+const DEFAULT_DURATION_HOURS = 3;
+const MAX_SESSION_HOURS = 12;
 
 export interface StreamSession {
   startTime: Date;
@@ -33,7 +36,7 @@ export interface StreamingPattern {
   inferredWindows: Array<{ start: Date; end: Date }>;
   /** Normalized frequency per day-of-week [0..6], 0–1 scale */
   dayFrequency: number[];
-  /** Normalized frequency per start-hour [0..23], 0–1 scale */
+  /** Normalized frequency per active hour [0..23], 0–1 scale */
   hourDistribution: number[];
   /** Stddev of start hours — low means very consistent, high means unpredictable */
   consistency: number;
@@ -66,31 +69,31 @@ function analyzeFromHistory(
   scheduleHints: ScheduleHint[]
 ): StreamingPattern {
   const dayCounts = new Array(7).fill(0);
-  const hourCounts = new Array(24).fill(0);
-  const hours: number[] = [];
+  const hourCounts = new Array(HOURS_PER_DAY).fill(0);
+  const startHours: number[] = [];
   const gameCounts: Record<string, number> = {};
   let totalSec = 0;
 
   for (const s of sessions) {
-    const day = s.startTime.getUTCDay();
-    const hour = s.startTime.getUTCHours();
-    dayCounts[day]++;
-    hourCounts[hour]++;
-    hours.push(hour);
+    const weight = recencyWeight(s.startTime);
+    addWindowWeight(dayCounts, hourCounts, s.startTime, s.endTime, weight);
+    startHours.push(s.startTime.getUTCHours());
     if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 1;
     totalSec += s.durationSec;
   }
 
-  // Blend in schedule hints at half weight
+  // Blend in future schedule hints at reduced weight so explicit schedules can
+  // pull suggestions without overwhelming observed behavior.
   for (const h of scheduleHints) {
-    dayCounts[h.startTime.getUTCDay()] += 0.5;
-    hourCounts[h.startTime.getUTCHours()] += 0.5;
+    const weight = h.isRecurring ? 0.9 : 0.65;
+    addWindowWeight(dayCounts, hourCounts, h.startTime, h.endTime, weight);
   }
 
+  const smoothedHourCounts = smoothCircular(hourCounts);
   const maxDay = Math.max(...dayCounts) || 1;
-  const maxHour = Math.max(...hourCounts) || 1;
+  const maxHour = Math.max(...smoothedHourCounts) || 1;
   const dayFrequency = dayCounts.map((c) => c / maxDay);
-  const hourDistribution = hourCounts.map((c) => c / maxHour);
+  const hourDistribution = smoothedHourCounts.map((c) => c / maxHour);
 
   const sortedDays = dayCounts
     .map((count, i) => ({ day: DAYS[i], count }))
@@ -98,17 +101,15 @@ function analyzeFromHistory(
     .sort((a, b) => b.count - a.count)
     .map((d) => d.day);
 
-  hours.sort((a, b) => a - b);
-  const medianHour = hours[Math.floor(hours.length / 2)];
-  const earliest = Math.min(...hours);
-  const latest = Math.max(...hours);
+  startHours.sort((a, b) => a - b);
+  const medianHour = startHours[Math.floor(startHours.length / 2)];
+  const earliest = Math.min(...startHours);
+  const latest = Math.max(...startHours);
 
-  // Consistency: stddev of start hours (circular-aware for midnight wrap)
-  const meanHour = hours.reduce((a, b) => a + b, 0) / hours.length;
-  const variance = hours.reduce((sum, h) => sum + Math.pow(h - meanHour, 2), 0) / hours.length;
-  const consistency = Math.sqrt(variance);
+  const consistency = circularStdDev(startHours);
 
-  const avgDurationHours = Math.round((totalSec / sessions.length / 3600) * 10) / 10 || 3;
+  const avgDurationHours =
+    Math.round((totalSec / sessions.length / 3600) * 10) / 10 || DEFAULT_DURATION_HOURS;
 
   const topGames = Object.entries(gameCounts)
     .sort(([, a], [, b]) => b - a)
@@ -149,26 +150,26 @@ function analyzeFromSchedule(
   sessions: StreamSession[]
 ): StreamingPattern {
   const dayCounts = new Array(7).fill(0);
-  const hourCounts = new Array(24).fill(0);
+  const hourCounts = new Array(HOURS_PER_DAY).fill(0);
   const gameCounts: Record<string, number> = {};
   const durations: number[] = [];
 
   for (const h of hints) {
-    const weight = h.isRecurring ? 2 : 1;
-    dayCounts[h.startTime.getUTCDay()] += weight;
-    hourCounts[h.startTime.getUTCHours()] += weight;
-    if (h.gameName) gameCounts[h.gameName] = (gameCounts[h.gameName] ?? 0) + 1;
+    const weight = h.isRecurring ? 2 : 1.2;
+    addWindowWeight(dayCounts, hourCounts, h.startTime, h.endTime, weight);
+    if (h.gameName) gameCounts[h.gameName] = (gameCounts[h.gameName] ?? 0) + weight;
     const dur = (h.endTime.getTime() - h.startTime.getTime()) / 3600000;
     if (dur > 0) durations.push(dur);
   }
   for (const s of sessions) {
-    if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 0.5;
+    if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + recencyWeight(s.startTime) * 0.5;
   }
 
+  const smoothedHourCounts = smoothCircular(hourCounts);
   const maxDay = Math.max(...dayCounts) || 1;
-  const maxHour = Math.max(...hourCounts) || 1;
+  const maxHour = Math.max(...smoothedHourCounts) || 1;
   const dayFrequency = dayCounts.map((c) => c / maxDay);
-  const hourDistribution = hourCounts.map((c) => c / maxHour);
+  const hourDistribution = smoothedHourCounts.map((c) => c / maxHour);
 
   const sortedDays = dayCounts
     .map((count, i) => ({ day: DAYS[i], count }))
@@ -181,7 +182,7 @@ function analyzeFromSchedule(
   const avgDurationHours =
     durations.length > 0
       ? Math.round((durations.reduce((a, b) => a + b) / durations.length) * 10) / 10
-      : 3;
+      : DEFAULT_DURATION_HOURS;
 
   const topGames = Object.entries(gameCounts)
     .sort(([, a], [, b]) => b - a)
@@ -206,32 +207,35 @@ function analyzeFromSchedule(
     inferredWindows: inferFutureWindows(sortedDays, medianHour, avgDurationHours),
     dayFrequency,
     hourDistribution,
-    consistency: 0,
+    consistency: circularStdDev(hours),
     sampleSize: hints.length,
   };
 }
 
 function estimatedPattern(friendId: number, displayName: string): StreamingPattern {
-  const dayFrequency = [0.8, 0.2, 0.2, 0.2, 0.4, 0.9, 1.0]; // Fri/Sat/Sun weighted
-  const hourDistribution = new Array(24).fill(0);
-  hourDistribution[19] = 0.6;
+  const dayFrequency = [0.4, 0.28, 0.28, 0.32, 0.45, 0.75, 0.82];
+  const hourDistribution = new Array(HOURS_PER_DAY).fill(0.08);
+  hourDistribution[17] = 0.35;
+  hourDistribution[18] = 0.55;
+  hourDistribution[19] = 0.78;
   hourDistribution[20] = 1.0;
-  hourDistribution[21] = 0.8;
-  hourDistribution[22] = 0.5;
+  hourDistribution[21] = 0.92;
+  hourDistribution[22] = 0.72;
+  hourDistribution[23] = 0.45;
 
   return {
     friendId,
     displayName,
     typicalDays: ["Saturday", "Friday", "Sunday"],
     startHours: { earliest: 18, latest: 23, median: 20 },
-    avgDurationHours: 3,
+    avgDurationHours: DEFAULT_DURATION_HOURS,
     topGames: [],
     confidence: "estimated",
-    summary: `${displayName}: no stream history yet. Estimated as a typical evening streamer (Fri/Sat/Sun ~8PM UTC).`,
-    inferredWindows: inferFutureWindows(["Saturday", "Friday", "Sunday"], 20, 3),
+    summary: `${displayName}: no stream history yet. Using a broad evening/weekend fallback until more data is collected.`,
+    inferredWindows: inferFutureWindows(["Saturday", "Friday", "Sunday"], 20, DEFAULT_DURATION_HOURS),
     dayFrequency,
     hourDistribution,
-    consistency: 2,
+    consistency: 4,
     sampleSize: 0,
   };
 }
@@ -248,6 +252,60 @@ function inferFutureWindows(
   durationHours: number
 ): Array<{ start: Date; end: Date }> {
   return inferWindowsForRange(topDays, startHour, durationHours, new Date(), new Date(Date.now() + 14 * 86400000));
+}
+
+function recencyWeight(date: Date): number {
+  const ageMs = Math.max(0, Date.now() - date.getTime());
+  const ageDays = ageMs / 86400000;
+  return 0.35 + 0.65 * Math.exp(-ageDays / 45);
+}
+
+function addWindowWeight(
+  dayCounts: number[],
+  hourCounts: number[],
+  start: Date,
+  end: Date,
+  weight: number
+) {
+  const safeEnd = end > start
+    ? end
+    : new Date(start.getTime() + DEFAULT_DURATION_HOURS * 3600 * 1000);
+
+  const cursor = new Date(start);
+  cursor.setUTCMinutes(0, 0, 0);
+
+  const limit = Math.min(
+    MAX_SESSION_HOURS,
+    Math.max(1, Math.ceil((safeEnd.getTime() - cursor.getTime()) / 3600000))
+  );
+
+  for (let i = 0; i < limit; i++) {
+    dayCounts[cursor.getUTCDay()] += weight;
+    hourCounts[cursor.getUTCHours()] += weight;
+    cursor.setUTCHours(cursor.getUTCHours() + 1);
+  }
+}
+
+function smoothCircular(values: number[]): number[] {
+  return values.map((_, index) => {
+    const prev = values[(index - 1 + values.length) % values.length];
+    const curr = values[index];
+    const next = values[(index + 1) % values.length];
+    return prev * 0.2 + curr * 0.6 + next * 0.2;
+  });
+}
+
+function circularStdDev(hours: number[]): number {
+  if (hours.length <= 1) return 0;
+
+  const radians = hours.map((hour) => (hour / HOURS_PER_DAY) * Math.PI * 2);
+  const meanSin = radians.reduce((sum, value) => sum + Math.sin(value), 0) / radians.length;
+  const meanCos = radians.reduce((sum, value) => sum + Math.cos(value), 0) / radians.length;
+  const resultant = Math.sqrt(meanSin * meanSin + meanCos * meanCos);
+
+  if (resultant <= 0) return HOURS_PER_DAY / 2;
+
+  return Math.sqrt(-2 * Math.log(resultant)) * (HOURS_PER_DAY / (2 * Math.PI));
 }
 
 export function inferWindowsForRange(

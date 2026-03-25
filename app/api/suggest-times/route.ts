@@ -8,7 +8,7 @@ import { rankCollabSlots } from "@/lib/scheduling/overlap";
  * POST /api/suggest-times
  * Body: { friendIds: number[] }
  *
- * Returns top 5 collab time slots scored by streaming pattern probability.
+ * Returns top collab windows scored by streaming pattern overlap probability.
  * All times are returned in UTC; display strings are formatted in the user's
  * saved timezone (Profile.timezone). No AI involved.
  */
@@ -88,9 +88,12 @@ export async function POST(req: Request) {
     const suggestions = slots.map((slot) => ({
       start: slot.start.toISOString(),
       end: slot.end.toISOString(),
-      combinedScore: Math.round(slot.combinedScore * 100) / 100,
+      combinedScore: Math.round(slot.combinedScore * 100),
+      confidence: slot.confidence,
       displayStart: dtf.format(slot.start),
+      displayEnd: dtf.format(slot.end),
       timezone,
+      windowHours: Math.round(((slot.end.getTime() - slot.start.getTime()) / 3600000) * 10) / 10,
       friendScores: slot.friendScores.map((fs) => ({
         friendId: fs.friendId,
         displayName: fs.displayName,

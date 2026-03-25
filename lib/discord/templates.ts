@@ -4,44 +4,82 @@ export interface DiscordMessageContext {
   gameName?: string;
   friends: string[];
   googleCalendarLink?: string;
+  timezone?: string;
+  additionalContext?: string;
 }
 
-export function formatDateTime(date: Date): string {
-  return date.toLocaleString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  });
+export function formatDateTime(date: Date, timezone = "UTC"): string {
+  try {
+    return date.toLocaleString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone: timezone,
+    });
+  } catch {
+    return date.toLocaleString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    });
+  }
 }
 
-// Simple fallback templates (used when AI is unavailable)
 export function buildInviteMessage(ctx: DiscordMessageContext): string {
-  const timeStr = formatDateTime(ctx.startTime);
-  const gameLine = ctx.gameName ? `Game: ${ctx.gameName}` : "Game: TBD";
-  const calendarLine = ctx.googleCalendarLink ? `\nCalendar: ${ctx.googleCalendarLink}` : "";
+  const timeStr = formatDateTime(ctx.startTime, ctx.timezone);
+  const greeting = ctx.friends.length > 0 ? `${ctx.friends.join(", ")} -` : "Hey -";
+  const lines = [
+    greeting,
+    "",
+    "Want to run this collab?",
+    "",
+    ctx.eventTitle,
+    timeStr,
+    ctx.gameName ? `Game: ${ctx.gameName}` : "Game: TBD",
+  ];
 
-  return `${ctx.friends.join(", ")} -
+  if (ctx.googleCalendarLink) {
+    lines.push(`Calendar: ${ctx.googleCalendarLink}`);
+  }
 
-Want to run this collab?
+  if (ctx.additionalContext?.trim()) {
+    lines.push("");
+    lines.push(ctx.additionalContext.trim());
+  }
 
-${ctx.eventTitle}
-${timeStr}
-${gameLine}${calendarLine}
+  lines.push("");
+  lines.push("You in?");
 
-You in?`;
+  return lines.join("\n");
 }
 
 export function buildReminderMessage(ctx: DiscordMessageContext): string {
-  const timeStr = formatDateTime(ctx.startTime);
-  const gameLine = ctx.gameName ? `Game: ${ctx.gameName}\n` : "";
-  const calendarLine = ctx.googleCalendarLink ? `Calendar: ${ctx.googleCalendarLink}\n` : "";
+  const timeStr = formatDateTime(ctx.startTime, ctx.timezone);
+  const lines = [
+    "Reminder.",
+    "",
+    ctx.eventTitle,
+    timeStr,
+  ];
 
-  return `Reminder.
+  if (ctx.gameName) {
+    lines.push(`Game: ${ctx.gameName}`);
+  }
 
-${ctx.eventTitle}
-${timeStr}
-${gameLine}${calendarLine}`.trim();
+  if (ctx.googleCalendarLink) {
+    lines.push(`Calendar: ${ctx.googleCalendarLink}`);
+  }
+
+  if (ctx.additionalContext?.trim()) {
+    lines.push("");
+    lines.push(ctx.additionalContext.trim());
+  }
+
+  return lines.join("\n").trim();
 }

@@ -1,25 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 262.1 83.3% 57.8%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 262.1 83.3% 57.8%;
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 6% 6%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 6% 6%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 221 83% 73%;
+  --primary-foreground: 240 10% 4%;
+  --secondary: 240 4% 11%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 4% 11%;
+  --muted-foreground: 240 4% 65%;
+  --accent: 240 4% 15%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 4% 16%;
+  --input: 240 4% 16%;
+  --ring: 221 83% 73%;
   --radius: 0.5rem;
 }
 
@@ -54,7 +54,7 @@
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 @keyframes fade-in-up {
@@ -75,14 +75,14 @@ body {
   --fc-button-bg-color: hsl(var(--secondary));
   --fc-button-border-color: hsl(var(--border));
   --fc-button-text-color: hsl(var(--foreground));
-  --fc-button-hover-bg-color: hsl(215 25% 22%);
+  --fc-button-hover-bg-color: hsl(240 4% 18%);
   --fc-button-hover-border-color: hsl(var(--border));
-  --fc-button-active-bg-color: hsl(215 25% 27%);
-  --fc-button-active-border-color: hsl(215 25% 32%);
+  --fc-button-active-bg-color: hsl(240 4% 22%);
+  --fc-button-active-border-color: hsl(240 4% 26%);
   --fc-page-bg-color: transparent;
   --fc-neutral-bg-color: hsl(var(--muted));
   --fc-list-event-hover-bg-color: hsl(var(--accent));
-  --fc-today-bg-color: hsl(215 30% 10%);
+  --fc-today-bg-color: hsl(240 5% 8%);
   --fc-event-text-color: hsl(var(--foreground));
   --fc-neutral-text-color: hsl(var(--muted-foreground));
 }
@@ -111,7 +111,7 @@ body {
 
 /* "Your usual stream time" — tints the day cell itself */
 .fc .fc-daygrid-day.calendar-my-stream-day {
-  background: hsl(215 28% 9%) !important;
+  background: hsl(240 5% 7%) !important;
   position: relative;
 }
 .fc .fc-daygrid-day.calendar-my-stream-day::after {
@@ -127,10 +127,10 @@ body {
 
 /* Planned event card */
 .fc .fc-event.calendar-planned-event {
-  background: hsl(215 28% 18%) !important;
-  border-color: hsl(215 25% 26%) !important;
+  background: hsl(240 4% 13%) !important;
+  border-color: hsl(240 4% 20%) !important;
   border-left: 3px solid hsl(var(--primary)) !important;
-  box-shadow: 0 1px 5px hsl(215 20% 4% / 0.6);
+  box-shadow: 0 1px 5px hsl(240 5% 3% / 0.6);
   border-radius: 5px !important;
 }
 
@@ -181,7 +181,7 @@ body {
 /* Friend posted schedule event */
 .fc .fc-event.calendar-friend-event {
   border-radius: 4px !important;
-  box-shadow: 0 1px 3px hsl(215 20% 4% / 0.4);
+  box-shadow: 0 1px 3px hsl(240 5% 3% / 0.4);
 }
 
 .calendar-friend-event-content {
@@ -279,7 +279,7 @@ body {
   transition: background-color 0.15s;
 }
 .fc .fc-daygrid-day:hover {
-  background-color: hsl(215 25% 13%) !important;
+  background-color: hsl(240 4% 11%) !important;
 }
 
 /* Event hover & click */
@@ -310,7 +310,7 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: hsl(215 25% 55% / 0.35);
+  background: hsl(221 83% 73% / 0.18);
   pointer-events: none;
   animation: calendar-ripple 0.55s ease-out forwards;
   z-index: 5;

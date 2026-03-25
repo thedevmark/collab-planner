@@ -29,14 +29,14 @@ function EventRow({ event }: { event: any }) {
   const nonMeParticipants = (event.participants ?? []).filter((p: any) => !p.friend.isMe);
 
   return (
-    <div className={`rounded-lg border transition-colors ${past ? "opacity-60" : ""} ${open ? "border-slate-600 bg-slate-800/40" : "border-transparent hover:bg-slate-800/40"}`}>
+    <div className={`rounded-lg border transition-colors ${past ? "opacity-60" : ""} ${open ? "border-zinc-700 bg-zinc-900/40" : "border-transparent hover:bg-zinc-900/40"}`}>
       {/* Row header — clickable to toggle */}
       <button
         className="flex items-center gap-4 px-4 py-3 w-full text-left cursor-pointer"
         onClick={() => setOpen((v) => !v)}
       >
         {/* Date block */}
-        <div className={`flex flex-col items-center justify-center w-12 shrink-0 rounded-md py-1.5 ${today ? "bg-violet-600/20 border border-violet-500/40" : "bg-slate-800"}`}>
+        <div className={`flex flex-col items-center justify-center w-12 shrink-0 rounded-md py-1.5 ${today ? "bg-primary/15 border border-primary/30" : "bg-zinc-900"}`}>
           <span className="text-[10px] font-medium text-muted-foreground uppercase leading-none">
             {format(start, "MMM")}
           </span>
@@ -73,7 +73,7 @@ function EventRow({ event }: { event: any }) {
               </Avatar>
             ))}
             {nonMeParticipants.length > 4 && (
-              <div className="h-7 w-7 rounded-full border-2 border-card bg-slate-700 flex items-center justify-center text-[10px] font-medium">
+              <div className="h-7 w-7 rounded-full border-2 border-card bg-zinc-800 flex items-center justify-center text-[10px] font-medium">
                 +{nonMeParticipants.length - 4}
               </div>
             )}
@@ -93,7 +93,7 @@ function EventRow({ event }: { event: any }) {
 
       {/* Expanded details */}
       {open && (
-        <div className="px-4 pb-4 pt-1 border-t border-slate-700/60 space-y-3 animate-fade-in-up">
+        <div className="px-4 pb-4 pt-1 border-t border-zinc-800/60 space-y-3 animate-fade-in-up">
           {event.description && (
             <p className="text-sm text-muted-foreground">{event.description}</p>
           )}
@@ -103,7 +103,7 @@ function EventRow({ event }: { event: any }) {
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Participants</p>
               <div className="flex flex-wrap gap-2">
                 {nonMeParticipants.map((p: any) => (
-                  <div key={p.id} className="flex items-center gap-2 bg-slate-800 rounded-md px-2 py-1">
+                  <div key={p.id} className="flex items-center gap-2 bg-zinc-900 rounded-md px-2 py-1">
                     <Avatar className="h-5 w-5">
                       <AvatarImage src={p.friend.avatarUrl} />
                       <AvatarFallback className="text-[9px]">{p.friend.displayName[0]}</AvatarFallback>

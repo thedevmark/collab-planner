@@ -336,12 +336,12 @@ export default function CalendarPage() {
 
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-violet-600" />
+          <span className="w-3 h-3 rounded-sm bg-primary" />
           Your events
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm relative overflow-hidden" style={{ background: "linear-gradient(to top, hsl(262 83% 58% / 0.25) 0%, transparent 100%)", border: "1px solid hsl(262 83% 58% / 0.3)" }}>
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500/60" />
+          <span className="w-3 h-3 rounded-sm relative overflow-hidden" style={{ background: "linear-gradient(to top, hsl(221 83% 73% / 0.2) 0%, transparent 100%)", border: "1px solid hsl(221 83% 73% / 0.25)" }}>
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary/60" />
           </span>
           Your usual stream time
         </div>
