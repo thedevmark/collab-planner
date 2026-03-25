@@ -5,7 +5,12 @@ import type { ResponseCookie } from "next/dist/compiled/@edge-runtime/cookies";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
-    request: { headers: request.headers },
+    request: {
+      headers: new Headers({
+        ...Object.fromEntries(request.headers),
+        "x-pathname": request.nextUrl.pathname,
+      }),
+    },
   });
 
   const supabase = createServerClient(
@@ -20,9 +25,14 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          });
+      response = NextResponse.next({
+        request: {
+          headers: new Headers({
+            ...Object.fromEntries(request.headers),
+            "x-pathname": request.nextUrl.pathname,
+          }),
+        },
+      });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );

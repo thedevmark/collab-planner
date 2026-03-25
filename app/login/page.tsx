@@ -1,8 +1,12 @@
 "use client";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useTheme } from "next-themes";
+import { Sun, Moon } from "lucide-react";
 
 export default function LoginPage() {
+  const { resolvedTheme, setTheme } = useTheme();
+
   async function loginWithTwitch() {
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signInWithOAuth({
@@ -15,11 +19,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+    <div className="min-h-screen bg-background flex items-center justify-center relative">
+      {/* Theme toggle */}
+      <button
+        onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+        className="absolute top-4 right-4 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        aria-label="Toggle theme"
+      >
+        {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      </button>
+
       <div className="w-full max-w-sm space-y-8 px-6">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-white">Collab Planner</h1>
-          <p className="text-zinc-400 text-sm">
+          <h1 className="text-3xl font-bold text-foreground">Collab Planner</h1>
+          <p className="text-muted-foreground text-sm">
             Schedule stream collabs with your Twitch friends
           </p>
         </div>
@@ -38,7 +51,7 @@ export default function LoginPage() {
           Login with Twitch
         </button>
 
-        <p className="text-center text-xs text-zinc-600">
+        <p className="text-center text-xs text-muted-foreground">
           collab.deutschmark.online
         </p>
       </div>
