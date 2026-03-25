@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { headers } from "next/headers";
 
 const geistSans = Geist({
@@ -29,8 +30,9 @@ export default async function RootLayout({
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/auth");
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
         {isAuthPage ? (
           children
         ) : (
@@ -41,6 +43,7 @@ export default async function RootLayout({
             </main>
           </div>
         )}
+        </ThemeProvider>
       </body>
     </html>
   );
