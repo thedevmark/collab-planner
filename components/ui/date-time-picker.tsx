@@ -33,7 +33,7 @@ export function DateTimePicker({ value, onChange }: Props) {
 
   // hour/minute state for the time row
   const rawHour = selected ? selected.getHours() : 20;
-  const rawMinute = selected ? selected.getMinutes() : 0;
+  const rawMinute = selected ? Math.round(selected.getMinutes() / 15) * 15 % 60 : 0;
   const displayHour = rawHour % 12 === 0 ? 12 : rawHour % 12;
   const isPM = rawHour >= 12;
 
@@ -157,31 +157,33 @@ export function DateTimePicker({ value, onChange }: Props) {
           {/* Time row */}
           <div className="border-t border-border px-3 py-2.5 flex items-center gap-2">
             <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <input
-              type="number"
-              min={1}
-              max={12}
-              value={String(displayHour).padStart(2, "0")}
+            <select
+              value={displayHour}
               onChange={(e) => onHourChange(e.target.value)}
-              className="w-10 h-7 text-center text-sm rounded border border-input bg-background text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-            <span className="text-muted-foreground font-medium">:</span>
-            <input
-              type="number"
-              min={0}
-              max={59}
-              step={5}
-              value={String(rawMinute).padStart(2, "0")}
-              onChange={(e) => onMinuteChange(e.target.value)}
-              className="w-10 h-7 text-center text-sm rounded border border-input bg-background text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-            <button
-              type="button"
-              onClick={toggleAmPm}
-              className="w-10 h-7 text-xs font-semibold rounded border border-input bg-background text-foreground hover:bg-accent transition-colors"
+              className="h-7 px-1 text-sm rounded border border-input bg-background text-foreground"
             >
-              {isPM ? "PM" : "AM"}
-            </button>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                <option key={h} value={h}>{String(h).padStart(2, "0")}</option>
+              ))}
+            </select>
+            <span className="text-muted-foreground font-medium">:</span>
+            <select
+              value={rawMinute}
+              onChange={(e) => onMinuteChange(e.target.value)}
+              className="h-7 px-1 text-sm rounded border border-input bg-background text-foreground"
+            >
+              {[0, 15, 30, 45].map((m) => (
+                <option key={m} value={m}>{String(m).padStart(2, "0")}</option>
+              ))}
+            </select>
+            <select
+              value={isPM ? "PM" : "AM"}
+              onChange={(e) => { if ((e.target.value === "PM") !== isPM) toggleAmPm(); }}
+              className="h-7 px-1 text-sm rounded border border-input bg-background text-foreground"
+            >
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
             <button
               type="button"
               onClick={() => setOpen(false)}
