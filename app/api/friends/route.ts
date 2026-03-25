@@ -19,9 +19,10 @@ async function backfillMissingColors(friends: { id: number; username: string; ch
 
 const addFriendSchema = z.object({
   username: z.string().min(1),
+  isSuggested: z.boolean().optional(),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
   const user = await getAuthUser();
   if (!user) return unauthorized();
   const userId = user.id;
@@ -30,8 +31,11 @@ export async function GET() {
     await backfillStoredStreamHistoryGameNames().catch(() => {});
     const now = new Date();
 
+    const { searchParams } = new URL(req.url);
+    const suggestedOnly = searchParams.get("suggested") === "true";
+
     const friends = await prisma.friend.findMany({
-      where: { isActive: true, userId },
+      where: { isActive: true, userId, ...(suggestedOnly ? { isSuggested: true } : {}) },
       include: {
         scheduleSegments: {
           where: { endTime: { gte: new Date() } },
@@ -123,7 +127,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { username } = addFriendSchema.parse(body);
+    const { username, isSuggested } = addFriendSchema.parse(body);
 
     const twitchUser = await getUserByUsername(username);
     if (!twitchUser) {
@@ -152,6 +156,7 @@ export async function POST(req: Request) {
         displayName: twitchUser.display_name,
         avatarUrl: twitchUser.profile_image_url,
         channelColor,
+        isSuggested: isSuggested ?? false,
       },
     });
 

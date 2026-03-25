@@ -7,6 +7,7 @@ import { z } from "zod";
 const updateSchema = z.object({
   notes: z.string().optional(),
   displayName: z.string().optional(),
+  isSuggested: z.boolean().optional(),
 });
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {

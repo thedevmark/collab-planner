@@ -255,6 +255,15 @@ function NewEventForm() {
         });
 
         fetch(`/api/invites/${fromInvite}`, { method: "PATCH" });
+
+        // Auto-suggest invite creator as a friend
+        if (invite.creatorUsername) {
+          fetch("/api/friends", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: invite.creatorUsername, isSuggested: true }),
+          }).catch(() => {}); // fire-and-forget, non-critical
+        }
       })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps

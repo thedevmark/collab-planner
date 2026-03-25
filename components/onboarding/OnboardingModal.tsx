@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -289,6 +289,39 @@ function StepFriends({
   onRemove: (username: string) => void;
   onNext: () => void;
 }) {
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [confirmingId, setConfirmingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Fire-and-forget: populate suggestions
+    fetch("/api/friends/sync-suggestions", { method: "POST" }).catch(() => {});
+
+    // Fetch any existing suggestions
+    fetch("/api/friends?suggested=true")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setSuggestions(data.filter((f: any) => !f.isMe).slice(0, 5));
+      })
+      .catch(() => {});
+  }, []);
+
+  async function confirmSuggestion(friend: any) {
+    setConfirmingId(friend.id);
+    try {
+      await fetch(`/api/friends/${friend.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isSuggested: false }),
+      });
+      setSuggestions((prev) => prev.filter((f) => f.id !== friend.id));
+      if (!addedFriends.some((f) => f.username === friend.username)) {
+        // addedFriends is managed in parent; just remove from suggestions view
+      }
+    } finally {
+      setConfirmingId(null);
+    }
+  }
+
   return (
     <div>
       <h2
@@ -303,6 +336,42 @@ function StepFriends({
       >
         Search by username and add the streamers you collab with.
       </p>
+
+      {suggestions.length > 0 && (
+        <div
+          className="mb-4 space-y-2"
+          style={{ animation: "ob-fade-up 0.4s ease both", animationDelay: "120ms" }}
+        >
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+            <Sparkles className="h-3 w-3" />
+            <span>Suggested for you</span>
+          </div>
+          {suggestions.map((f) => (
+            <div
+              key={f.id}
+              className="flex items-center gap-2 rounded-md border border-dashed bg-secondary/40 px-2.5 py-1.5"
+            >
+              <Avatar className="h-7 w-7 shrink-0">
+                <AvatarImage src={f.avatarUrl} />
+                <AvatarFallback className="text-xs">{f.displayName[0]?.toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium truncate">{f.displayName}</p>
+                <p className="text-[11px] text-muted-foreground truncate">@{f.username}</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-xs shrink-0"
+                disabled={confirmingId === f.id}
+                onClick={() => confirmSuggestion(f)}
+              >
+                {confirmingId === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3 mr-1" />Add</>}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div
         className="flex gap-2 mb-1"

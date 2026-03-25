@@ -18,7 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Search, Loader2, TrendingUp, Users2, CalendarClock, Gamepad2, Link2 } from "lucide-react";
+import { UserPlus, Search, Loader2, TrendingUp, Users2, CalendarClock, Gamepad2, Link2, Sparkles, RefreshCw, Check, X } from "lucide-react";
 import { InviteDialog } from "@/components/InviteDialog";
 
 const FALLBACK_COLORS = [
@@ -138,10 +138,15 @@ export default function FriendsPage() {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [confirmingId, setConfirmingId] = useState<number | null>(null);
+  const [dismissingId, setDismissingId] = useState<number | null>(null);
 
   const meFriend = friends.find((f: any) => f.isMe);
   const nonMeFriends = friends.filter((f: any) => !f.isMe);
-  const filtered = nonMeFriends.filter((f: any) =>
+  const confirmedFriends = nonMeFriends.filter((f: any) => !f.isSuggested);
+  const suggestedFriends = nonMeFriends.filter((f: any) => f.isSuggested);
+  const filtered = confirmedFriends.filter((f: any) =>
     f.displayName.toLowerCase().includes(search.trim().toLowerCase()) ||
     f.username.toLowerCase().includes(search.trim().toLowerCase())
   );
@@ -169,6 +174,42 @@ export default function FriendsPage() {
     }
   }
 
+  async function syncSuggestions() {
+    setSyncing(true);
+    try {
+      await fetch("/api/friends/sync-suggestions", { method: "POST" });
+      mutate();
+    } catch {
+      // ignore
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function confirmSuggestion(id: number) {
+    setConfirmingId(id);
+    try {
+      await fetch(`/api/friends/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isSuggested: false }),
+      });
+      mutate();
+    } finally {
+      setConfirmingId(null);
+    }
+  }
+
+  async function dismissSuggestion(id: number) {
+    setDismissingId(id);
+    try {
+      await fetch(`/api/friends/${id}`, { method: "DELETE" });
+      mutate();
+    } finally {
+      setDismissingId(null);
+    }
+  }
+
   const meColor = meFriend?.channelColor || "#7aa2f7";
 
   return (
@@ -176,6 +217,10 @@ export default function FriendsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Friends</h1>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={syncSuggestions} disabled={syncing}>
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Sync Suggestions
+          </Button>
           <InviteDialog friends={friends}>
             <Button variant="outline">
               <Link2 className="h-4 w-4" />
@@ -246,6 +291,58 @@ export default function FriendsPage() {
             </CardContent>
           </Card>
         </Link>
+      )}
+
+      {/* Suggested friends section */}
+      {suggestedFriends.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <span className="font-semibold text-sm">Suggested · {suggestedFriends.length}</span>
+              <p className="text-xs text-muted-foreground">Based on your collab history</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {suggestedFriends.map((friend: any) => (
+              <div
+                key={friend.id}
+                className="flex items-center gap-3 rounded-lg border border-dashed bg-card/50 px-3 py-2.5"
+              >
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarImage src={friend.avatarUrl} />
+                  <AvatarFallback>{friend.displayName[0]?.toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{friend.displayName}</p>
+                  <p className="text-xs text-muted-foreground truncate">@{friend.username}</p>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 w-7 p-0"
+                    title="Add friend"
+                    disabled={confirmingId === friend.id}
+                    onClick={() => confirmSuggestion(friend.id)}
+                  >
+                    {confirmingId === friend.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0 text-muted-foreground"
+                    title="Dismiss"
+                    disabled={dismissingId === friend.id}
+                    onClick={() => dismissSuggestion(friend.id)}
+                  >
+                    {dismissingId === friend.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       <div className="relative">
