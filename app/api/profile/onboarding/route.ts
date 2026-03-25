@@ -45,3 +45,20 @@ export async function PATCH(req: NextRequest) {
     avatarUrl: updated.avatarUrl,
   });
 }
+
+export async function DELETE() {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+
+  const updated = await prisma.profile.update({
+    where: { id: user.id },
+    data: { hasCompletedOnboarding: false },
+  });
+
+  return NextResponse.json({
+    hasCompletedOnboarding: updated.hasCompletedOnboarding,
+    timezone: updated.timezone,
+    displayName: updated.displayName,
+    avatarUrl: updated.avatarUrl,
+  });
+}

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarPlus, RefreshCw, MessageSquare, Users, Clock, Gamepad2, Loader2 } from "lucide-react";
+import { CalendarPlus, RefreshCw, MessageSquare, Users, Clock, Gamepad2, Loader2, TrendingUp } from "lucide-react";
 import { useReminderPolling } from "@/hooks/useReminders";
 import OnboardingModal from "@/components/onboarding/OnboardingModal";
 
@@ -32,7 +32,9 @@ export default function Dashboard() {
   const { data: friends = [], mutate: mutateFriends } = useSWR("/api/friends", fetcher);
   const { data: liveData, mutate: mutateLive } = useSWR("/api/twitch/live", fetcher, { refreshInterval: 60000 });
   const { data: profile, mutate: mutateProfile } = useSWR("/api/profile/onboarding", fetcher);
+  const { data: trendingData } = useSWR("/api/dashboard/trending-games", fetcher, { revalidateOnFocus: false });
   const [refreshing, setRefreshing] = useState(false);
+  const trendingGames: any[] = trendingData?.games ?? [];
 
   useReminderPolling(true);
 
@@ -78,18 +80,21 @@ export default function Dashboard() {
         <OnboardingModal
           displayName={profile.displayName ?? ""}
           avatarUrl={profile.avatarUrl ?? ""}
-          onComplete={() => mutateProfile()}
+          friendCount={profile.friendCount ?? 0}
+          onComplete={async () => {
+            await Promise.all([mutateProfile(), mutateFriends(), mutateLive()]);
+          }}
         />
       )}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">{format(now, "EEEE, MMMM d, yyyy")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={refreshSchedules} disabled={refreshing}>
             {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            {refreshing ? "Refreshing..." : "Refresh"}
+            <span className="hidden sm:inline">{refreshing ? "Refreshing..." : "Refresh"}</span>
           </Button>
           <Link href="/events/new">
             <Button size="sm">
@@ -100,7 +105,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -136,7 +141,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -243,6 +248,56 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              Trending on Twitch Today
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {trendingGames.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {trendingGames.slice(0, 10).map((game: any, i: number) => {
+                const artUrl = game.box_art_url
+                  ?.replace("{width}", "52")
+                  ?.replace("{height}", "72");
+                return (
+                  <div key={game.id} className="flex flex-col items-center gap-1 shrink-0 w-14">
+                    <div className="relative">
+                      {artUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={artUrl}
+                          alt={game.name}
+                          width={52}
+                          height={72}
+                          className="rounded-md object-cover"
+                        />
+                      ) : (
+                        <div className="w-[52px] h-[72px] rounded-md bg-muted flex items-center justify-center">
+                          <Gamepad2 className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="absolute top-1 left-1 text-[10px] font-bold bg-black/70 text-white rounded px-1 leading-tight">
+                        #{i + 1}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-center text-muted-foreground leading-tight line-clamp-2 w-full">
+                      {game.name}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-3">

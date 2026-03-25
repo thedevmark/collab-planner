@@ -15,9 +15,18 @@ model Profile {
   avatarUrl             String   @default("")
   channelColor          String   @default("")
   timezone              String   @default("UTC")
-  hasCompletedOnboarding Boolean  @default(false)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  hasCompletedOnboarding Boolean   @default(false)
+  discordId             String?
+  discordUsername       String?
+  discordAccessToken    String?
+  discordRefreshToken   String?
+  discordTokenExpiry    DateTime?
+  discordGuildId        String?
+  discordGuildName      String?
+  discordChannelId      String?
+  discordChannelName    String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }
 
 model Friend {
@@ -184,4 +193,22 @@ model CollabInvite {
   usedCount               Int       @default(0)
   maxUses                 Int?
   createdAt               DateTime  @default(now())
+  recipients              CollabInviteRecipient[]
+}
+
+model CollabInviteRecipient {
+  id           Int          @id @default(autoincrement())
+  inviteId      Int
+  username      String
+  displayName   String      @default("")
+  avatarUrl     String      @default("")
+  status        String      @default("pending")
+  respondedAt   DateTime?
+  claimedAt     DateTime?
+  claimedByUserId String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  invite        CollabInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+
+  @@unique([inviteId, username])
 }

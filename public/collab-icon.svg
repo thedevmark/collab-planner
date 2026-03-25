@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Two Twitch Glitch marks, interlocked like chain links.
+    Rendering layers:
+      1. Purple mark — lower portion (behind blue)
+      2. Blue mark — full
+      3. Purple mark — upper portion (in front of blue)
+    This gives the illusion that each mark threads through the other.
+  -->
+  <defs>
+    <!-- Chain cut: purple below y=236 goes behind, above y=236 goes in front -->
+    <clipPath id="P-behind">
+      <rect x="0" y="236" width="512" height="276"/>
+    </clipPath>
+    <clipPath id="P-front">
+      <rect x="0" y="0" width="512" height="236"/>
+    </clipPath>
+
+    <!-- Blur-only glow (rendered as separate element behind everything) -->
+    <filter id="halo" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+    <filter id="edge" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="88" fill="#0d0518"/>
+
+  <!--
+    Marks are the canonical Twitch Glitch shape scaled to 208×247 px.
+    Original 160×190 unit shape, scaled ×1.3.
+
+    Shape (scale 1.3):
+      Outer polygon (no curves — crisp):
+        M x0,y0  top-left
+        L x1,y0  top-right
+        L x1+d,y0+d  angled top-right corner (d=18.2)
+        L x1+d, yB   right side down to base
+        L xN,yB      bottom, right portion
+        L xN,yN      notch going down (bottom-left pointer)
+        L x0,yB      bottom-left shoulder
+        L x0,y0+d    left side
+        Z
+      where width=208, height=247, notch at x=62.4
+
+    Eye rects (punched with fill-rule evenodd):
+      Left:  x+41.6, y+39, 36.4w, 62.4h
+      Right: x+130,  y+39, 36.4w, 62.4h
+
+    BLUE  mark origin: (50, 45)
+    PURPLE mark origin: (190, 180)
+      → horizontal overlap: x 190–258 (68 px)
+      → vertical overlap:   y 180–292 (112 px)
+      → chain cut: y 236 (middle of overlap)
+  -->
+
+  <!-- ── GLOW HALOS ─────────────────────────────────────────── -->
+  <rect x="50"  y="45"  width="208" height="247" rx="18" fill="#5865F2" opacity="0.35" filter="url(#halo)"/>
+  <rect x="190" y="180" width="208" height="247" rx="18" fill="#9147ff" opacity="0.30" filter="url(#halo)"/>
+
+  <!-- ── PURPLE MARK — BEHIND (lower half) ─────────────────── -->
+  <g clip-path="url(#P-behind)">
+    <path fill-rule="evenodd" fill="#9147ff" d="
+      M 190,180
+      L 379.8,180
+      L 398,198.2
+      L 398,377.6
+      L 252.4,377.6
+      L 252.4,427
+      L 190,377.6
+      L 190,198.2
+      Z
+      M 231.6,219 L 268,219 L 268,281.4 L 231.6,281.4 Z
+      M 320,219 L 356.4,219 L 356.4,281.4 L 320,281.4 Z
+    "/>
+  </g>
+
+  <!-- ── BLUE MARK — FULL ───────────────────────────────────── -->
+  <path fill-rule="evenodd" fill="#5865F2" d="
+    M 50,45
+    L 239.8,45
+    L 258,63.2
+    L 258,242.6
+    L 112.4,242.6
+    L 112.4,292
+    L 50,242.6
+    L 50,63.2
+    Z
+    M 91.6,84 L 128,84 L 128,146.4 L 91.6,146.4 Z
+    M 180,84 L 216.4,84 L 216.4,146.4 L 180,146.4 Z
+  "/>
+
+  <!-- ── PURPLE MARK — FRONT (upper half, over blue) ────────── -->
+  <g clip-path="url(#P-front)">
+    <path fill-rule="evenodd" fill="#9147ff" d="
+      M 190,180
+      L 379.8,180
+      L 398,198.2
+      L 398,377.6
+      L 252.4,377.6
+      L 252.4,427
+      L 190,377.6
+      L 190,198.2
+      Z
+      M 231.6,219 L 268,219 L 268,281.4 L 231.6,281.4 Z
+      M 320,219 L 356.4,219 L 356.4,281.4 L 320,281.4 Z
+    "/>
+  </g>
+
+  <!-- ── EDGE HIGHLIGHTS (rim light on each mark) ───────────── -->
+  <!-- Blue mark — top + left rim -->
+  <polyline points="50,242.6 50,63.2 68.2,45 239.8,45 258,63.2"
+            fill="none" stroke="white" stroke-width="2.5" stroke-linejoin="round"
+            stroke-linecap="round" opacity="0.25"/>
+  <!-- Purple mark — top + right rim -->
+  <polyline points="190,198.2 208.2,180 379.8,180 398,198.2 398,377.6"
+            fill="none" stroke="white" stroke-width="2.5" stroke-linejoin="round"
+            stroke-linecap="round" opacity="0.18"/>
+
+  <!-- ── INTERSECTION ACCENT ────────────────────────────────── -->
+  <!-- subtle glow dot at the crossing point -->
+  <circle cx="224" cy="236" r="14" fill="white" opacity="0.07"/>
+  <circle cx="224" cy="236" r="6"  fill="white" opacity="0.14"/>
+  <circle cx="224" cy="236" r="2"  fill="white" opacity="0.4"/>
+
+</svg>

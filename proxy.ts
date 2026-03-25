@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { ResponseCookie } from "next/dist/compiled/@edge-runtime/cookies";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
     request: {
       headers: new Headers({
@@ -22,26 +22,27 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options?: Partial<ResponseCookie> }[]) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-      response = NextResponse.next({
-        request: {
-          headers: new Headers({
-            ...Object.fromEntries(request.headers),
-            "x-pathname": request.nextUrl.pathname,
-          }),
-        },
-      });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+
+          response = NextResponse.next({
+            request: {
+              headers: new Headers({
+                ...Object.fromEntries(request.headers),
+                "x-pathname": request.nextUrl.pathname,
+              }),
+            },
+          });
+
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
         },
       },
     }
   );
 
-  // Refresh session — must be called before checking user
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -52,14 +53,15 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/auth") ||
     pathname.startsWith("/invite") ||
     pathname.startsWith("/api/health") ||
-    pathname.startsWith("/api/extension");
+    pathname.startsWith("/api/extension") ||
+    pathname.startsWith("/api/auth/discord") ||
+    pathname.startsWith("/privacy") ||
+    pathname.startsWith("/terms");
 
-  // Redirect unauthenticated users to login
   if (!user && !isAuthRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Redirect authenticated users away from login
   if (user && pathname.startsWith("/login")) {
     return NextResponse.redirect(new URL("/", request.url));
   }

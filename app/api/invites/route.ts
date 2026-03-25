@@ -33,6 +33,19 @@ export async function POST(req: Request) {
           })
         : [];
 
+    const recipientRows = Array.from(
+      new Map(
+        participants.map((participant) => [
+          participant.username.toLowerCase(),
+          {
+            username: participant.username,
+            displayName: participant.displayName,
+            avatarUrl: participant.avatarUrl,
+          },
+        ])
+      ).values()
+    );
+
     const expiresAt =
       data.expiresIn != null
         ? new Date(Date.now() + data.expiresIn * 60 * 60 * 1000)
@@ -53,6 +66,12 @@ export async function POST(req: Request) {
         participantAvatarUrls: participants.map((p) => p.avatarUrl),
         expiresAt,
         maxUses: data.maxUses ?? null,
+        recipients: recipientRows.length > 0 ? { create: recipientRows } : undefined,
+      },
+      include: {
+        recipients: {
+          orderBy: { displayName: "asc" },
+        },
       },
     });
 

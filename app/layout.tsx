@@ -1,19 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { AppShell } from "@/components/layout/AppShell";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { headers } from "next/headers";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Collab Planner",
@@ -30,21 +19,18 @@ export default async function RootLayout({
   const isAuthPage =
     pathname.startsWith("/login") ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/invite");
+    pathname.startsWith("/invite") ||
+    pathname.startsWith("/privacy") ||
+    pathname.startsWith("/terms");
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
         {isAuthPage ? (
           children
         ) : (
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <main className="ml-56 flex-1 p-6">
-              {children}
-            </main>
-          </div>
+          <AppShell>{children}</AppShell>
         )}
         </ThemeProvider>
       </body>

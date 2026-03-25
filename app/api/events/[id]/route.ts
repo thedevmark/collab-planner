@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser, unauthorized } from "@/lib/auth";
 import { z } from "zod";
+import { notifyDiscord } from "@/lib/discord/notify";
 
 const updateSchema = z.object({
   title: z.string().optional(),
@@ -88,6 +89,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
       return updatedEvent;
     });
+
+    // Fire-and-forget Discord notification on meaningful status changes
+    if (data.status === "confirmed") notifyDiscord(user.id, "confirmed", event);
+    if (data.status === "canceled") notifyDiscord(user.id, "canceled", event);
 
     return NextResponse.json(event);
   } catch (err) {

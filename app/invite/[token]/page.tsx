@@ -7,6 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CalendarClock, Clock, Link2Off, Users } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getAuthUser } from "@/lib/auth";
+import { InviteResponseActions } from "@/components/invites/InviteResponseActions";
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -24,7 +26,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function InvitePage({ params }: Props) {
   const { token } = await params;
-  const invite = await prisma.collabInvite.findUnique({ where: { token } });
+  const [invite, user] = await Promise.all([
+    prisma.collabInvite.findUnique({
+      where: { token },
+      include: {
+        recipients: {
+          orderBy: [{ status: "asc" }, { displayName: "asc" }],
+        },
+      },
+    }),
+    getAuthUser(),
+  ]);
 
   if (!invite) {
     return (
@@ -66,11 +78,39 @@ export default async function InvitePage({ params }: Props) {
     );
   }
 
-  const participants = invite.participantDisplayNames.map((name, i) => ({
-    displayName: name,
-    username: invite.participantUsernames[i] ?? "",
-    avatarUrl: invite.participantAvatarUrls[i] ?? "",
-  }));
+  const participants =
+    invite.recipients.length > 0
+      ? invite.recipients.map((recipient) => ({
+          displayName: recipient.displayName,
+          username: recipient.username,
+          avatarUrl: recipient.avatarUrl,
+          status: recipient.status,
+          claimedAt: recipient.claimedAt,
+        }))
+      : invite.participantDisplayNames.map((name, i) => ({
+          displayName: name,
+          username: invite.participantUsernames[i] ?? "",
+          avatarUrl: invite.participantAvatarUrls[i] ?? "",
+          status: "pending",
+          claimedAt: null,
+        }));
+
+  const viewerProfile = user
+    ? await prisma.profile.findUnique({
+        where: { id: user.id },
+        select: { username: true },
+      })
+    : null;
+  const viewerRecipient =
+    viewerProfile != null
+      ? participants.find(
+          (participant) =>
+            participant.username.toLowerCase() === viewerProfile.username.toLowerCase()
+        ) ?? null
+      : null;
+  const acceptedCount = participants.filter((participant) => participant.status === "accepted").length;
+  const declinedCount = participants.filter((participant) => participant.status === "declined").length;
+  const claimedCount = participants.filter((participant) => participant.claimedAt != null).length;
 
   return (
     <CenteredShell>
@@ -102,6 +142,13 @@ export default async function InvitePage({ params }: Props) {
                 🎮 {invite.gameName}
               </Badge>
             )}
+            {participants.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Badge variant="secondary">{acceptedCount} accepted</Badge>
+                <Badge variant="secondary">{declinedCount} declined</Badge>
+                <Badge variant="secondary">{claimedCount} claimed</Badge>
+              </div>
+            )}
           </div>
 
           {/* Description */}
@@ -132,6 +179,9 @@ export default async function InvitePage({ params }: Props) {
                       </AvatarFallback>
                     </Avatar>
                     <span className="text-sm">{p.displayName || p.username}</span>
+                    <Badge variant={recipientBadgeVariant(p.status, p.claimedAt != null)} className="text-[10px]">
+                      {recipientBadgeLabel(p.status, p.claimedAt != null)}
+                    </Badge>
                   </div>
                 ))}
               </div>
@@ -149,12 +199,13 @@ export default async function InvitePage({ params }: Props) {
             </div>
           )}
 
-          {/* CTA */}
-          <Link href={`/events/new?fromInvite=${token}`} className="block">
-            <Button className="w-full" size="lg">
-              Start Planning →
-            </Button>
-          </Link>
+          <InviteResponseActions
+            token={token}
+            isSignedIn={user != null}
+            viewerUsername={viewerProfile?.username ?? null}
+            initialStatus={viewerRecipient?.status ?? null}
+            initialClaimed={viewerRecipient?.claimedAt != null}
+          />
         </CardContent>
       </Card>
     </CenteredShell>
@@ -194,4 +245,18 @@ function ErrorState({
       </CardContent>
     </Card>
   );
+}
+
+function recipientBadgeVariant(status: string, claimed = false): "secondary" | "success" | "destructive" | "outline" {
+  if (status === "accepted") return "success";
+  if (status === "declined") return "destructive";
+  if (claimed) return "outline";
+  return "secondary";
+}
+
+function recipientBadgeLabel(status: string, claimed: boolean) {
+  if (status === "accepted") return "Accepted";
+  if (status === "declined") return "Declined";
+  if (claimed) return "Claimed";
+  return "Pending";
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import useSWR from "swr";
 import { useRouter, useSearchParams } from "next/navigation";
 import { addHours, formatDistanceToNowStrict } from "date-fns";
@@ -176,7 +176,7 @@ function StreamPatternPanel({
 function NewEventForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: friends = [] } = useSWR("/api/friends", fetcher);
+  const { data: friends = [], mutate: mutateFriends } = useSWR("/api/friends", fetcher);
 
   const meFriend = friends.find((f: any) => f.isMe);
   const otherFriends = friends.filter((f: any) => !f.isMe);
@@ -194,6 +194,8 @@ function NewEventForm() {
   const [selectedFriendIds, setSelectedFriendIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [inviteBanner, setInviteBanner] = useState<{ creatorDisplayName: string; creatorAvatarUrl: string } | null>(null);
+  const [invitePrefill, setInvitePrefill] = useState<any | null>(null);
+  const importedInviteTokenRef = useRef<string | null>(null);
 
   const [suggestingTimes, setSuggestingTimes] = useState(false);
   const [timeSuggestions, setTimeSuggestions] = useState<any[]>([]);
@@ -227,50 +229,93 @@ function NewEventForm() {
 
   useEffect(() => {
     const fromInvite = searchParams.get("fromInvite");
-    if (!fromInvite || friends.length === 0) return;
+    if (!fromInvite) {
+      setInvitePrefill(null);
+      importedInviteTokenRef.current = null;
+      return;
+    }
 
     fetch(`/api/invites/${fromInvite}`)
       .then((r) => r.json())
       .then(({ valid, expired, invite }) => {
         if (!valid || expired || !invite) return;
 
+        setInvitePrefill(invite);
+
         if (invite.title) setTitle(invite.title);
         if (invite.gameName) setGameName(invite.gameName);
         if (invite.description) setDescription(invite.description);
-
-        const matched = friends
-          .filter((f: any) => !f.isMe && invite.participantUsernames?.includes(f.username))
-          .map((f: any) => f.id);
-
-        if (matched.length > 0) {
-          setSelectedFriendIds((prev: number[]) => {
-            const ids = [...prev];
-            for (const id of matched) {
-              if (!ids.includes(id)) ids.push(id);
-            }
-            return ids;
-          });
-        }
 
         setInviteBanner({
           creatorDisplayName: invite.creatorDisplayName,
           creatorAvatarUrl: invite.creatorAvatarUrl,
         });
-
-        fetch(`/api/invites/${fromInvite}`, { method: "PATCH" });
-
-        // Auto-suggest invite creator as a friend
-        if (invite.creatorUsername) {
-          fetch("/api/friends", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: invite.creatorUsername, isSuggested: true }),
-          }).catch(() => {}); // fire-and-forget, non-critical
-        }
       })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.get("fromInvite"), friends.length > 0]);
+  }, [searchParams.get("fromInvite")]);
+
+  useEffect(() => {
+    if (!invitePrefill || friends.length === 0) return;
+
+    const inviteUsernames = Array.from(
+      new Set(
+        [
+          ...(invitePrefill.recipients?.map((recipient: any) => recipient.username) ??
+            invitePrefill.participantUsernames ??
+            []),
+          invitePrefill.creatorUsername,
+        ]
+          .filter(Boolean)
+          .map((username: string) => username.toLowerCase())
+      )
+    );
+
+    if (inviteUsernames.length === 0) return;
+
+    const matched = friends
+      .filter(
+        (friend: any) =>
+          !friend.isMe && inviteUsernames.includes(friend.username?.toLowerCase())
+      )
+      .map((friend: any) => friend.id);
+
+    if (matched.length > 0) {
+      setSelectedFriendIds((prev: number[]) => {
+        const ids = [...prev];
+        for (const id of matched) {
+          if (!ids.includes(id)) ids.push(id);
+        }
+        return ids;
+      });
+    }
+
+    if (importedInviteTokenRef.current === invitePrefill.token) return;
+    importedInviteTokenRef.current = invitePrefill.token;
+
+    const existingUsernames = new Set(
+      friends
+        .filter((friend: any) => !friend.isMe)
+        .map((friend: any) => friend.username?.toLowerCase())
+    );
+    const missingUsernames = inviteUsernames.filter(
+      (username: string) => !existingUsernames.has(username)
+    );
+
+    if (missingUsernames.length === 0) return;
+
+    Promise.allSettled(
+      missingUsernames.map((username: string) =>
+        fetch("/api/friends", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, isSuggested: true }),
+        })
+      )
+    )
+      .then(() => mutateFriends())
+      .catch(() => {});
+  }, [invitePrefill, friends, mutateFriends]);
 
   useEffect(() => {
     const addFriend = searchParams.get("addFriend");
@@ -373,6 +418,7 @@ function NewEventForm() {
           endTime: new Date(endTime).toISOString(),
           gameName,
           participantIds: selectedFriendIds,
+          fromInviteToken: searchParams.get("fromInvite") || undefined,
         }),
       });
       const event = await res.json();

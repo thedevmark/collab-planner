@@ -31,19 +31,77 @@ Example response:
 }
 ```
 
-## How to create the extension on dev.twitch.tv
+## How to submit the extension to Twitch
+
+### Step 1 — Create the extension
 
 1. Go to [dev.twitch.tv/console/extensions](https://dev.twitch.tv/console/extensions) and click **Create Extension**.
 2. Fill in:
    - **Name**: Collab Planner
-   - **Extension Type**: Panel
-3. In the **Capabilities** tab, set:
-   - **Panel Viewer Path**: `panel.html`
-   - **Panel Height**: 300
-4. In the **Asset Hosting** tab, upload `panel.html` (and any referenced assets).  
-   Alternatively, during development you can use a locally served URL and set it as the panel URL.
-5. In the **Allowlist** section, add:
-   - `https://collab.deutschmark.online/api/extension/*`
+   - **Version**: 0.0.1
+   - **Extension Type**: Panel (only — uncheck Overlay and Component)
+3. Click **Create Extension Version**.
+
+### Step 2 — Configure capabilities
+
+In the extension dashboard, go to the **Capabilities** tab:
+- **Panel Viewer URL**: leave blank for now (you'll upload the asset in the next step)
+- **Panel Height**: 300
+- Check **Can Link External Content** (required since the panel fetches from our API and links to `collab.deutschmark.online`)
+
+### Step 3 — Upload assets
+
+1. In the **Asset Hosting** tab, click **Upload Assets**.
+2. Upload `panel.html` from this folder.
+3. After upload, Twitch will give you a hosted URL like `https://[extension-id].ext-twitch.tv/[extension-id]/[version]/panel.html`.
+4. Back in **Capabilities**, set **Panel Viewer URL** to that hosted URL.
+
+### Step 4 — Allowlist the API
+
+In the **Capabilities** tab, under **Allowlisted Panel URLs**, add:
+```
+https://collab.deutschmark.online
+```
+This allows the iframe to fetch from our API and navigate to our site.
+
+### Step 5 — Extension details (required for review)
+
+In the **Details** tab, fill in:
+- **Summary**: Show your stream schedule and planned collabs. Let viewers plan a collab with you in one click.
+- **Description**: (expand on the summary — mention schedule display, collab events, the CTA button)
+- **Category**: Productivity / Social
+- **Screenshots**: Take a screenshot of the panel in testing mode showing the schedule and collabs sections
+- **Contact email**: your email
+
+### Step 6 — Test locally before submitting
+
+1. In the extension dashboard, go to **Testing**.
+2. Under **Panel Testing Base URI**, enter `https://localhost:8080`.
+3. Serve the extension folder locally:
+   ```
+   npx serve twitch-extension --ssl
+   ```
+4. Click **Install on Channel** → choose **Local Test**.
+5. Open your Twitch channel — the panel appears below the stream player.
+6. Verify the schedule and collabs load correctly. Check browser devtools for any errors.
+
+### Step 7 — Submit for review
+
+1. Once testing looks good, go to **Status** → click **Submit for Review**.
+2. Twitch's review team checks:
+   - The panel loads without errors
+   - No TOS violations (no gambling, adult content, misleading info)
+   - Privacy policy / terms links (add these to your site if you don't have them)
+   - The **Can Link External Content** usage is legitimate
+3. Review typically takes **3–7 business days**.
+4. You'll get an email when approved or if changes are requested.
+
+### Step 8 — Go live
+
+After approval:
+1. In the extension dashboard, click **Release** to make it publicly available.
+2. Activate it on your own channel: Twitch Dashboard → Extensions → find Collab Planner → **Activate**.
+3. Share the extension with friends — they can add it from [twitch.tv/ext/collab-planner](https://www.twitch.tv/ext) once live.
 
 ## How to host panel.html
 
