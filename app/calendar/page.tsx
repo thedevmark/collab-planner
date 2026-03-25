@@ -9,7 +9,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarPlus, Eye, EyeOff } from "lucide-react";
+import { CalendarPlus, Eye, EyeOff, Tv2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -115,6 +115,7 @@ export default function CalendarPage() {
   });
   const [hiddenFriends, setHiddenFriends] = useState<Set<number>>(new Set());
   const [initialized, setInitialized] = useState(false);
+  const [showMyStreamDays, setShowMyStreamDays] = useState(true);
 
   const { data } = useSWR(
     `/api/calendar?from=${currentRange.from}&to=${currentRange.to}`,
@@ -280,27 +281,46 @@ export default function CalendarPage() {
         </Link>
       </div>
 
-      {nonMeFriends.length > 0 && (
+      {(nonMeFriends.length > 0 || meDates.size > 0) && (
         <Card>
           <CardContent className="pt-4 pb-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground mr-1">Show friend streams:</span>
-              {nonMeFriends.map((f: any, i: number) => {
-                const color = getFriendColor(f, i);
-                const hidden = hiddenFriends.has(f.id);
-                return (
+              {meDates.size > 0 && (
+                <>
+                  <span className="text-xs text-muted-foreground mr-1">My days:</span>
                   <button
-                    key={f.id}
-                    onClick={() => toggleFriend(f.id)}
+                    onClick={() => setShowMyStreamDays((v) => !v)}
                     className="flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs transition-all hover:brightness-125 active:scale-95"
-                    style={{ borderColor: color, opacity: hidden ? 0.35 : 1 }}
+                    style={{ borderColor: "hsl(var(--primary))", opacity: showMyStreamDays ? 1 : 0.35 }}
                   >
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                    {f.displayName}
-                    {hidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    <Tv2 className="h-3 w-3" style={{ color: "hsl(var(--primary))" }} />
+                    My stream days
+                    {showMyStreamDays ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                   </button>
-                );
-              })}
+                  {nonMeFriends.length > 0 && <span className="w-px h-4 bg-border mx-1" />}
+                </>
+              )}
+              {nonMeFriends.length > 0 && (
+                <>
+                  <span className="text-xs text-muted-foreground mr-1">Friend streams:</span>
+                  {nonMeFriends.map((f: any, i: number) => {
+                    const color = getFriendColor(f, i);
+                    const hidden = hiddenFriends.has(f.id);
+                    return (
+                      <button
+                        key={f.id}
+                        onClick={() => toggleFriend(f.id)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs transition-all hover:brightness-125 active:scale-95"
+                        style={{ borderColor: color, opacity: hidden ? 0.35 : 1 }}
+                      >
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                        {f.displayName}
+                        {hidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                      </button>
+                    );
+                  })}
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -325,7 +345,7 @@ export default function CalendarPage() {
             dayCellClassNames={(arg) => {
               const d = arg.date;
               const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-              return meDates.has(key) ? ["calendar-my-stream-day"] : [];
+              return showMyStreamDays && meDates.has(key) ? ["calendar-my-stream-day"] : [];
             }}
             height="auto"
             dayMaxEvents={3}

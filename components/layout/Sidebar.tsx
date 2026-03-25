@@ -72,15 +72,7 @@ export function Sidebar() {
       </nav>
       {user && (
         <div className="p-3 border-t space-y-1">
-          <button
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            aria-label="Toggle theme"
-          >
-            {resolvedTheme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-            {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
-          </button>
-          <div className="flex items-center gap-2 px-1 pt-1">
+          <div className="flex items-center gap-2 px-1 py-1">
             {avatarUrl ? (
               <Image
                 src={avatarUrl}
@@ -96,6 +88,14 @@ export function Sidebar() {
             )}
             <span className="text-xs font-medium text-zinc-300 truncate">{displayName}</span>
           </div>
+          <button
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            aria-label="Toggle theme"
+          >
+            {resolvedTheme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
+          </button>
           <button
             onClick={handleSignOut}
             className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"

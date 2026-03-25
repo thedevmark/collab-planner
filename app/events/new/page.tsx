@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Loader2, Check, TrendingUp, Zap, Link2 } from "lucide-react";
+import { ArrowLeft, Loader2, Check, TrendingUp, Zap, Link2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { InviteDialog } from "@/components/InviteDialog";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
@@ -198,9 +198,12 @@ function NewEventForm() {
   const [suggestingTimes, setSuggestingTimes] = useState(false);
   const [timeSuggestions, setTimeSuggestions] = useState<any[]>([]);
   const [timeSuggestTimezone, setTimeSuggestTimezone] = useState("UTC");
+  const [timeSuggestEmpty, setTimeSuggestEmpty] = useState(false);
+  const [appliedSlot, setAppliedSlot] = useState<number | null>(null);
 
   const [suggestingGames, setSuggestingGames] = useState(false);
   const [gameSuggestions, setGameSuggestions] = useState<any[]>([]);
+  const [gameSuggestEmpty, setGameSuggestEmpty] = useState(false);
 
   const [gameSearch, setGameSearch] = useState("");
   const { data: gameResults = [] } = useSWR(
@@ -286,6 +289,7 @@ function NewEventForm() {
     if (aiIds.length === 0) return;
     setSuggestingTimes(true);
     setTimeSuggestions([]);
+    setTimeSuggestEmpty(false);
     try {
       const res = await fetch("/api/suggest-times", {
         method: "POST",
@@ -293,25 +297,32 @@ function NewEventForm() {
         body: JSON.stringify({ friendIds: aiIds }),
       });
       const data = await res.json();
-      setTimeSuggestions(data.suggestions ?? []);
+      const suggestions = data.suggestions ?? [];
+      setTimeSuggestions(suggestions);
+      setTimeSuggestEmpty(suggestions.length === 0);
       if (data.timezone) setTimeSuggestTimezone(data.timezone);
     } finally {
       setSuggestingTimes(false);
     }
   }
 
-  function applyTimeSuggestion(suggestion: any) {
+  function applyTimeSuggestion(suggestion: any, index: number) {
     const start = snapToQuarter(new Date(suggestion.start));
     const end = snapToQuarter(new Date(suggestion.end));
     setStartTime(toLocalDatetimeValue(start));
     setEndTime(toLocalDatetimeValue(end));
-    setTimeSuggestions([]);
+    setAppliedSlot(index);
+    setTimeout(() => {
+      setTimeSuggestions([]);
+      setAppliedSlot(null);
+    }, 800);
   }
 
   async function suggestGames() {
-    if (aiIds.length === 0) return;
+    if (selectedNonMe.length === 0) return;
     setSuggestingGames(true);
     setGameSearch("");
+    setGameSuggestEmpty(false);
     try {
       const res = await fetch("/api/suggest-games", {
         method: "POST",
@@ -319,7 +330,9 @@ function NewEventForm() {
         body: JSON.stringify({ friendIds: aiIds }),
       });
       const data = await res.json();
-      setGameSuggestions(data.games ?? []);
+      const games = data.games ?? [];
+      setGameSuggestions(games);
+      setGameSuggestEmpty(games.length === 0);
     } finally {
       setSuggestingGames(false);
     }
@@ -349,7 +362,7 @@ function NewEventForm() {
     }
   }
 
-  const showPanel = selectedNonMe.length > 0 || !!meFriend;
+  const showPanel = selectedNonMe.length > 0;
 
   return (
     <div className="space-y-6">
@@ -447,22 +460,24 @@ function NewEventForm() {
                     variant="outline"
                     size="sm"
                     onClick={suggestGames}
-                    disabled={suggestingGames || aiIds.length === 0}
+                    disabled={suggestingGames || selectedNonMe.length === 0}
+                    title={selectedNonMe.length === 0 ? "Select friends to get game suggestions" : "Suggest games based on stream history"}
                   >
-                    {suggestingGames ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                    {suggestingGames ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     Suggest
                   </Button>
                 </div>
                 {gameSuggestions.length > 0 && (
-                  <div className="border rounded-md p-3 space-y-1 bg-muted/30">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">
-                      Games from your stream history:
+                  <div className="border rounded-md p-3 space-y-1 bg-muted/30 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      Games your group has streamed:
                     </p>
                     {gameSuggestions.slice(0, 8).map((g) => (
                       <button
                         key={g.name}
-                        onClick={() => { setGameName(g.name); setGameSuggestions([]); }}
-                        className="w-full text-left p-2 rounded hover:bg-accent text-sm"
+                        onClick={() => { setGameName(g.name); setGameSuggestions([]); setGameSuggestEmpty(false); }}
+                        className="w-full text-left p-2 rounded hover:bg-accent text-sm transition-colors"
                       >
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{g.name}</span>
@@ -493,6 +508,11 @@ function NewEventForm() {
                     ))}
                   </div>
                 )}
+                {gameSuggestEmpty && !suggestingGames && (
+                  <p className="text-xs text-muted-foreground px-1">
+                    No shared game history yet — add friends and refresh their data first.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -514,43 +534,63 @@ function NewEventForm() {
                   size="sm"
                   onClick={suggestTimes}
                   disabled={suggestingTimes || aiIds.length === 0}
+                  title={aiIds.length === 0 ? "Select friends to suggest times" : "Analyze stream patterns"}
                 >
                   {suggestingTimes ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-                  {suggestingTimes ? "Analyzing..." : "Suggest Times"}
+                  {suggestingTimes ? "Analyzing…" : "Suggest Times"}
                 </Button>
               </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
               {timeSuggestions.length > 0 && (
-                <div className="border rounded-md p-3 space-y-1 bg-muted/30">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">
-                    Best times based on stream history ({timeSuggestTimezone}):
+                <div className="border rounded-md p-3 space-y-1 bg-muted/30 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                    <Zap className="h-3 w-3 text-yellow-500" />
+                    Best windows based on stream history ({timeSuggestTimezone}):
                   </p>
                   {timeSuggestions.map((s, i) => (
                     <button
                       key={i}
-                      onClick={() => applyTimeSuggestion(s)}
-                      className="w-full text-left p-2 rounded hover:bg-accent text-sm transition-colors"
+                      onClick={() => applyTimeSuggestion(s, i)}
+                      className={`w-full text-left p-2 rounded text-sm transition-all ${
+                        appliedSlot === i
+                          ? "bg-primary/20 border border-primary/40 scale-[0.99]"
+                          : "hover:bg-accent"
+                      }`}
                     >
                       <div className="flex items-center gap-2">
+                        {appliedSlot === i
+                          ? <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                          : <span className="text-xs text-muted-foreground w-3.5 shrink-0">{i + 1}.</span>
+                        }
                         <span className="font-medium">{s.displayStart}</span>
                         <Badge variant={s.confidence === "high" ? "success" : s.confidence === "medium" ? "secondary" : "outline"} className="text-[10px] capitalize">
                           {s.confidence}
                         </Badge>
-                        <span className="text-xs text-muted-foreground ml-auto">{s.combinedScore}% match</span>
+                        <span className="text-xs text-muted-foreground ml-auto font-medium">{s.combinedScore}% match</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5 ml-5">
                         through {s.displayEnd} · {s.windowHours}h window
                       </p>
                       {s.friendScores?.length > 0 && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {s.friendScores.map((f: any) => `${f.displayName} ${f.probability}%`).join(" · ")}
-                        </p>
+                        <div className="flex gap-2 flex-wrap mt-1 ml-5">
+                          {s.friendScores.map((f: any) => (
+                            <span key={f.friendId} className="text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+                              {f.displayName} {f.probability}%
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </button>
                   ))}
                 </div>
+              )}
+              {timeSuggestEmpty && !suggestingTimes && (
+                <p className="text-xs text-muted-foreground px-1 flex items-center gap-1">
+                  <Zap className="h-3 w-3" />
+                  Not enough stream history yet — refresh friend data and try again.
+                </p>
               )}
               {meFriend && (
                 <div className="flex items-center gap-2 p-2 rounded-md border border-muted bg-muted/20 opacity-60">
