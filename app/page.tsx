@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CalendarPlus, RefreshCw, MessageSquare, Users, Clock, Gamepad2, Loader2 } from "lucide-react";
 import { useReminderPolling } from "@/hooks/useReminders";
+import OnboardingModal from "@/components/onboarding/OnboardingModal";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -30,6 +31,7 @@ export default function Dashboard() {
   const { data: events = [], mutate: mutateEvents } = useSWR(EVENTS_KEY, fetcher);
   const { data: friends = [], mutate: mutateFriends } = useSWR("/api/friends", fetcher);
   const { data: liveData, mutate: mutateLive } = useSWR("/api/twitch/live", fetcher, { refreshInterval: 60000 });
+  const { data: profile, mutate: mutateProfile } = useSWR("/api/profile/onboarding", fetcher);
   const [refreshing, setRefreshing] = useState(false);
 
   useReminderPolling(true);
@@ -72,6 +74,13 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {profile?.hasCompletedOnboarding === false && (
+        <OnboardingModal
+          displayName={profile.displayName ?? ""}
+          avatarUrl={profile.avatarUrl ?? ""}
+          onComplete={() => mutateProfile()}
+        />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>

@@ -8,15 +8,16 @@ datasource db {
 }
 
 model Profile {
-  id           String   @id
-  twitchId     String   @unique
-  username     String
-  displayName  String
-  avatarUrl    String   @default("")
-  channelColor String   @default("")
-  timezone     String   @default("UTC")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                    String   @id
+  twitchId              String   @unique
+  username              String
+  displayName           String
+  avatarUrl             String   @default("")
+  channelColor          String   @default("")
+  timezone              String   @default("UTC")
+  hasCompletedOnboarding Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 model Friend {
