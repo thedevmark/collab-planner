@@ -1,0 +1,69 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getAuthUser, unauthorized } from "@/lib/auth";
+import { z } from "zod";
+
+const createInviteSchema = z.object({
+  participantFriendIds: z.array(z.number()).default([]),
+  title: z.string().min(1).default("Collab Stream"),
+  gameName: z.string().optional(),
+  description: z.string().optional(),
+  message: z.string().optional(),
+  expiresIn: z.number().nullable().optional(),
+  maxUses: z.number().nullable().optional(),
+});
+
+export async function POST(req: Request) {
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
+
+  try {
+    const body = await req.json();
+    const data = createInviteSchema.parse(body);
+
+    const meFriend = await prisma.friend.findFirst({
+      where: { userId, isMe: true },
+    });
+
+    const participants =
+      data.participantFriendIds.length > 0
+        ? await prisma.friend.findMany({
+            where: { id: { in: data.participantFriendIds }, userId, isMe: false },
+          })
+        : [];
+
+    const expiresAt =
+      data.expiresIn != null
+        ? new Date(Date.now() + data.expiresIn * 60 * 60 * 1000)
+        : null;
+
+    const invite = await prisma.collabInvite.create({
+      data: {
+        creatorUserId: userId,
+        creatorDisplayName: meFriend?.displayName ?? "",
+        creatorAvatarUrl: meFriend?.avatarUrl ?? "",
+        creatorUsername: meFriend?.username ?? "",
+        title: data.title,
+        gameName: data.gameName ?? "",
+        description: data.description ?? "",
+        message: data.message ?? "",
+        participantUsernames: participants.map((p) => p.username),
+        participantDisplayNames: participants.map((p) => p.displayName),
+        participantAvatarUrls: participants.map((p) => p.avatarUrl),
+        expiresAt,
+        maxUses: data.maxUses ?? null,
+      },
+    });
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const url = `${baseUrl}/invite/${invite.token}`;
+
+    return NextResponse.json({ token: invite.token, url, invite }, { status: 201 });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({ error: "Validation failed", details: err.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Failed to create invite" }, { status: 500 });
+  }
+}

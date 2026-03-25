@@ -38,7 +38,9 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const isAuthRoute =
-    pathname.startsWith("/login") || pathname.startsWith("/auth");
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/invite");
 
   // Redirect unauthenticated users to login
   if (!user && !isAuthRoute) {

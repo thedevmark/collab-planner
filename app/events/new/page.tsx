@@ -11,8 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Loader2, Check, TrendingUp, Zap } from "lucide-react";
+import { ArrowLeft, Loader2, Check, TrendingUp, Zap, Link2 } from "lucide-react";
 import Link from "next/link";
+import { InviteDialog } from "@/components/InviteDialog";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -192,6 +193,7 @@ function NewEventForm() {
   const [gameName, setGameName] = useState("");
   const [selectedFriendIds, setSelectedFriendIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
+  const [inviteBanner, setInviteBanner] = useState<{ creatorDisplayName: string; creatorAvatarUrl: string } | null>(null);
 
   const [suggestingTimes, setSuggestingTimes] = useState(false);
   const [timeSuggestions, setTimeSuggestions] = useState<any[]>([]);
@@ -219,6 +221,44 @@ function NewEventForm() {
     }
     if (ids.length > 0) setSelectedFriendIds(ids);
   }, [meFriend?.id, searchParams]);
+
+  useEffect(() => {
+    const fromInvite = searchParams.get("fromInvite");
+    if (!fromInvite || friends.length === 0) return;
+
+    fetch(`/api/invites/${fromInvite}`)
+      .then((r) => r.json())
+      .then(({ valid, expired, invite }) => {
+        if (!valid || expired || !invite) return;
+
+        if (invite.title) setTitle(invite.title);
+        if (invite.gameName) setGameName(invite.gameName);
+        if (invite.description) setDescription(invite.description);
+
+        const matched = friends
+          .filter((f: any) => !f.isMe && invite.participantUsernames?.includes(f.username))
+          .map((f: any) => f.id);
+
+        if (matched.length > 0) {
+          setSelectedFriendIds((prev: number[]) => {
+            const ids = [...prev];
+            for (const id of matched) {
+              if (!ids.includes(id)) ids.push(id);
+            }
+            return ids;
+          });
+        }
+
+        setInviteBanner({
+          creatorDisplayName: invite.creatorDisplayName,
+          creatorAvatarUrl: invite.creatorAvatarUrl,
+        });
+
+        fetch(`/api/invites/${fromInvite}`, { method: "PATCH" });
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get("fromInvite"), friends.length > 0]);
 
   const aiIds = meFriend
     ? [...new Set([meFriend.id, ...selectedFriendIds])]
@@ -313,6 +353,18 @@ function NewEventForm() {
         </Link>
         <h1 className="text-3xl font-bold">New Collab Event</h1>
       </div>
+
+      {inviteBanner && (
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20 text-sm">
+          <Avatar className="h-6 w-6">
+            <AvatarImage src={inviteBanner.creatorAvatarUrl} />
+            <AvatarFallback>{inviteBanner.creatorDisplayName[0]}</AvatarFallback>
+          </Avatar>
+          <span>
+            Planning from <strong>{inviteBanner.creatorDisplayName}</strong>&apos;s invite
+          </span>
+        </div>
+      )}
 
       <div className={`gap-6 max-w-5xl ${showPanel ? "grid grid-cols-[minmax(0,1fr)_320px]" : "flex flex-col max-w-2xl"}`}>
         {/* Left column */}
@@ -441,6 +493,13 @@ function NewEventForm() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Invite Friends</CardTitle>
+              <div className="flex items-center gap-2">
+                <InviteDialog friends={friends} defaultFriendIds={selectedNonMe}>
+                  <Button variant="outline" size="sm">
+                    <Link2 className="h-4 w-4" />
+                    Share Link
+                  </Button>
+                </InviteDialog>
                 <Button
                   variant="outline"
                   size="sm"
@@ -450,6 +509,7 @@ function NewEventForm() {
                   {suggestingTimes ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
                   {suggestingTimes ? "Analyzing..." : "Suggest Times"}
                 </Button>
+              </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">

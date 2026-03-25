@@ -18,7 +18,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Search, Loader2, TrendingUp, Users2, CalendarClock, Gamepad2 } from "lucide-react";
+import { UserPlus, Search, Loader2, TrendingUp, Users2, CalendarClock, Gamepad2, Link2 } from "lucide-react";
+import { InviteDialog } from "@/components/InviteDialog";
 
 const FALLBACK_COLORS = [
   "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
@@ -174,7 +175,14 @@ export default function FriendsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Friends</h1>
-        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setAddError(""); setNewUsername(""); } }}>
+        <div className="flex items-center gap-2">
+          <InviteDialog friends={friends}>
+            <Button variant="outline">
+              <Link2 className="h-4 w-4" />
+              Create Invite
+            </Button>
+          </InviteDialog>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setAddError(""); setNewUsername(""); } }}>
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="h-4 w-4" />
@@ -207,6 +215,7 @@ export default function FriendsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Your own card — always at the top */}
@@ -308,6 +317,19 @@ export default function FriendsPage() {
                         {friend.notes}
                       </p>
                     )}
+
+                    <div onClick={(e) => e.preventDefault()}>
+                      <InviteDialog friends={friends} defaultFriendIds={[friend.id]}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full mt-1 h-7 text-xs text-muted-foreground"
+                        >
+                          <Link2 className="h-3 w-3" />
+                          Invite to Collab
+                        </Button>
+                      </InviteDialog>
+                    </div>
                   </CardContent>
                 </Card>
               </Link>

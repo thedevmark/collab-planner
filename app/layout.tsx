@@ -27,7 +27,10 @@ export default async function RootLayout({
 }>) {
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") ?? headersList.get("x-invoke-path") ?? "";
-  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/auth");
+  const isAuthPage =
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/invite");
 
   return (
     <html lang="en" suppressHydrationWarning>
