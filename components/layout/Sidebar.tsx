@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  Calendar,
   CalendarPlus,
   ListChecks,
   Settings,
@@ -32,11 +31,10 @@ import {
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/friends", label: "Friends", icon: Users },
-  { href: "/calendar", label: "Calendar", icon: Calendar, exact: true },
-  { href: "/events", label: "Event History", icon: ListChecks, exact: true },
-  { href: "/events/new", label: "New Event", icon: CalendarPlus, exact: true },
+  { href: "/", label: "Home", icon: LayoutDashboard, exact: true },
+  { href: "/events/new", label: "New Session", icon: CalendarPlus, exact: true },
+  { href: "/friends", label: "People", icon: Users },
+  { href: "/events", label: "History", icon: ListChecks, exact: true },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

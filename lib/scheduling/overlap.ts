@@ -21,6 +21,12 @@ export interface ScoredSlot {
   end: Date;
   /** Aggregate overlap score across all friends */
   combinedScore: number;
+  /** Average participant score for the slot */
+  averageFriendScore: number;
+  /** Lowest participant score in the slot */
+  minFriendScore: number;
+  /** Whether the slot passes the viability threshold for the whole group */
+  viable: boolean;
   /** Human-readable confidence tier for the suggestion */
   confidence: "high" | "medium" | "low";
   /** Per-friend probability breakdown */
@@ -44,47 +50,35 @@ export function rankCollabSlots(
 ): ScoredSlot[] {
   if (patterns.length === 0) return [];
 
-  const hourlyCandidates: ScoredSlot[] = [];
-
-  // Walk every hour in [from, to)
-  const cursor = new Date(from);
-  cursor.setUTCMinutes(0, 0, 0);
-
-  while (cursor < to) {
-    const day = cursor.getUTCDay();
-    const hour = cursor.getUTCHours();
-
-    const friendScores = patterns.map((pattern) => {
-      const baseScore = pattern.dayFrequency[day] * pattern.hourDistribution[hour];
-      return {
-        friendId: pattern.friendId,
-        displayName: pattern.displayName,
-        score: clampScore(baseScore * reliabilityWeight(pattern)),
-      };
-    });
-
-    const minFriendScore = Math.min(...friendScores.map((friend) => friend.score));
-    const averageFriendScore =
-      friendScores.reduce((sum, friend) => sum + friend.score, 0) / friendScores.length;
-    const harmony = averageFriendScore > 0 ? minFriendScore / averageFriendScore : 0;
-    const combinedScore = averageFriendScore * (0.7 + 0.3 * harmony);
-
-    if (isViableSlot(patterns.length, averageFriendScore, minFriendScore)) {
-      hourlyCandidates.push({
-        start: new Date(cursor),
-        end: new Date(cursor.getTime() + MIN_DURATION_MS),
-        combinedScore,
-        confidence: scoreToConfidence(averageFriendScore, minFriendScore),
-        friendScores,
-      });
-    }
-
-    cursor.setUTCHours(cursor.getUTCHours() + 1);
-  }
+  const hourlyCandidates = scoreCollabHours(patterns, from, to).filter((slot) => slot.viable);
 
   const merged = mergeAdjacentSlots(hourlyCandidates);
   merged.sort((a, b) => b.combinedScore - a.combinedScore || a.start.getTime() - b.start.getTime());
   return merged.slice(0, topN);
+}
+
+/**
+ * Score every 1-hour block in the requested range. Unlike rankCollabSlots,
+ * this returns both viable and low-confidence slots so the UI can render a
+ * full heatmap instead of only a ranked shortlist.
+ */
+export function scoreCollabHours(
+  patterns: StreamingPattern[],
+  from: Date = new Date(),
+  to: Date = new Date(Date.now() + 14 * 86400000)
+): ScoredSlot[] {
+  if (patterns.length === 0) return [];
+
+  const slots: ScoredSlot[] = [];
+  const cursor = new Date(from);
+  cursor.setUTCMinutes(0, 0, 0);
+
+  while (cursor < to) {
+    slots.push(scoreHour(patterns, cursor));
+    cursor.setUTCHours(cursor.getUTCHours() + 1);
+  }
+
+  return slots;
 }
 
 /**
@@ -105,6 +99,10 @@ export function mergeAdjacentSlots(slots: ScoredSlot[]): ScoredSlot[] {
       last.end = curr.end;
       last.combinedScore =
         (last.combinedScore * last.slotCount + curr.combinedScore) / (last.slotCount + 1);
+      last.averageFriendScore =
+        (last.averageFriendScore * last.slotCount + curr.averageFriendScore) / (last.slotCount + 1);
+      last.minFriendScore = Math.min(last.minFriendScore, curr.minFriendScore);
+      last.viable = last.viable && curr.viable;
       last.friendScores = last.friendScores.map((friendScore, index) => ({
         ...friendScore,
         score:
@@ -122,6 +120,37 @@ export function mergeAdjacentSlots(slots: ScoredSlot[]): ScoredSlot[] {
     void slotCount;
     return slot;
   });
+}
+
+function scoreHour(patterns: StreamingPattern[], start: Date): ScoredSlot {
+  const day = start.getUTCDay();
+  const hour = start.getUTCHours();
+
+  const friendScores = patterns.map((pattern) => {
+    const baseScore = pattern.dayFrequency[day] * pattern.hourDistribution[hour];
+    return {
+      friendId: pattern.friendId,
+      displayName: pattern.displayName,
+      score: clampScore(baseScore * reliabilityWeight(pattern)),
+    };
+  });
+
+  const minFriendScore = Math.min(...friendScores.map((friend) => friend.score));
+  const averageFriendScore =
+    friendScores.reduce((sum, friend) => sum + friend.score, 0) / friendScores.length;
+  const harmony = averageFriendScore > 0 ? minFriendScore / averageFriendScore : 0;
+  const combinedScore = averageFriendScore * (0.7 + 0.3 * harmony);
+
+  return {
+    start: new Date(start),
+    end: new Date(start.getTime() + MIN_DURATION_MS),
+    combinedScore,
+    averageFriendScore,
+    minFriendScore,
+    viable: isViableSlot(patterns.length, averageFriendScore, minFriendScore),
+    confidence: scoreToConfidence(averageFriendScore, minFriendScore),
+    friendScores,
+  };
 }
 
 function reliabilityWeight(pattern: StreamingPattern): number {

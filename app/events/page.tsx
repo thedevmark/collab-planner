@@ -9,6 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CalendarPlus, Calendar, Clock, Gamepad2, ChevronDown, ExternalLink } from "lucide-react";
+import {
+  participantResponseBadgeVariant,
+  participantResponseLabel,
+} from "@/lib/participantStatus";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -19,14 +23,35 @@ const STATUS_COLORS: Record<string, "default" | "success" | "warning" | "seconda
   canceled: "destructive",
 };
 
-function EventRow({ event }: { event: any }) {
+type EventParticipant = {
+  id: number;
+  inviteStatus: string;
+  friend: {
+    displayName: string;
+    avatarUrl: string | null;
+    isMe: boolean;
+  };
+};
+
+type EventSummary = {
+  id: number;
+  title: string;
+  description: string | null;
+  startTime: string;
+  endTime: string;
+  gameName: string | null;
+  status: string;
+  participants: EventParticipant[];
+};
+
+function EventRow({ event }: { event: EventSummary }) {
   const [open, setOpen] = useState(false);
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
   const past = isPast(end);
   const today = isToday(start);
 
-  const nonMeParticipants = (event.participants ?? []).filter((p: any) => !p.friend.isMe);
+  const nonMeParticipants = (event.participants ?? []).filter((p) => !p.friend.isMe);
 
   return (
     <div className={`rounded-lg border transition-colors ${past ? "opacity-60" : ""} ${open ? "border-zinc-700 bg-zinc-900/40" : "border-transparent hover:bg-zinc-900/40"}`}>
@@ -66,9 +91,9 @@ function EventRow({ event }: { event: any }) {
         {/* Participants */}
         {nonMeParticipants.length > 0 && (
           <div className="flex -space-x-2 shrink-0">
-            {nonMeParticipants.slice(0, 4).map((p: any) => (
+            {nonMeParticipants.slice(0, 4).map((p) => (
               <Avatar key={p.id} className="h-7 w-7 border-2 border-card">
-                <AvatarImage src={p.friend.avatarUrl} />
+                <AvatarImage src={p.friend.avatarUrl ?? undefined} />
                 <AvatarFallback className="text-[10px]">{p.friend.displayName[0]}</AvatarFallback>
               </Avatar>
             ))}
@@ -102,21 +127,18 @@ function EventRow({ event }: { event: any }) {
             <div className="space-y-1.5">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Participants</p>
               <div className="flex flex-wrap gap-2">
-                {nonMeParticipants.map((p: any) => (
+                {nonMeParticipants.map((p) => (
                   <div key={p.id} className="flex items-center gap-2 bg-zinc-900 rounded-md px-2 py-1">
                     <Avatar className="h-5 w-5">
-                      <AvatarImage src={p.friend.avatarUrl} />
+                      <AvatarImage src={p.friend.avatarUrl ?? undefined} />
                       <AvatarFallback className="text-[9px]">{p.friend.displayName[0]}</AvatarFallback>
                     </Avatar>
                     <span className="text-xs font-medium">{p.friend.displayName}</span>
                     <Badge
-                      variant={
-                        p.inviteStatus === "accepted" ? "success" :
-                        p.inviteStatus === "declined" ? "destructive" : "secondary"
-                      }
+                      variant={participantResponseBadgeVariant(p.inviteStatus)}
                       className="text-[10px] px-1 py-0"
                     >
-                      {p.inviteStatus}
+                      {participantResponseLabel(p.inviteStatus)}
                     </Badge>
                   </div>
                 ))}
@@ -137,21 +159,21 @@ function EventRow({ event }: { event: any }) {
 }
 
 export default function EventsPage() {
-  const { data: events = [] } = useSWR("/api/events", fetcher);
+  const { data: events = [] } = useSWR<EventSummary[]>("/api/events", fetcher);
 
   const now = new Date();
-  const upcoming = events.filter((e: any) => new Date(e.endTime) >= now && e.status !== "canceled");
-  const past = events.filter((e: any) => new Date(e.endTime) < now && e.status !== "canceled");
-  const canceled = events.filter((e: any) => e.status === "canceled");
+  const upcoming = events.filter((e) => new Date(e.endTime) >= now && e.status !== "canceled");
+  const past = events.filter((e) => new Date(e.endTime) < now && e.status !== "canceled");
+  const canceled = events.filter((e) => e.status === "canceled");
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Event History</h1>
+        <h1 className="text-3xl font-bold">History</h1>
         <Link href="/events/new">
           <Button>
             <CalendarPlus className="h-4 w-4" />
-            New Event
+            New Session
           </Button>
         </Link>
       </div>
@@ -159,12 +181,12 @@ export default function EventsPage() {
       {events.length === 0 && (
         <div className="text-center py-20 text-muted-foreground">
           <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p className="text-lg font-medium">No events yet</p>
-          <p className="text-sm mb-4">Create a collab event to get started</p>
+          <p className="text-lg font-medium">No sessions yet</p>
+          <p className="text-sm mb-4">Create a session to get started</p>
           <Link href="/events/new">
             <Button>
               <CalendarPlus className="h-4 w-4" />
-              New Event
+              New Session
             </Button>
           </Link>
         </div>
@@ -175,7 +197,7 @@ export default function EventsPage() {
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Upcoming</p>
           <Card>
             <CardContent className="p-2 space-y-0.5">
-              {upcoming.map((e: any) => <EventRow key={e.id} event={e} />)}
+              {upcoming.map((e) => <EventRow key={e.id} event={e} />)}
             </CardContent>
           </Card>
         </section>
@@ -186,7 +208,7 @@ export default function EventsPage() {
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Past</p>
           <Card>
             <CardContent className="p-2 space-y-0.5">
-              {past.map((e: any) => <EventRow key={e.id} event={e} />)}
+              {past.map((e) => <EventRow key={e.id} event={e} />)}
             </CardContent>
           </Card>
         </section>
@@ -197,7 +219,7 @@ export default function EventsPage() {
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Canceled</p>
           <Card>
             <CardContent className="p-2 space-y-0.5">
-              {canceled.map((e: any) => <EventRow key={e.id} event={e} />)}
+              {canceled.map((e) => <EventRow key={e.id} event={e} />)}
             </CardContent>
           </Card>
         </section>

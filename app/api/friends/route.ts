@@ -51,7 +51,7 @@ export async function GET(req: Request) {
           take: 20,
         },
       },
-      orderBy: { displayName: "asc" },
+      orderBy: [{ isFavorite: "desc" }, { displayName: "asc" }],
     });
 
     const pastParticipants = await prisma.eventParticipant.findMany({
@@ -115,7 +115,7 @@ export async function GET(req: Request) {
         recentCollabs: (recentCollabsByFriend.get(friend.id) ?? []).slice(0, 3),
       }))
     );
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
   }
 }

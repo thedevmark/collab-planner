@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser, unauthorized } from "@/lib/auth";
-import { analyzePatterns, type StreamSession, type ScheduleHint } from "@/lib/scheduling/patterns";
-import { rankCollabSlots } from "@/lib/scheduling/overlap";
+import { getPlannerTopSlots } from "@/lib/scheduling/planner";
 
 /**
  * POST /api/suggest-times
@@ -52,27 +51,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ suggestions: [] });
     }
 
-    // Build pattern for each friend
-    const patterns = friends.map((f) => {
-      const sessions: StreamSession[] = f.streamHistory.map((h) => ({
-        startTime: new Date(h.startTime),
-        endTime: new Date(h.endTime),
-        gameName: h.gameName ?? "",
-        durationSec: h.durationSec,
-      }));
-
-      const scheduleHints: ScheduleHint[] = f.scheduleSegments.map((s) => ({
-        startTime: new Date(s.startTime),
-        endTime: new Date(s.endTime),
-        gameName: s.title ?? "",
-        isRecurring: s.isRecurring,
-      }));
-
-      return analyzePatterns(f.id, f.displayName, sessions, scheduleHints);
-    });
-
-    // Score every 1-hour block in the next 14 days, pick top 5
-    const slots = rankCollabSlots(patterns, 5);
+    const now = new Date();
+    const slots = getPlannerTopSlots(friends, now, new Date(now.getTime() + 14 * 86400000), 5);
 
     // Format display strings in the user's timezone
     const dtf = new Intl.DateTimeFormat("en-US", {

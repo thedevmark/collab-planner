@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, ArrowLeft, Clock, Edit2, Check, X, Trash2, History, TrendingUp, Users2 } from "lucide-react";
+import { RefreshCw, ArrowLeft, Clock, Edit2, Check, X, Trash2, History, TrendingUp, Users2, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -94,6 +94,15 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
     router.push("/friends");
   }
 
+  async function toggleFavorite() {
+    await fetch(`/api/friends/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isFavorite: !friend.isFavorite }),
+    });
+    mutate();
+  }
+
   const pattern = getStreamingPattern(friend.streamHistory, friend.scheduleSegments);
   const upcomingSegments = friend.scheduleSegments?.filter((s: any) => new Date(s.endTime) > new Date()) ?? [];
   const collabPartners = collabData?.summary?.partners ?? [];
@@ -121,6 +130,7 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold">{friend.displayName}</h1>
                 {friend.isMe && <Badge style={{ backgroundColor: accentColor, color: "#fff", border: "none" }}>You</Badge>}
+                {friend.isFavorite && <Badge variant="secondary">Favorite</Badge>}
               </div>
               <p className="text-muted-foreground">@{friend.username}</p>
               {collabPartners.length > 0 && (
@@ -134,8 +144,14 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
                   <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                   Refresh Data
                 </Button>
+                {!friend.isMe && (
+                  <Button variant="outline" size="sm" onClick={toggleFavorite}>
+                    <Star className={`h-4 w-4 ${friend.isFavorite ? "fill-current text-yellow-400" : ""}`} />
+                    {friend.isFavorite ? "Favorited" : "Favorite"}
+                  </Button>
+                )}
                 <Link href={`/events/new?friendId=${friend.id}`}>
-                  <Button size="sm">Plan Collab</Button>
+                  <Button size="sm">New Session</Button>
                 </Link>
                 <Button variant="ghost" size="sm" className="text-destructive" onClick={removeFriend}>
                   <Trash2 className="h-4 w-4" />

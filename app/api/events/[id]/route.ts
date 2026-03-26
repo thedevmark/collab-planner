@@ -3,6 +3,10 @@ import { prisma } from "@/lib/db";
 import { getAuthUser, unauthorized } from "@/lib/auth";
 import { z } from "zod";
 import { notifyDiscord } from "@/lib/discord/notify";
+import {
+  normalizeParticipantsInviteStatus,
+  normalizeParticipantResponseStatus,
+} from "@/lib/participantStatus";
 
 const updateSchema = z.object({
   title: z.string().optional(),
@@ -29,12 +33,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           },
         },
         reminders: true,
-        messageLogs: { orderBy: { createdAt: "desc" }, take: 10 },
       },
     });
     if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    return NextResponse.json(event);
-  } catch (err) {
+    return NextResponse.json({
+      ...event,
+      participants: normalizeParticipantsInviteStatus(event.participants),
+    });
+  } catch {
     return NextResponse.json({ error: "Failed to fetch event" }, { status: 500 });
   }
 }
@@ -72,7 +78,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       await tx.collabHistory.deleteMany({ where: { eventId } });
 
       if (updatedEvent.status === "completed") {
-        const completedParticipants = updatedEvent.participants.filter((p) => !p.friend.isMe);
+        const completedParticipants = updatedEvent.participants.filter(
+          (p) => !p.friend.isMe && normalizeParticipantResponseStatus(p.inviteStatus) !== "declined",
+        );
         if (completedParticipants.length > 0) {
           await tx.collabHistory.createMany({
             data: completedParticipants.map((p) => ({
@@ -94,7 +102,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (data.status === "confirmed") notifyDiscord(user.id, "confirmed", event);
     if (data.status === "canceled") notifyDiscord(user.id, "canceled", event);
 
-    return NextResponse.json(event);
+    return NextResponse.json({
+      ...event,
+      participants: normalizeParticipantsInviteStatus(event.participants),
+    });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed" }, { status: 400 });
@@ -117,7 +128,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       data: { status: "canceled" },
     });
     return NextResponse.json({ success: true });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Failed to delete event" }, { status: 500 });
   }
 }

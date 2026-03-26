@@ -272,11 +272,11 @@ export default function CalendarPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Calendar</h1>
+        <h1 className="text-3xl font-bold">Calendar Helper</h1>
         <Link href="/events/new">
           <Button>
             <CalendarPlus className="h-4 w-4" />
-            New Event
+            New Session
           </Button>
         </Link>
       </div>

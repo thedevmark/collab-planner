@@ -18,7 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Search, Loader2, TrendingUp, Users2, CalendarClock, Gamepad2, Link2, Sparkles, RefreshCw, Check, X } from "lucide-react";
+import { UserPlus, Search, Loader2, TrendingUp, Users2, CalendarClock, Gamepad2, Link2, Sparkles, RefreshCw, Check, X, Star } from "lucide-react";
 import { InviteDialog } from "@/components/InviteDialog";
 
 const FALLBACK_COLORS = [
@@ -141,15 +141,22 @@ export default function FriendsPage() {
   const [syncing, setSyncing] = useState(false);
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [dismissingId, setDismissingId] = useState<number | null>(null);
+  const [togglingFavoriteId, setTogglingFavoriteId] = useState<number | null>(null);
 
   const meFriend = friends.find((f: any) => f.isMe);
   const nonMeFriends = friends.filter((f: any) => !f.isMe);
   const confirmedFriends = nonMeFriends.filter((f: any) => !f.isSuggested);
   const suggestedFriends = nonMeFriends.filter((f: any) => f.isSuggested);
-  const filtered = confirmedFriends.filter((f: any) =>
-    f.displayName.toLowerCase().includes(search.trim().toLowerCase()) ||
-    f.username.toLowerCase().includes(search.trim().toLowerCase())
-  );
+  const favoriteCount = confirmedFriends.filter((f: any) => f.isFavorite).length;
+  const filtered = confirmedFriends
+    .filter((f: any) =>
+      f.displayName.toLowerCase().includes(search.trim().toLowerCase()) ||
+      f.username.toLowerCase().includes(search.trim().toLowerCase())
+    )
+    .sort((a: any, b: any) => {
+      if (a.isFavorite !== b.isFavorite) return Number(b.isFavorite) - Number(a.isFavorite);
+      return a.displayName.localeCompare(b.displayName);
+    });
 
   async function addFriend() {
     if (!newUsername.trim()) return;
@@ -210,12 +217,26 @@ export default function FriendsPage() {
     }
   }
 
+  async function toggleFavorite(id: number, isFavorite: boolean) {
+    setTogglingFavoriteId(id);
+    try {
+      await fetch(`/api/friends/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isFavorite }),
+      });
+      mutate();
+    } finally {
+      setTogglingFavoriteId(null);
+    }
+  }
+
   const meColor = meFriend?.channelColor || "#7aa2f7";
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Friends</h1>
+        <h1 className="text-3xl font-bold">People</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={syncSuggestions} disabled={syncing}>
             {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
@@ -224,14 +245,14 @@ export default function FriendsPage() {
           <InviteDialog friends={friends}>
             <Button variant="outline">
               <Link2 className="h-4 w-4" />
-              Create Invite
+              Invite People
             </Button>
           </InviteDialog>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setAddError(""); setNewUsername(""); } }}>
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="h-4 w-4" />
-              Add Friend
+              Add Person
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -355,14 +376,21 @@ export default function FriendsPage() {
         />
       </div>
 
+      {favoriteCount > 0 && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Star className="h-3.5 w-3.5 fill-current text-yellow-400" />
+          Favorites appear first in planning and session setup.
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <UserPlus className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p className="text-lg font-medium">No friends yet</p>
-          <p className="text-sm mb-4">Add your Twitch friends to start planning collabs</p>
+          <p className="text-lg font-medium">No people yet</p>
+          <p className="text-sm mb-4">Add your Twitch people to start planning sessions</p>
           <Button onClick={() => setDialogOpen(true)}>
             <UserPlus className="h-4 w-4" />
-            Add Friend
+            Add Person
           </Button>
         </div>
       ) : (
@@ -384,10 +412,34 @@ export default function FriendsPage() {
                           {friend.displayName[0].toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0">
-                        <p className="font-semibold truncate">{friend.displayName}</p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold truncate">{friend.displayName}</p>
+                          {friend.isFavorite && (
+                            <Badge variant="secondary" className="text-[10px] shrink-0">
+                              Favorite
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">@{friend.username}</p>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 shrink-0 p-0"
+                        disabled={togglingFavoriteId === friend.id}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          void toggleFavorite(friend.id, !friend.isFavorite);
+                        }}
+                        title={friend.isFavorite ? "Remove favorite" : "Mark as favorite"}
+                      >
+                        {togglingFavoriteId === friend.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Star className={`h-4 w-4 ${friend.isFavorite ? "fill-current text-yellow-400" : "text-muted-foreground"}`} />
+                        )}
+                      </Button>
                     </div>
 
                     <StreamPattern friend={friend} accentColor={accentColor} />

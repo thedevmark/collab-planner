@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Modern Vectors Gradients -->
+    <linearGradient id="purple-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a970ff" />
+      <stop offset="100%" stop-color="#772ce8" />
+    </linearGradient>
+    <linearGradient id="blue-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+
+    <path id="twitch-glitch" fill-rule="evenodd" d="
+      M50,0 L0,50 L0,230 L60,230 L60,280 L110,230 L150,230 L240,140 L240,0 Z
+      M220,20 L60,20 L60,170 L105,170 L105,205 L140,170 L180,170 L220,130 Z
+      M170,55 L190,55 L190,115 L170,115 Z
+      M115,55 L135,55 L135,115 L115,115 Z
+    " />
+
+    <mask id="mask-for-1" maskUnits="userSpaceOnUse">
+      <rect x="-200" y="-200" width="1000" height="1000" fill="white" />
+      <!-- Cut Logo 1 using the completely uniform expanded stroke of Logo 2 -->
+      <use href="#twitch-glitch" x="130" y="100" fill="black" stroke="black" stroke-width="26" stroke-linejoin="round" />
+      <!-- Explicitly protect Logo 1's right vertical arm so it can cleanly overlap Logo 2 -->
+      <rect x="206" y="85" width="48" height="50" fill="white" />
+    </mask>
+
+    <mask id="mask-for-2" maskUnits="userSpaceOnUse">
+      <rect x="-200" y="-200" width="1000" height="1000" fill="white" />
+      <!-- Create a perfect rectangular cutout in Logo 2's top arm to let Logo 1's right arm pass through -->
+      <rect x="207" y="85" width="46" height="50" fill="black" />
+    </mask>
+  </defs>
+
+  <g transform="translate(68, 60) scale(1.05)">
+    <!-- Logo 1: Twitch Purple (Base layer) -->
+    <g mask="url(#mask-for-1)">
+      <use href="#twitch-glitch" fill="url(#purple-grad)" />
+    </g>
+
+    <!-- Logo 2: Deutschmark Blue (Offset layer) tightly chained -->
+    <g mask="url(#mask-for-2)">
+      <use href="#twitch-glitch" x="130" y="100" fill="url(#blue-grad)" />
+    </g>
+  </g>
+</svg>

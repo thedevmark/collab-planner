@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser, unauthorized } from "@/lib/auth";
 import { analyzePatterns, inferWindowsForRange } from "@/lib/scheduling/patterns";
+import { normalizeParticipantsInviteStatus } from "@/lib/participantStatus";
 
 export async function GET(req: Request) {
   const user = await getAuthUser();
@@ -14,9 +15,6 @@ export async function GET(req: Request) {
     const to = searchParams.get("to")
       ? new Date(searchParams.get("to")!)
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-    // Get the user's own profile to identify their isMe friend
-    const profile = await prisma.profile.findUnique({ where: { id: userId } });
 
     const [events, scheduleSegments, friends] = await Promise.all([
       prisma.event.findMany({
@@ -92,8 +90,15 @@ export async function GET(req: Request) {
       }));
     });
 
-    return NextResponse.json({ events, scheduleSegments, inferredWindows });
-  } catch (err) {
+    return NextResponse.json({
+      events: events.map((event) => ({
+        ...event,
+        participants: normalizeParticipantsInviteStatus(event.participants),
+      })),
+      scheduleSegments,
+      inferredWindows,
+    });
+  } catch {
     return NextResponse.json({ error: "Failed to fetch calendar data" }, { status: 500 });
   }
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { startTransition, useState, useEffect, useMemo, useRef, Suspense } from "react";
 import useSWR from "swr";
 import { useRouter, useSearchParams } from "next/navigation";
-import { addHours, formatDistanceToNowStrict } from "date-fns";
+import { addDays, addHours, formatDistanceToNowStrict } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,10 @@ import { ArrowLeft, Loader2, Check, TrendingUp, Zap, Link2, Sparkles } from "luc
 import Link from "next/link";
 import { InviteDialog } from "@/components/InviteDialog";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { AvailabilityMatrix } from "@/components/events/AvailabilityMatrix";
+import { MessageBlock } from "@/components/events/MessageBlock";
+import { getPlannerTopSlots } from "@/lib/scheduling/planner";
+import type { ScoredSlot } from "@/lib/scheduling/overlap";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -177,9 +181,16 @@ function NewEventForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: friends = [], mutate: mutateFriends } = useSWR("/api/friends", fetcher);
+  const { data: profile } = useSWR("/api/profile/onboarding", fetcher);
 
   const meFriend = friends.find((f: any) => f.isMe);
-  const otherFriends = friends.filter((f: any) => !f.isMe);
+  const meFriendId = meFriend?.id;
+  const otherFriends = friends
+    .filter((f: any) => !f.isMe)
+    .sort((a: any, b: any) => {
+      if (a.isFavorite !== b.isFavorite) return Number(b.isFavorite) - Number(a.isFavorite);
+      return a.displayName.localeCompare(b.displayName);
+    });
 
   const now = new Date();
   const defaultStart = searchParams.get("startTime")
@@ -214,7 +225,7 @@ function NewEventForm() {
   );
 
   useEffect(() => {
-    const ids: number[] = meFriend ? [meFriend.id] : [];
+    const ids: number[] = meFriendId ? [meFriendId] : [];
     const friendId = searchParams.get("friendId");
     if (friendId) ids.push(parseInt(friendId));
     const friendIds = searchParams.get("friendIds");
@@ -225,7 +236,7 @@ function NewEventForm() {
       }
     }
     if (ids.length > 0) setSelectedFriendIds(ids);
-  }, [meFriend?.id, searchParams]);
+  }, [meFriendId, searchParams]);
 
   useEffect(() => {
     const fromInvite = searchParams.get("fromInvite");
@@ -338,11 +349,59 @@ function NewEventForm() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.get("addFriend"), friends.length > 0]);
 
-  const aiIds = meFriend
-    ? [...new Set([meFriend.id, ...selectedFriendIds])]
-    : selectedFriendIds;
+  const aiIds = useMemo(
+    () => (meFriendId ? [...new Set([meFriendId, ...selectedFriendIds])] : selectedFriendIds),
+    [meFriendId, selectedFriendIds]
+  );
 
   const selectedNonMe = selectedFriendIds.filter((id) => meFriend?.id !== id);
+  const plannerTimezone =
+    profile?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC";
+  const currentDurationMs = Math.max(
+    60 * 60 * 1000,
+    new Date(endTime).getTime() - new Date(startTime).getTime() || 3 * 60 * 60 * 1000
+  );
+  const plannerFrom = useMemo(() => {
+    const anchor = startTime ? new Date(startTime) : new Date();
+    if (Number.isNaN(anchor.getTime())) return new Date();
+    const dayStart = new Date(anchor);
+    dayStart.setHours(0, 0, 0, 0);
+    const now = new Date();
+    now.setMinutes(0, 0, 0);
+    return dayStart < now ? now : dayStart;
+  }, [startTime]);
+  const plannerTo = useMemo(() => addDays(plannerFrom, 7), [plannerFrom]);
+  const plannerFriends = useMemo(
+    () => friends.filter((friend: any) => aiIds.includes(friend.id)),
+    [friends, aiIds]
+  );
+  const plannerTopSlots = useMemo(
+    () => getPlannerTopSlots(plannerFriends, plannerFrom, plannerTo, 5),
+    [plannerFriends, plannerFrom, plannerTo]
+  );
+  const selectedMessageParticipants = useMemo(
+    () =>
+      friends
+        .filter((friend: any) => selectedNonMe.includes(friend.id))
+        .map((friend: any) => ({
+          displayName: friend.displayName,
+          twitchUsername: friend.username,
+        })),
+    [friends, selectedNonMe]
+  );
+  const suggestionFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: plannerTimezone,
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      }),
+    [plannerTimezone]
+  );
 
   function toggleFriend(id: number) {
     if (meFriend && id === meFriend.id) return;
@@ -351,25 +410,31 @@ function NewEventForm() {
     );
   }
 
-  async function suggestTimes() {
+  function suggestTimes() {
     if (aiIds.length === 0) return;
     setSuggestingTimes(true);
-    setTimeSuggestions([]);
-    setTimeSuggestEmpty(false);
-    try {
-      const res = await fetch("/api/suggest-times", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friendIds: aiIds }),
-      });
-      const data = await res.json();
-      const suggestions = data.suggestions ?? [];
+    startTransition(() => {
+      const suggestions = plannerTopSlots.map((slot) => ({
+        start: slot.start.toISOString(),
+        end: slot.end.toISOString(),
+        combinedScore: Math.round(slot.combinedScore * 100),
+        confidence: slot.confidence,
+        displayStart: suggestionFormatter.format(slot.start),
+        displayEnd: suggestionFormatter.format(slot.end),
+        timezone: plannerTimezone,
+        windowHours: Math.round(((slot.end.getTime() - slot.start.getTime()) / 3600000) * 10) / 10,
+        friendScores: slot.friendScores.map((friendScore) => ({
+          friendId: friendScore.friendId,
+          displayName: friendScore.displayName,
+          probability: Math.round(friendScore.score * 100),
+        })),
+      }));
       setTimeSuggestions(suggestions);
       setTimeSuggestEmpty(suggestions.length === 0);
-      if (data.timezone) setTimeSuggestTimezone(data.timezone);
-    } finally {
+      setTimeSuggestTimezone(plannerTimezone);
+      setAppliedSlot(null);
       setSuggestingTimes(false);
-    }
+    });
   }
 
   function applyTimeSuggestion(suggestion: any, index: number) {
@@ -382,6 +447,16 @@ function NewEventForm() {
       setTimeSuggestions([]);
       setAppliedSlot(null);
     }, 800);
+  }
+
+  function applyMatrixSlot(slot: ScoredSlot) {
+    const start = snapToQuarter(new Date(slot.start));
+    const end = snapToQuarter(new Date(start.getTime() + currentDurationMs));
+    setStartTime(toLocalDatetimeValue(start));
+    setEndTime(toLocalDatetimeValue(end));
+    setTimeSuggestions([]);
+    setTimeSuggestEmpty(false);
+    setAppliedSlot(null);
   }
 
   async function suggestGames() {
@@ -440,7 +515,7 @@ function NewEventForm() {
             Back
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold">New Collab Event</h1>
+        <h1 className="text-3xl font-bold">New Session</h1>
       </div>
 
       {inviteBanner && (
@@ -588,7 +663,7 @@ function NewEventForm() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Invite Friends</CardTitle>
+                <CardTitle className="text-base">Choose People</CardTitle>
               <div className="flex items-center gap-2">
                 <InviteDialog friends={friends} defaultFriendIds={selectedNonMe}>
                   <Button variant="outline" size="sm">
@@ -672,7 +747,7 @@ function NewEventForm() {
 
               {otherFriends.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  <Link href="/friends" className="underline">Add friends</Link> to invite them
+                  <Link href="/friends" className="underline">Add people</Link> to invite them
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
@@ -691,7 +766,14 @@ function NewEventForm() {
                           <AvatarFallback className="text-xs">{f.displayName[0]}</AvatarFallback>
                         </Avatar>
                         <span className="text-sm font-medium truncate">{f.displayName}</span>
-                        {selected && <Check className="h-3.5 w-3.5 text-zinc-300 ml-auto shrink-0" />}
+                        <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                          {f.isFavorite && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              Favorite
+                            </Badge>
+                          )}
+                          {selected && <Check className="h-3.5 w-3.5 text-zinc-300" />}
+                        </div>
                       </button>
                     );
                   })}
@@ -700,10 +782,33 @@ function NewEventForm() {
             </CardContent>
           </Card>
 
+          {selectedNonMe.length > 0 && (
+            <AvailabilityMatrix
+              friends={friends}
+              selectedFriendIds={aiIds}
+              timezone={plannerTimezone}
+              anchorStart={startTime}
+              selectedStartTime={startTime}
+              durationMs={currentDurationMs}
+              onApplySlot={applyMatrixSlot}
+            />
+          )}
+
+          {selectedNonMe.length > 0 && (
+            <MessageBlock
+              title={title}
+              gameName={gameName || undefined}
+              startTime={new Date(startTime)}
+              endTime={new Date(endTime)}
+              participants={selectedMessageParticipants}
+              timezone={plannerTimezone}
+            />
+          )}
+
           <div className="flex gap-3">
             <Button onClick={handleSubmit} disabled={saving || !title || !startTime || !endTime}>
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              Create Event
+              Create Session
             </Button>
             <Link href="/calendar">
               <Button variant="outline">Cancel</Button>

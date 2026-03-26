@@ -1,13 +1,13 @@
 # Twitch Friends Organizer
 
-A single-user web app for planning collab streams with your Twitch friends. It uses stream history, schedules, and deterministic ranking logic to suggest times, surface likely games, and build Discord message drafts.
+A single-user web app for planning collab streams with your Twitch friends. It uses stream history, schedules, and deterministic ranking logic to suggest times, surface likely games, and provide copyable session facts.
 
 ## What it does
 
 - **Friends system** — Add Twitch streamers by username. The app pulls their real VOD history (past broadcasts) to learn when they typically stream and what they play.
 - **Smart scheduling** — Pattern analysis ranks likely overlap windows based on real stream history and Twitch schedules.
 - **Game suggestions** — Shared play history surfaces games your selected group is most likely to enjoy together.
-- **Discord messages** — Build invite and reminder drafts from event details and selected friends.
+- **Session facts** — Copy straightforward session details into Discord and write the actual message yourself.
 - **Calendar** — Visual calendar showing your events alongside estimated stream times for all your friends.
 - **Reminders** — Set browser notification reminders for upcoming collabs.
 
@@ -75,7 +75,7 @@ app/                    # Next.js pages and API routes
 ├── calendar/           # Calendar view
 ├── events/             # Create/view events
 ├── friends/            # Friends list and detail
-├── messages/           # Discord message generator
+├── messages/           # Redirects into session planning surfaces
 └── settings/           # API key configuration
 lib/
 ├── db.ts               # Prisma client singleton

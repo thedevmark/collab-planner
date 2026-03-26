@@ -326,7 +326,7 @@ function WelcomeStep({
         {[
           "Add the streamers you collab with",
           "Confirm your timezone",
-          "Start scheduling from your dashboard",
+          "Start scheduling from Home",
         ].map((item, i) => (
           <div key={i} className="flex items-center gap-3 text-sm text-zinc-400">
             <div className="w-5 h-5 rounded-full bg-[#9147ff]/15 border border-[#9147ff]/30 flex items-center justify-center shrink-0">
@@ -586,7 +586,7 @@ function FinishStep({
         </div>
         <h2 className="text-2xl font-bold text-white">You&apos;re all set, {displayName}.</h2>
         <p className="text-zinc-400 text-sm leading-relaxed">
-          Your dashboard is ready. Start exploring your crew&apos;s schedule
+          Home is ready. Start exploring your crew&apos;s schedule
           and create your first collab event.
         </p>
       </div>
@@ -623,7 +623,7 @@ function FinishStep({
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <>
-              Open my dashboard
+              Open Home
               <ArrowRight className="h-4 w-4" />
             </>
           )}

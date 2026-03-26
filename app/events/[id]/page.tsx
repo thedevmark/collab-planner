@@ -18,6 +18,11 @@ import {
   Bell, Trash2, Loader2, Edit2, Check, X,
 } from "lucide-react";
 import { MessageBlock } from "@/components/events/MessageBlock";
+import {
+  nextParticipantResponseStatus,
+  participantResponseBadgeVariant,
+  participantResponseLabel,
+} from "@/lib/participantStatus";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -27,6 +32,37 @@ const STATUS_COLORS: Record<string, "default" | "success" | "warning" | "seconda
   confirmed: "success",
   completed: "default",
   canceled: "destructive",
+};
+
+type EventParticipant = {
+  id: number;
+  inviteStatus: string;
+  friend: {
+    displayName: string;
+    username: string;
+    avatarUrl: string | null;
+    isMe: boolean;
+  };
+};
+
+type EventReminder = {
+  id: number;
+  label: string | null;
+  remindAt: string;
+  sent: boolean;
+};
+
+type EventDetail = {
+  id: number;
+  title: string;
+  description: string | null;
+  startTime: string;
+  endTime: string;
+  gameName: string | null;
+  status: string;
+  participants: EventParticipant[];
+  reminders: EventReminder[];
+  error?: string;
 };
 
 function toLocalDatetimeValue(date: Date): string {
@@ -40,7 +76,7 @@ function toLocalDatetimeValue(date: Date): string {
 
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data: event, mutate } = useSWR(`/api/events/${id}`, fetcher);
+  const { data: event, mutate } = useSWR<EventDetail>(`/api/events/${id}`, fetcher);
 
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -60,14 +96,15 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     return <div className="text-destructive">Event not found</div>;
   }
 
-  const isPastEvent = isPast(new Date(event.endTime));
+  const currentEvent: EventDetail = event;
+  const isPastEvent = isPast(new Date(currentEvent.endTime));
 
   function startEditing() {
-    setEditTitle(event.title);
-    setEditDescription(event.description ?? "");
-    setEditStartTime(toLocalDatetimeValue(new Date(event.startTime)));
-    setEditEndTime(toLocalDatetimeValue(new Date(event.endTime)));
-    setEditGameName(event.gameName ?? "");
+    setEditTitle(currentEvent.title);
+    setEditDescription(currentEvent.description ?? "");
+    setEditStartTime(toLocalDatetimeValue(new Date(currentEvent.startTime)));
+    setEditEndTime(toLocalDatetimeValue(new Date(currentEvent.endTime)));
+    setEditGameName(currentEvent.gameName ?? "");
     setEditing(true);
   }
 
@@ -101,14 +138,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     mutate();
   }
 
-  const INVITE_STATUS_CYCLE: Record<string, string> = {
-    pending: "confirmed",
-    confirmed: "cannot",
-    cannot: "pending",
-  };
-
   async function cycleParticipantStatus(participantId: number, currentStatus: string) {
-    const nextStatus = INVITE_STATUS_CYCLE[currentStatus] ?? "pending";
+    const nextStatus = nextParticipantResponseStatus(currentStatus);
     await fetch(`/api/events/${id}/participants`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -120,13 +151,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   async function deleteEvent() {
     if (!confirm("Cancel this event?")) return;
     await fetch(`/api/events/${id}`, { method: "DELETE" });
-    router.push("/calendar");
+    router.push("/events");
   }
 
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
-        <Link href="/calendar">
+        <Link href="/events">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4" />
             Back
@@ -198,14 +229,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             <>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl font-bold">{event.title}</h1>
-                  {event.description && (
-                    <p className="text-muted-foreground mt-1">{event.description}</p>
+                  <h1 className="text-2xl font-bold">{currentEvent.title}</h1>
+                  {currentEvent.description && (
+                    <p className="text-muted-foreground mt-1">{currentEvent.description}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Badge variant={STATUS_COLORS[event.status] ?? "secondary"}>
-                    {event.status}
+                  <Badge variant={STATUS_COLORS[currentEvent.status] ?? "secondary"}>
+                    {currentEvent.status}
                   </Badge>
                   {!isPastEvent && (
                     <Button variant="ghost" size="sm" onClick={startEditing}>
@@ -221,17 +252,17 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  {format(new Date(event.startTime), "EEEE, MMMM d, yyyy")}
+                  {format(new Date(currentEvent.startTime), "EEEE, MMMM d, yyyy")}
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  {format(new Date(event.startTime), "h:mm a")} –{" "}
-                  {format(new Date(event.endTime), "h:mm a")}
+                  {format(new Date(currentEvent.startTime), "h:mm a")} –{" "}
+                  {format(new Date(currentEvent.endTime), "h:mm a")}
                 </div>
-                {event.gameName && (
+                {currentEvent.gameName && (
                   <div className="flex items-center gap-2">
                     <Gamepad2 className="h-4 w-4 text-muted-foreground" />
-                    {event.gameName}
+                    {currentEvent.gameName}
                   </div>
                 )}
               </div>
@@ -240,7 +271,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 {STATUS_OPTIONS.map((s) => (
                   <Button
                     key={s}
-                    variant={event.status === s ? "default" : "outline"}
+                    variant={currentEvent.status === s ? "default" : "outline"}
                     size="sm"
                     onClick={() => updateStatus(s)}
                     className="capitalize"
@@ -261,13 +292,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             <CardTitle className="text-base">Participants</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {event.participants?.length === 0 ? (
+            {currentEvent.participants?.length === 0 ? (
               <p className="text-sm text-muted-foreground">No participants added</p>
             ) : (
-              event.participants?.map((p: any) => (
+              currentEvent.participants?.map((p) => (
                 <div key={p.id} className="flex items-center gap-3">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={p.friend.avatarUrl} />
+                    <AvatarImage src={p.friend.avatarUrl ?? undefined} />
                     <AvatarFallback>{p.friend.displayName[0]}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
@@ -277,17 +308,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   <button
                     onClick={() => !p.friend.isMe && cycleParticipantStatus(p.id, p.inviteStatus)}
                     disabled={p.friend.isMe}
-                    title={p.friend.isMe ? undefined : "Click to cycle status"}
+                    title={p.friend.isMe ? undefined : "Click to cycle response"}
                     className="disabled:cursor-default"
                   >
                     <Badge
-                      variant={
-                        p.inviteStatus === "confirmed" ? "success" :
-                        p.inviteStatus === "cannot" ? "destructive" : "secondary"
-                      }
+                      variant={participantResponseBadgeVariant(p.inviteStatus)}
                       className={`text-xs ${!p.friend.isMe ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
                     >
-                      {p.inviteStatus}
+                      {participantResponseLabel(p.inviteStatus)}
                     </Badge>
                   </button>
                 </div>
@@ -300,11 +328,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         <div className="space-y-4">
           {/* Message block */}
           <MessageBlock
-            title={event.title}
-            gameName={event.gameName}
-            startTime={new Date(event.startTime)}
-            endTime={new Date(event.endTime)}
-            participants={event.participants?.map((p: any) => ({
+            title={currentEvent.title}
+            gameName={currentEvent.gameName ?? undefined}
+            startTime={new Date(currentEvent.startTime)}
+            endTime={new Date(currentEvent.endTime)}
+            participants={currentEvent.participants
+              ?.filter((p) => !p.friend.isMe)
+              .map((p) => ({
               displayName: p.friend.displayName,
               twitchUsername: p.friend.username,
             })) ?? []}
@@ -316,11 +346,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               <CardTitle className="text-base">Auto Reminders</CardTitle>
             </CardHeader>
             <CardContent>
-              {event.reminders?.length === 0 ? (
+              {currentEvent.reminders?.length === 0 ? (
                 <p className="text-sm text-muted-foreground">All reminders have passed.</p>
               ) : (
                 <div className="space-y-2">
-                  {event.reminders?.map((r: any) => (
+                  {currentEvent.reminders?.map((r) => (
                     <div key={r.id} className="flex items-center gap-2 text-sm">
                       <Bell className="h-3 w-3 text-muted-foreground shrink-0" />
                       <span className="text-muted-foreground">{r.label}</span>
@@ -336,36 +366,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           </Card>
         </div>
       </div>
-
-      {/* Message logs */}
-      {event.messageLogs?.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Message History</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {event.messageLogs.map((m: any) => (
-              <div key={m.id} className="border rounded-md p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge variant="outline" className="capitalize">{m.messageType}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {format(new Date(m.createdAt), "MMM d, h:mm a")}
-                  </span>
-                </div>
-                <pre className="text-xs whitespace-pre-wrap font-sans">{m.content}</pre>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="mt-2"
-                  onClick={() => navigator.clipboard.writeText(m.content)}
-                >
-                  Copy
-                </Button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

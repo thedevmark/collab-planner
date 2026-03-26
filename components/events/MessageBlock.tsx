@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, MessageSquare } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { format } from "date-fns";
 
 interface MessageBlockProps {
@@ -68,10 +68,11 @@ export function MessageBlock({
   const names = participants.map((p) => `@${p.twitchUsername ?? p.displayName}`).join(", ");
 
   const block = [
-    `🎮 ${gameName ? `Game: ${gameName}` : title}`,
-    `📅 ${dateStr}`,
-    `🕐 ${timeStr} (~${duration})`,
-    names ? `👥 Playing with: ${names}` : null,
+    `Title: ${title}`,
+    gameName ? `Game: ${gameName}` : null,
+    `Date: ${dateStr}`,
+    `Time: ${timeStr} (${duration})`,
+    names ? `People: ${names}` : null,
   ]
     .filter(Boolean)
     .join("\n");
@@ -85,17 +86,14 @@ export function MessageBlock({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <MessageSquare className="h-4 w-4" />
-          Share on Discord
-        </CardTitle>
+        <CardTitle className="text-base">Copy Session Facts</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <pre className="text-sm bg-muted p-3 rounded-md whitespace-pre-wrap font-sans leading-relaxed select-all">
           {block}
         </pre>
         <p className="text-xs text-muted-foreground">
-          Copy these facts — then write your own message around them.
+          Paste these facts directly. Any personal wording should come from you.
         </p>
         <Button size="sm" onClick={copyBlock} variant="outline" className="gap-2">
           {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}

@@ -7,6 +7,14 @@ import { headers } from "next/headers";
 export const metadata: Metadata = {
   title: "Collab Planner",
   description: "Plan stream collabs with your Twitch friends",
+  icons: {
+    icon: [
+      { url: "/collab-icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/collab-icon.svg",
+    apple: "/collab-icon.svg",
+  },
 };
 
 export default async function RootLayout({

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getAuthUser, unauthorized } from "@/lib/auth";
 import { z } from "zod";
 import { notifyDiscord } from "@/lib/discord/notify";
+import { normalizeParticipantsInviteStatus } from "@/lib/participantStatus";
 
 const createEventSchema = z.object({
   title: z.string().min(1),
@@ -41,8 +42,13 @@ export async function GET(req: Request) {
       },
       orderBy: { startTime: "asc" },
     });
-    return NextResponse.json(events);
-  } catch (err) {
+    return NextResponse.json(
+      events.map((event) => ({
+        ...event,
+        participants: normalizeParticipantsInviteStatus(event.participants),
+      })),
+    );
+  } catch {
     return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 });
   }
 }
@@ -151,7 +157,13 @@ export async function POST(req: Request) {
     // Fire-and-forget Discord notification
     notifyDiscord(userId, "created", event);
 
-    return NextResponse.json(event, { status: 201 });
+    return NextResponse.json(
+      {
+        ...event,
+        participants: normalizeParticipantsInviteStatus(event.participants),
+      },
+      { status: 201 },
+    );
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: err.message }, { status: 400 });

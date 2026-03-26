@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser, unauthorized } from "@/lib/auth";
 import { z } from "zod";
+import {
+  normalizeParticipantInviteStatus,
+  normalizeParticipantResponseStatus,
+  PARTICIPANT_RESPONSE_STATUS_INPUTS,
+} from "@/lib/participantStatus";
 
 const addParticipantSchema = z.object({ friendId: z.number() });
 const updateParticipantSchema = z.object({
   participantId: z.number(),
-  inviteStatus: z.enum(["pending", "confirmed", "cannot"]),
+  inviteStatus: z.enum(PARTICIPANT_RESPONSE_STATUS_INPUTS),
 });
 const removeParticipantSchema = z.object({ participantId: z.number() });
 
@@ -35,20 +40,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         friend: { select: { id: true, username: true, displayName: true, avatarUrl: true, isMe: true } },
       },
     });
-    return NextResponse.json(participant, { status: 201 });
-  } catch (err) {
+    return NextResponse.json(normalizeParticipantInviteStatus(participant), { status: 201 });
+  } catch {
     return NextResponse.json({ error: "Failed to add participant" }, { status: 500 });
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: Request) {
   const user = await getAuthUser();
   if (!user) return unauthorized();
 
   try {
-    const { id } = await params;
     const body = await req.json();
     const { participantId, inviteStatus } = updateParticipantSchema.parse(body);
+    const normalizedInviteStatus = normalizeParticipantResponseStatus(inviteStatus);
 
     // Verify participant belongs to user's event
     const participant = await prisma.eventParticipant.findFirst({
@@ -58,15 +63,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const updated = await prisma.eventParticipant.update({
       where: { id: participantId },
-      data: { inviteStatus },
+      data: { inviteStatus: normalizedInviteStatus },
     });
-    return NextResponse.json(updated);
-  } catch (err) {
+    return NextResponse.json(normalizeParticipantInviteStatus(updated));
+  } catch {
     return NextResponse.json({ error: "Failed to update participant" }, { status: 500 });
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: Request) {
   const user = await getAuthUser();
   if (!user) return unauthorized();
 
@@ -81,7 +86,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     await prisma.eventParticipant.delete({ where: { id: participantId } });
     return NextResponse.json({ success: true });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Failed to remove participant" }, { status: 500 });
   }
 }

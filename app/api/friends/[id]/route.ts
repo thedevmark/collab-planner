@@ -8,6 +8,7 @@ const updateSchema = z.object({
   notes: z.string().optional(),
   displayName: z.string().optional(),
   isSuggested: z.boolean().optional(),
+  isFavorite: z.boolean().optional(),
 });
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -43,7 +44,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     if (!friend) return NextResponse.json({ error: "Friend not found" }, { status: 404 });
     return NextResponse.json(friend);
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Failed to fetch friend" }, { status: 500 });
   }
 }
@@ -87,7 +88,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       data: { isActive: false },
     });
     return NextResponse.json({ success: true });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Failed to remove friend" }, { status: 500 });
   }
 }
