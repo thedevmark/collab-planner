@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -135,13 +135,31 @@ export default function FriendsPage() {
   const { data: friends = [], mutate } = useSWR("/api/friends", fetcher);
   const [search, setSearch] = useState("");
   const [newUsername, setNewUsername] = useState("");
+  const [channelQuery, setChannelQuery] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [syncing, setSyncing] = useState(false);
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [dismissingId, setDismissingId] = useState<number | null>(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState<number | null>(null);
+
+  const { data: channelResults = [] } = useSWR(
+    channelQuery.length >= 2 ? `/api/twitch/channels?q=${encodeURIComponent(channelQuery)}` : null,
+    fetcher
+  );
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const meFriend = friends.find((f: any) => f.isMe);
   const nonMeFriends = friends.filter((f: any) => !f.isMe);
@@ -248,7 +266,7 @@ export default function FriendsPage() {
               Invite People
             </Button>
           </InviteDialog>
-          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setAddError(""); setNewUsername(""); } }}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setAddError(""); setNewUsername(""); setChannelQuery(""); setDropdownOpen(false); } }}>
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="h-4 w-4" />
@@ -262,13 +280,52 @@ export default function FriendsPage() {
             <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label htmlFor="username">Twitch Username</Label>
-                <Input
-                  id="username"
-                  placeholder="e.g. shroud"
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addFriend()}
-                />
+                <div className="relative" ref={dropdownRef}>
+                  <Input
+                    id="username"
+                    placeholder="Search for a Twitch user..."
+                    value={newUsername}
+                    onChange={(e) => {
+                      setNewUsername(e.target.value);
+                      setChannelQuery(e.target.value);
+                      setDropdownOpen(true);
+                      setAddError("");
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && addFriend()}
+                    onFocus={() => channelQuery.length >= 2 && setDropdownOpen(true)}
+                  />
+                  {dropdownOpen && channelResults.length > 0 && channelQuery && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 border rounded-md bg-background shadow-md max-h-64 overflow-y-auto">
+                      {channelResults.slice(0, 8).map((ch: any) => (
+                        <button
+                          key={ch.id}
+                          className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-3"
+                          onClick={() => {
+                            setNewUsername(ch.broadcaster_login);
+                            setChannelQuery("");
+                            setDropdownOpen(false);
+                          }}
+                        >
+                          <Avatar className="h-8 w-8 shrink-0">
+                            <AvatarImage src={ch.thumbnail_url} />
+                            <AvatarFallback className="text-xs">{ch.display_name[0]?.toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{ch.display_name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {ch.is_live ? (
+                                <span className="text-green-500">Live</span>
+                              ) : (
+                                <span>Offline</span>
+                              )}
+                              {ch.game_name ? ` · ${ch.game_name}` : ""}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               {addError && <p className="text-sm text-destructive">{addError}</p>}
             </div>

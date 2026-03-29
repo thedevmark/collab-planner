@@ -15,9 +15,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
   ArrowLeft, Calendar, Clock, Gamepad2,
-  Bell, Trash2, Loader2, Edit2, Check, X,
+  Bell, Trash2, Loader2, Edit2, Check, X, Link2,
 } from "lucide-react";
 import { MessageBlock } from "@/components/events/MessageBlock";
+import { InviteDialog } from "@/components/InviteDialog";
 import {
   nextParticipantResponseStatus,
   participantResponseBadgeVariant,
@@ -77,6 +78,7 @@ function toLocalDatetimeValue(date: Date): string {
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: event, mutate } = useSWR<EventDetail>(`/api/events/${id}`, fetcher);
+  const { data: friends = [] } = useSWR("/api/friends", fetcher);
 
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -339,6 +341,17 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               twitchUsername: p.friend.username,
             })) ?? []}
           />
+
+          {/* Share invite link */}
+          <InviteDialog
+            friends={friends}
+            defaultFriendIds={currentEvent.participants?.map((p) => p.friend).filter((f) => !f.isMe).map((f) => friends.find((fr: any) => fr.username === f.username)?.id).filter(Boolean) ?? []}
+          >
+            <Button variant="outline" className="w-full">
+              <Link2 className="h-4 w-4" />
+              Share Invite Link
+            </Button>
+          </InviteDialog>
 
           {/* Reminders */}
           <Card>

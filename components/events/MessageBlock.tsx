@@ -86,18 +86,15 @@ export function MessageBlock({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Copy Session Facts</CardTitle>
+        <CardTitle className="text-base">Copy Session Info</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <pre className="text-sm bg-muted p-3 rounded-md whitespace-pre-wrap font-sans leading-relaxed select-all">
           {block}
         </pre>
-        <p className="text-xs text-muted-foreground">
-          Paste these facts directly. Any personal wording should come from you.
-        </p>
         <Button size="sm" onClick={copyBlock} variant="outline" className="gap-2">
           {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-          {copied ? "Copied!" : "Copy facts"}
+          {copied ? "Copied!" : "Copy info"}
         </Button>
       </CardContent>
     </Card>

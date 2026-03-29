@@ -185,7 +185,7 @@ export default function HomePage() {
               <p className="text-muted-foreground">{format(now, "EEEE, MMMM d, yyyy")}</p>
             </div>
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Pick your people, find a workable window, and lock a session. Smart scheduling stays in support.
+              See who&apos;s around, find a time that works, and lock it in.
             </p>
             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
               <span className="rounded-full border px-2.5 py-1">{nonMeFriends.length} people</span>
@@ -295,7 +295,7 @@ export default function HomePage() {
               {peopleWithSignals.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-5 text-center text-muted-foreground">
                   <Users className="mx-auto mb-2 h-7 w-7 opacity-40" />
-                  <p className="text-sm">No live or likely-streaming people right now</p>
+                  <p className="text-sm">Nobody&apos;s live or expected to stream right now</p>
                 </div>
               ) : (
                 peopleWithSignals.map(({ friend, signal, liveInfo, nextSegment }) => (
@@ -334,7 +334,7 @@ export default function HomePage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Use the calendar helper when you want to start from a day or a friend list, then jump back into session setup.
+                Start from a date instead. Pick a day, see who&apos;s free, then set up the session from there.
               </p>
               <Link href="/calendar">
                 <Button variant="outline" className="w-full justify-center">

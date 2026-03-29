@@ -50,6 +50,16 @@ export interface TwitchVideo {
   game_name?: string;    // not always present on /videos
 }
 
+export interface TwitchChannel {
+  id: string;
+  broadcaster_login: string;
+  display_name: string;
+  thumbnail_url: string;
+  is_live: boolean;
+  game_name: string;
+  title: string;
+}
+
 export interface TwitchTokenResponse {
   access_token: string;
   expires_in: number;

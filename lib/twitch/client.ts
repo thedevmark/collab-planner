@@ -1,5 +1,5 @@
 import { getTwitchToken } from "./auth";
-import type { TwitchUser, TwitchSchedule, TwitchGame, TwitchVideo } from "./types";
+import type { TwitchUser, TwitchSchedule, TwitchGame, TwitchVideo, TwitchChannel } from "./types";
 
 const TWITCH_API = "https://api.twitch.tv/helix";
 
@@ -43,6 +43,13 @@ export async function getBroadcasterSchedule(broadcasterId: string): Promise<Twi
     if (err instanceof Error && err.message.includes("404")) return null;
     throw err;
   }
+}
+
+export async function searchChannels(query: string): Promise<TwitchChannel[]> {
+  const data = await twitchFetch<{ data: TwitchChannel[] }>(
+    `/search/channels?query=${encodeURIComponent(query)}&first=8`
+  );
+  return data.data;
 }
 
 export async function searchCategories(query: string): Promise<TwitchGame[]> {

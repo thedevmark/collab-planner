@@ -70,7 +70,7 @@ export default function LoginPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
             </span>
-            <span className="font-mono">schedule analysis active</span>
+            <span className="font-mono">free &amp; open</span>
           </div>
 
           {/* Headline */}
@@ -80,8 +80,8 @@ export default function LoginPage() {
               <span className="text-[#9147ff]">collabs over DMs.</span>
             </h1>
             <p className="text-base text-zinc-400 leading-relaxed max-w-md mx-auto">
-              Collab Planner reads your Twitch history, finds the windows where
-              your whole crew overlaps, and posts the announcement to Discord — automatically.
+              It looks at when everyone actually streams, finds the overlap,
+              and posts to your Discord when you lock something in.
             </p>
           </div>
 
@@ -95,7 +95,7 @@ export default function LoginPage() {
               Connect with Twitch — it&apos;s free
             </button>
             <p className="text-[11px] font-mono text-zinc-600">
-              no account needed beyond twitch · 10 seconds to set up
+              just your twitch login · nothing to install
             </p>
           </div>
         </div>
@@ -103,11 +103,10 @@ export default function LoginPage() {
         {/* Capability pills */}
         <div className="relative mt-12 flex flex-wrap justify-center gap-2 max-w-xl mx-auto">
           {[
-            "VOD history analysis",
-            "schedule overlap detection",
-            "auto Discord events",
-            "stream pattern recognition",
-            "collab signal tracking",
+            "reads your VOD history",
+            "finds schedule overlaps",
+            "posts to Discord",
+            "tracks who you collab with",
           ].map((pill) => (
             <span
               key={pill}
@@ -198,17 +197,17 @@ export default function LoginPage() {
             {
               step: "01",
               title: "Connect your Twitch",
-              body: "We pull your last 90 days of stream history and channel data. No manual setup — your schedule is already there.",
+              body: "Sign in and your stream history is already loaded. No forms, no manual entry.",
             },
             {
               step: "02",
               title: "Add your crew",
-              body: "Collab Planner detects streamers from your VOD titles and suggests them automatically. Confirm with one tap.",
+              body: "It spots people from your past collabs and suggests them. You just confirm who you actually play with.",
             },
             {
               step: "03",
-              title: "Schedule and announce",
-              body: "Pick the overlap window. Collab Planner creates the event, sends Discord a rich embed, and adds a server calendar entry.",
+              title: "Pick a time, send it",
+              body: "Choose from the windows that work for everyone. It posts to Discord and creates a server event.",
               accent: true,
             },
           ].map(({ step, title, body, accent }) => (
@@ -229,9 +228,9 @@ export default function LoginPage() {
       {/* Bottom CTA */}
       <section className="text-center px-6 pb-20 space-y-5">
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-white">Your crew is waiting.</h2>
+          <h2 className="text-2xl font-bold text-white">That&apos;s basically it.</h2>
           <p className="text-sm text-zinc-500">
-            The collab window is open for about 3 days before schedules drift.
+            Less time in DMs figuring out when everyone&apos;s free.
           </p>
         </div>
         <button
