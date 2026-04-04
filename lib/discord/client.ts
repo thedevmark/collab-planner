@@ -88,6 +88,7 @@ export async function getGuildChannels(guildId: string, token: string): Promise<
   return discordFetch(`/guilds/${guildId}/channels`, token);
 }
 
+
 export async function createGuildScheduledEvent(
   guildId: string,
   token: string,

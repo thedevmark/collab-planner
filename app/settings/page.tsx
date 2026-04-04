@@ -54,6 +54,7 @@ function SettingsForm() {
   const [selectedChannelId, setSelectedChannelId] = useState("");
   const [loadingGuilds, setLoadingGuilds] = useState(false);
   const [loadingChannels, setLoadingChannels] = useState(false);
+  const [channelsError, setChannelsError] = useState("");
   const [savingDiscord, setSavingDiscord] = useState(false);
   const [discordBanner, setDiscordBanner] = useState<"connected" | "error" | "canceled" | null>(null);
 
@@ -87,12 +88,20 @@ function SettingsForm() {
 
   // Load channels when guild changes
   useEffect(() => {
-    if (!selectedGuildId) { setChannels([]); return; }
+    if (!selectedGuildId) { setChannels([]); setChannelsError(""); return; }
     setLoadingChannels(true);
+    setChannelsError("");
     fetch(`/api/discord/channels?guildId=${selectedGuildId}`)
       .then((r) => r.json())
-      .then((d) => setChannels(d.channels ?? []))
-      .catch(() => {})
+      .then((d) => {
+        if (d.error) {
+          setChannelsError(`Couldn't load channels: ${d.error}`);
+          setChannels([]);
+        } else {
+          setChannels(d.channels ?? []);
+        }
+      })
+      .catch(() => setChannelsError("Failed to load channels."))
       .finally(() => setLoadingChannels(false));
   }, [selectedGuildId]);
 
@@ -306,6 +315,21 @@ function SettingsForm() {
                     {loadingChannels ? (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading channels...
+                      </div>
+                    ) : channelsError ? (
+                      <div className="space-y-2">
+                        <p className="text-sm text-destructive">{channelsError}</p>
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground underline underline-offset-2"
+                          onClick={() => {
+                            const id = selectedGuildId;
+                            setSelectedGuildId("");
+                            setTimeout(() => setSelectedGuildId(id), 0);
+                          }}
+                        >
+                          Retry
+                        </button>
                       </div>
                     ) : (
                       <select

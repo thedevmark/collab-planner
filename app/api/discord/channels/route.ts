@@ -22,7 +22,8 @@ export async function GET(req: NextRequest) {
       .map(({ id, name, type }) => ({ id, name, type }));
 
     return NextResponse.json({ channels: textChannels });
-  } catch {
-    return NextResponse.json({ error: "Failed to fetch channels" }, { status: 500 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to fetch channels";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
