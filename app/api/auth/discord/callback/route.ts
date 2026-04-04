@@ -41,15 +41,25 @@ export async function GET(req: NextRequest) {
     if (!meRes.ok) throw new Error("Failed to fetch Discord user");
     const me = await meRes.json();
 
-    await prisma.profile.update({
+    const discordUsername = me.global_name ?? me.username;
+
+    const profile = await prisma.profile.update({
       where: { id: user.id },
       data: {
         discordId: me.id,
-        discordUsername: me.global_name ?? me.username,
+        discordUsername,
         discordAccessToken: tokens.access_token,
         discordRefreshToken: tokens.refresh_token,
         discordTokenExpiry: expiresAt,
       },
+      select: { twitchId: true },
+    });
+
+    // Silently back-fill discordUsername on any Friend records across all users
+    // that reference this person's Twitch ID. Only fills null — never overwrites manual entries.
+    await prisma.friend.updateMany({
+      where: { twitchId: profile.twitchId, discordUsername: null },
+      data: { discordUsername },
     });
 
     return NextResponse.redirect(new URL("/settings?discord=connected", req.url));
