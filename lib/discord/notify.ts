@@ -13,7 +13,7 @@ interface EventData {
   startTime: Date;
   endTime: Date;
   gameName: string;
-  participants: { friend: { displayName: string; isMe: boolean } }[];
+  participants: { friend: { displayName: string; isMe: boolean; discordUsername?: string | null } }[];
 }
 
 export async function notifyDiscord(
@@ -31,7 +31,11 @@ export async function notifyDiscord(
 
     const participants = event.participants
       .filter((p) => !p.friend.isMe)
-      .map((p) => p.friend.displayName);
+      .map((p) =>
+        p.friend.discordUsername
+          ? `${p.friend.displayName} (@${p.friend.discordUsername})`
+          : p.friend.displayName
+      );
 
     const embedData = {
       title: event.title,

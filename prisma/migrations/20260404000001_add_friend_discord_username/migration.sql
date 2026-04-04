@@ -1,0 +1,1 @@
+ALTER TABLE "Friend" ADD COLUMN IF NOT EXISTS "discordUsername" TEXT;

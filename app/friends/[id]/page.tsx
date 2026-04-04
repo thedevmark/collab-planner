@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, ArrowLeft, Clock, Edit2, Check, X, Trash2, History, TrendingUp, Users2, Star } from "lucide-react";
+import { RefreshCw, ArrowLeft, Clock, Edit2, Check, X, Trash2, History, TrendingUp, Users2, Star, MessageSquare } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -64,6 +65,8 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
   const { data: collabData, mutate: mutateCollabs } = useSWR(`/api/friends/${id}/collabs`, fetcher);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState("");
+  const [editingDiscord, setEditingDiscord] = useState(false);
+  const [discordUsername, setDiscordUsername] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
 
@@ -74,6 +77,12 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
     await fetch(`/api/friends/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ notes }) });
     mutate();
     setEditingNotes(false);
+  }
+
+  async function saveDiscordUsername() {
+    await fetch(`/api/friends/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ discordUsername: discordUsername.trim() || null }) });
+    mutate();
+    setEditingDiscord(false);
   }
 
   async function refreshHistory() {
@@ -133,6 +142,34 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
                 {friend.isFavorite && <Badge variant="secondary">Favorite</Badge>}
               </div>
               <p className="text-muted-foreground">@{friend.username}</p>
+              {editingDiscord ? (
+                <div className="flex items-center gap-1 mt-1">
+                  <MessageSquare className="h-3.5 w-3.5 text-[#5865F2] shrink-0" />
+                  <Input
+                    value={discordUsername}
+                    onChange={(e) => setDiscordUsername(e.target.value)}
+                    placeholder="discord username"
+                    className="h-6 text-xs px-1.5 py-0 w-36"
+                    onKeyDown={(e) => { if (e.key === "Enter") saveDiscordUsername(); if (e.key === "Escape") setEditingDiscord(false); }}
+                    autoFocus
+                  />
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={saveDiscordUsername}><Check className="h-3 w-3 text-green-600" /></Button>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setEditingDiscord(false)}><X className="h-3 w-3" /></Button>
+                </div>
+              ) : (
+                <button
+                  className="flex items-center gap-1 mt-1 text-xs text-muted-foreground hover:text-foreground group"
+                  onClick={() => { setDiscordUsername(friend.discordUsername ?? ""); setEditingDiscord(true); }}
+                >
+                  <MessageSquare className="h-3.5 w-3.5 text-[#5865F2]" />
+                  {friend.discordUsername ? (
+                    <span>{friend.discordUsername}</span>
+                  ) : (
+                    <span className="opacity-0 group-hover:opacity-60">add discord</span>
+                  )}
+                  <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-60" />
+                </button>
+              )}
               {collabPartners.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
                   Collaborated with: {collabPartners.slice(0, 3).map((p: any) => p.name).join(", ")}

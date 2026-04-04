@@ -9,6 +9,7 @@ const updateSchema = z.object({
   displayName: z.string().optional(),
   isSuggested: z.boolean().optional(),
   isFavorite: z.boolean().optional(),
+  discordUsername: z.string().nullable().optional(),
 });
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
