@@ -55,12 +55,11 @@ export async function GET(req: NextRequest) {
       select: { twitchId: true },
     });
 
-    // Silently back-fill discordUsername on any Friend records across all users
-    // that reference this person's Twitch ID. Only fills null — never overwrites manual entries.
-    await prisma.friend.updateMany({
+    // Fire-and-forget — never block the OAuth redirect
+    prisma.friend.updateMany({
       where: { twitchId: profile.twitchId, discordUsername: null },
       data: { discordUsername },
-    });
+    }).catch(() => {});
 
     return NextResponse.redirect(new URL("/settings?discord=connected", req.url));
   } catch {
