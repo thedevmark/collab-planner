@@ -10,6 +10,7 @@ const settingsSchema = z.object({
   discordGuildName: z.string().nullable().optional(),
   discordChannelId: z.string().nullable().optional(),
   discordChannelName: z.string().nullable().optional(),
+  discordWebhookUrl: z.string().nullable().optional(),
 });
 
 export async function GET() {
@@ -30,6 +31,7 @@ export async function GET() {
       discordGuildName: profile.discordGuildName,
       discordChannelId: profile.discordChannelId,
       discordChannelName: profile.discordChannelName,
+      discordWebhookUrl: profile.discordWebhookUrl,
     });
   } catch (err) {
     return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 });
@@ -52,6 +54,7 @@ export async function PUT(req: Request) {
         ...(data.discordGuildName !== undefined && { discordGuildName: data.discordGuildName }),
         ...(data.discordChannelId !== undefined && { discordChannelId: data.discordChannelId }),
         ...(data.discordChannelName !== undefined && { discordChannelName: data.discordChannelName }),
+        ...(data.discordWebhookUrl !== undefined && { discordWebhookUrl: data.discordWebhookUrl }),
       },
     });
 
@@ -65,6 +68,7 @@ export async function PUT(req: Request) {
       discordGuildName: profile.discordGuildName,
       discordChannelId: profile.discordChannelId,
       discordChannelName: profile.discordChannelName,
+      discordWebhookUrl: profile.discordWebhookUrl,
     });
   } catch (err) {
     if (err instanceof z.ZodError) {

@@ -25,6 +25,7 @@ model Profile {
   discordGuildName      String?
   discordChannelId      String?
   discordChannelName    String?
+  discordWebhookUrl     String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 }

@@ -5,8 +5,9 @@ import useSWR from "swr";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, Loader2, Twitch, MessageSquare, Unlink } from "lucide-react";
+import { Check, Loader2, Twitch, MessageSquare, Unlink, ExternalLink } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import Image from "next/image";
 
@@ -48,21 +49,15 @@ function SettingsForm() {
   const [saveError, setSaveError] = useState("");
 
   // Discord state
-  const [guilds, setGuilds] = useState<{ id: string; name: string; owner: boolean }[]>([]);
-  const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
-  const [selectedGuildId, setSelectedGuildId] = useState("");
-  const [selectedChannelId, setSelectedChannelId] = useState("");
-  const [loadingGuilds, setLoadingGuilds] = useState(false);
-  const [loadingChannels, setLoadingChannels] = useState(false);
-  const [channelsError, setChannelsError] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
   const [savingDiscord, setSavingDiscord] = useState(false);
+  const [savedDiscord, setSavedDiscord] = useState(false);
   const [discordBanner, setDiscordBanner] = useState<"connected" | "error" | "canceled" | null>(null);
 
   useEffect(() => {
     if (settings && !settings.error) {
       setTimezone(settings.timezone ?? "UTC");
-      setSelectedGuildId(settings.discordGuildId ?? "");
-      setSelectedChannelId(settings.discordChannelId ?? "");
+      setWebhookUrl(settings.discordWebhookUrl ?? "");
     }
   }, [settings]);
 
@@ -75,52 +70,19 @@ function SettingsForm() {
     }
   }, [searchParams, mutate]);
 
-  // Load guilds when Discord is connected
-  useEffect(() => {
-    if (!settings?.discordUsername) return;
-    setLoadingGuilds(true);
-    fetch("/api/discord/guilds")
-      .then((r) => r.json())
-      .then((d) => setGuilds(d.guilds ?? []))
-      .catch(() => {})
-      .finally(() => setLoadingGuilds(false));
-  }, [settings?.discordUsername]);
-
-  // Load channels when guild changes
-  useEffect(() => {
-    if (!selectedGuildId) { setChannels([]); setChannelsError(""); return; }
-    setLoadingChannels(true);
-    setChannelsError("");
-    fetch(`/api/discord/channels?guildId=${selectedGuildId}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) {
-          setChannelsError(`Couldn't load channels: ${d.error}`);
-          setChannels([]);
-        } else {
-          setChannels(d.channels ?? []);
-        }
-      })
-      .catch(() => setChannelsError("Failed to load channels."))
-      .finally(() => setLoadingChannels(false));
-  }, [selectedGuildId]);
-
   async function saveDiscordSettings() {
     setSavingDiscord(true);
     try {
-      const guild = guilds.find((g) => g.id === selectedGuildId);
-      const channel = channels.find((c) => c.id === selectedChannelId);
       await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          discordGuildId: selectedGuildId || null,
-          discordGuildName: guild?.name ?? null,
-          discordChannelId: selectedChannelId || null,
-          discordChannelName: channel?.name ?? null,
+          discordWebhookUrl: webhookUrl.trim() || null,
         }),
       });
       mutate();
+      setSavedDiscord(true);
+      setTimeout(() => setSavedDiscord(false), 2000);
     } finally {
       setSavingDiscord(false);
     }
@@ -135,14 +97,11 @@ function SettingsForm() {
         discordGuildName: null,
         discordChannelId: null,
         discordChannelName: null,
+        discordWebhookUrl: null,
       }),
     });
-    // Clear tokens via dedicated disconnect endpoint
     await fetch("/api/auth/discord/disconnect", { method: "POST" });
-    setSelectedGuildId("");
-    setSelectedChannelId("");
-    setGuilds([]);
-    setChannels([]);
+    setWebhookUrl("");
     mutate();
   }
 
@@ -248,8 +207,7 @@ function SettingsForm() {
             Discord
           </CardTitle>
           <CardDescription>
-            Automatically post to Discord when you plan, confirm, or get reminded of a collab.
-            A Discord Scheduled Event is also created so your community can RSVP.
+            Automatically post to a Discord channel when you plan, confirm, or get reminded of a collab.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -287,80 +245,43 @@ function SettingsForm() {
 
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label>Server</Label>
-                  {loadingGuilds ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading servers...
-                    </div>
-                  ) : (
-                    <select
-                      value={selectedGuildId}
-                      onChange={(e) => { setSelectedGuildId(e.target.value); setSelectedChannelId(""); }}
-                      className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      style={{ colorScheme: "dark" }}
+                  <Label htmlFor="webhook-url">Webhook URL</Label>
+                  <Input
+                    id="webhook-url"
+                    type="url"
+                    placeholder="https://discord.com/api/webhooks/..."
+                    value={webhookUrl}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    In Discord: open your server → channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL.{" "}
+                    <a
+                      href="https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-0.5 underline underline-offset-2 hover:text-foreground"
                     >
-                      <option value="">Select a server...</option>
-                      {guilds.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.name}{g.owner ? " (owner)" : ""}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                      Learn more <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </p>
                 </div>
 
-                {selectedGuildId && (
-                  <div className="space-y-1.5">
-                    <Label>Notification channel</Label>
-                    {loadingChannels ? (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading channels...
-                      </div>
-                    ) : channelsError ? (
-                      <div className="space-y-2">
-                        <p className="text-sm text-destructive">{channelsError}</p>
-                        <button
-                          type="button"
-                          className="text-xs text-muted-foreground underline underline-offset-2"
-                          onClick={() => {
-                            const id = selectedGuildId;
-                            setSelectedGuildId("");
-                            setTimeout(() => setSelectedGuildId(id), 0);
-                          }}
-                        >
-                          Retry
-                        </button>
-                      </div>
-                    ) : (
-                      <select
-                        value={selectedChannelId}
-                        onChange={(e) => setSelectedChannelId(e.target.value)}
-                        className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        style={{ colorScheme: "dark" }}
-                      >
-                        <option value="">Select a channel...</option>
-                        {channels.map((c) => (
-                          <option key={c.id} value={c.id}>#{c.name}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                )}
+                <Button
+                  size="sm"
+                  onClick={saveDiscordSettings}
+                  disabled={savingDiscord}
+                >
+                  {savingDiscord ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : savedDiscord ? (
+                    <Check className="h-4 w-4" />
+                  ) : null}
+                  {savedDiscord ? "Saved!" : "Save Webhook"}
+                </Button>
 
-                {selectedGuildId && (
-                  <Button
-                    size="sm"
-                    onClick={saveDiscordSettings}
-                    disabled={savingDiscord || !selectedChannelId}
-                  >
-                    {savingDiscord ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                    Save Discord Settings
-                  </Button>
-                )}
-
-                {settings.discordChannelName && (
+                {settings.discordWebhookUrl && (
                   <p className="text-xs text-muted-foreground">
-                    Posting to <span className="font-medium text-foreground">#{settings.discordChannelName}</span> in <span className="font-medium text-foreground">{settings.discordGuildName}</span>
+                    Webhook configured — notifications will post to this channel.
                   </p>
                 )}
               </div>

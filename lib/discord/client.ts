@@ -115,6 +115,19 @@ export async function postChannelMessage(channelId: string, token: string, embed
   });
 }
 
+export async function postWebhookMessage(webhookUrl: string, embed: object) {
+  const res = await fetch(webhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ embeds: [embed] }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Webhook ${res.status}: ${text}`);
+  }
+}
+
 // ── Embed builders ───────────────────────────────────────────────────────────
 
 interface EventEmbedData {

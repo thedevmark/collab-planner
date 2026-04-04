@@ -1,8 +1,6 @@
 import { prisma } from "@/lib/db";
 import {
-  getDiscordToken,
-  postChannelMessage,
-  createGuildScheduledEvent,
+  postWebhookMessage,
   buildNewEventEmbed,
   buildConfirmedEmbed,
   buildReminderEmbed,
@@ -27,12 +25,9 @@ export async function notifyDiscord(
   try {
     const profile = await prisma.profile.findUnique({
       where: { id: userId },
-      select: { discordChannelId: true, discordGuildId: true, timezone: true },
+      select: { discordWebhookUrl: true, timezone: true },
     });
-    if (!profile?.discordChannelId) return;
-
-    const token = await getDiscordToken(userId);
-    if (!token) return;
+    if (!profile?.discordWebhookUrl) return;
 
     const participants = event.participants
       .filter((p) => !p.friend.isMe)
@@ -53,22 +48,7 @@ export async function notifyDiscord(
     else if (type === "canceled") embed = buildCanceledEmbed({ title: event.title });
     else embed = buildReminderEmbed({ ...embedData, label: reminderLabel ?? "Reminder" });
 
-    await postChannelMessage(profile.discordChannelId, token, embed);
-
-    // Create a Discord Scheduled Event when a collab is first planned
-    if (type === "created" && profile.discordGuildId) {
-      await createGuildScheduledEvent(profile.discordGuildId, token, {
-        name: event.title,
-        startTime: event.startTime.toISOString(),
-        endTime: event.endTime.toISOString(),
-        description: [
-          participants.length > 0 ? `With: ${participants.join(", ")}` : "",
-          event.gameName ? `Playing: ${event.gameName}` : "",
-        ]
-          .filter(Boolean)
-          .join(" | "),
-      });
-    }
+    await postWebhookMessage(profile.discordWebhookUrl, embed);
   } catch {
     // Fire-and-forget — never block the main response
   }
