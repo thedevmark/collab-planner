@@ -115,11 +115,11 @@ export async function postChannelMessage(channelId: string, token: string, embed
   });
 }
 
-export async function postWebhookMessage(webhookUrl: string, embed: object) {
+export async function postWebhookMessage(webhookUrl: string, embed: object, content?: string) {
   const res = await fetch(webhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ embeds: [embed] }),
+    body: JSON.stringify({ embeds: [embed], ...(content && { content }) }),
   });
 
   if (!res.ok) {

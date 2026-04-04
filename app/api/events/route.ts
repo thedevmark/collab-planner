@@ -36,7 +36,7 @@ export async function GET(req: Request) {
       include: {
         participants: {
           include: {
-            friend: { select: { id: true, username: true, displayName: true, avatarUrl: true, isMe: true, discordUsername: true } },
+            friend: { select: { id: true, username: true, displayName: true, avatarUrl: true, isMe: true, discordUsername: true, discordId: true } },
           },
         },
       },
@@ -119,7 +119,7 @@ export async function POST(req: Request) {
         include: {
           participants: {
             include: {
-              friend: { select: { id: true, username: true, displayName: true, avatarUrl: true, isMe: true, discordUsername: true } },
+              friend: { select: { id: true, username: true, displayName: true, avatarUrl: true, isMe: true, discordUsername: true, discordId: true } },
             },
           },
         },

@@ -43,6 +43,7 @@ model Friend {
   isSuggested      Boolean            @default(false)
   isFavorite       Boolean            @default(false)
   discordUsername  String?
+  discordId        String?
   channelColor     String             @default("")
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt

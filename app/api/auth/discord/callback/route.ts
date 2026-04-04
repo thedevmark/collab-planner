@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
     // Fire-and-forget — never block the OAuth redirect
     prisma.friend.updateMany({
       where: { twitchId: profile.twitchId, discordUsername: null },
-      data: { discordUsername },
+      data: { discordUsername, discordId: me.id },
     }).catch(() => {});
 
     return NextResponse.redirect(new URL("/settings?discord=connected", req.url));

@@ -39,7 +39,7 @@ You configure everything in-app on the **Settings** page — no `.env` file need
 | Key | Where to get it | What it does |
 |-----|----------------|--------------|
 | `DATABASE_URL` / `DIRECT_URL` | Supabase project settings | Postgres connection for app data |
-| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` | Supabase project settings | Authentication and session handling |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase project settings | Authentication and session handling |
 | `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | [Twitch Developer Console](https://dev.twitch.tv/console/apps) | Search for streamers, pull VOD history and schedules |
 
 Alternatively, you can set them as environment variables in a `.env.local` file (see `.env.example`). Keys saved in Settings take priority over env vars.

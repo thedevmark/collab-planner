@@ -29,7 +29,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       include: {
         participants: {
           include: {
-            friend: { select: { id: true, username: true, displayName: true, avatarUrl: true, isMe: true, discordUsername: true } },
+            friend: { select: { id: true, username: true, displayName: true, avatarUrl: true, isMe: true, discordUsername: true, discordId: true } },
           },
         },
         reminders: true,
@@ -69,7 +69,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         include: {
           participants: {
             include: {
-              friend: { select: { id: true, username: true, displayName: true, avatarUrl: true, isMe: true, discordUsername: true } },
+              friend: { select: { id: true, username: true, displayName: true, avatarUrl: true, isMe: true, discordUsername: true, discordId: true } },
             },
           },
         },

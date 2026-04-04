@@ -24,7 +24,7 @@ export async function GET() {
             endTime: true,
             gameName: true,
             participants: {
-              include: { friend: { select: { displayName: true, isMe: true, discordUsername: true } } },
+              include: { friend: { select: { displayName: true, isMe: true, discordUsername: true, discordId: true } } },
             },
           },
         },

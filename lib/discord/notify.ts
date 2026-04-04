@@ -13,7 +13,7 @@ interface EventData {
   startTime: Date;
   endTime: Date;
   gameName: string;
-  participants: { friend: { displayName: string; isMe: boolean; discordUsername?: string | null } }[];
+  participants: { friend: { displayName: string; isMe: boolean; discordUsername?: string | null; discordId?: string | null } }[];
 }
 
 export async function notifyDiscord(
@@ -29,13 +29,19 @@ export async function notifyDiscord(
     });
     if (!profile?.discordWebhookUrl) return;
 
-    const participants = event.participants
-      .filter((p) => !p.friend.isMe)
-      .map((p) =>
-        p.friend.discordUsername
-          ? `${p.friend.displayName} (@${p.friend.discordUsername})`
-          : p.friend.displayName
-      );
+    const nonSelf = event.participants.filter((p) => !p.friend.isMe);
+
+    const participants = nonSelf.map((p) =>
+      p.friend.discordUsername
+        ? `${p.friend.displayName} (@${p.friend.discordUsername})`
+        : p.friend.displayName
+    );
+
+    // Build ping string for participants who have connected Discord
+    const pings = nonSelf
+      .filter((p) => p.friend.discordId)
+      .map((p) => `<@${p.friend.discordId}>`)
+      .join(" ");
 
     const embedData = {
       title: event.title,
@@ -52,7 +58,7 @@ export async function notifyDiscord(
     else if (type === "canceled") embed = buildCanceledEmbed({ title: event.title });
     else embed = buildReminderEmbed({ ...embedData, label: reminderLabel ?? "Reminder" });
 
-    await postWebhookMessage(profile.discordWebhookUrl, embed);
+    await postWebhookMessage(profile.discordWebhookUrl, embed, pings || undefined);
   } catch {
     // Fire-and-forget — never block the main response
   }
