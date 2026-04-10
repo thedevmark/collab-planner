@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { CalendarPlus, Eye, EyeOff, Tv2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import FindTimeView from "@/components/calendar/FindTimeView";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -118,9 +119,12 @@ function renderEventContent(eventInfo: any) {
   );
 }
 
+type CalendarView = "overview" | "find-time";
+
 export default function CalendarPage() {
   const router = useRouter();
   const calRef = useRef<any>(null);
+  const [activeView, setActiveView] = useState<CalendarView>("overview");
   const [currentRange, setCurrentRange] = useState({
     from: startOfMonth(new Date()).toISOString(),
     to: endOfMonth(new Date()).toISOString(),
@@ -289,15 +293,39 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Calendar Helper</h1>
-        <Link href="/events/new">
-          <Button>
-            <CalendarPlus className="h-4 w-4" />
-            New Session
-          </Button>
-        </Link>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h1 className="text-3xl font-bold">Calendar</h1>
+        <div className="flex items-center gap-3">
+          <div className="flex rounded-lg border bg-muted/40 p-0.5">
+            {(["overview", "find-time"] as const).map((view) => (
+              <button
+                key={view}
+                onClick={() => setActiveView(view)}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  activeView === view
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                type="button"
+              >
+                {view === "overview" ? "Overview" : "Find Time"}
+              </button>
+            ))}
+          </div>
+          <Link href="/events/new">
+            <Button size="sm">
+              <CalendarPlus className="h-4 w-4" />
+              New Session
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {activeView === "find-time" ? (
+        <FindTimeView />
+      ) : (
+        <>
+      {/* Everything below this point is the Overview (month calendar) view */}
 
       {(nonMeFriends.length > 0 || meDates.size > 0) && (
         <Card>
@@ -388,6 +416,8 @@ export default function CalendarPage() {
           Times: {Intl.DateTimeFormat().resolvedOptions().timeZone} ({new Intl.DateTimeFormat("en", { timeZoneName: "short" }).formatToParts(new Date()).find(p => p.type === "timeZoneName")?.value})
         </span>
       </div>
+        </>
+      )}
     </div>
   );
 }
