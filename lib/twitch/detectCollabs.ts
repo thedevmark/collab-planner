@@ -1,10 +1,16 @@
 import { prisma } from "@/lib/db";
 
+export type CollabSource =
+  | "confirmed_event"   // ground truth — completed event with both participants
+  | "guest_star"        // Helix Guest Star session history (own channel only)
+  | "vod_title_mention" // @handle or name+keyword in a VOD title
+  | "stream_overlap";   // concurrent live windows (≥30min)
+
 export interface CollabPartner {
   partnerName: string;
   partnerLogin: string;
   detectedAt: Date;
-  source: "vod_title_mention" | "stream_overlap";
+  source: CollabSource;
   evidence: string;
   confidence: "high" | "medium" | "weak";
 }
@@ -73,7 +79,7 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
     },
   });
 
-  if (!friend || !friend.streamHistory.length) return 0;
+  if (!friend) return 0;
 
   // All other active friends to cross-reference against
   const allFriends = await prisma.friend.findMany({
@@ -142,10 +148,66 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
     }
   }
 
-  // ── Source 3 & 4: Stream overlap detection ───────────────────────────────
-  // Twitch doesn't expose a public "guest star" / "collab channels" API, so
-  // the strongest non-title signal we can derive is overlapping live windows
-  // between two friends, scored higher when they're playing the same game.
+  // ── Source 3: Confirmed events (ground truth) ────────────────────────────
+  // When the user completes an event with participants, CollabHistory rows
+  // are created. We join those through to the event's participant list to
+  // find every OTHER friend who was in the same event — that's a confirmed
+  // collab between the subject friend and each co-participant.
+  const confirmedHistories = await prisma.collabHistory.findMany({
+    where: { friendId, eventId: { not: null } },
+    include: {
+      event: {
+        include: {
+          participants: {
+            include: {
+              friend: {
+                select: { id: true, username: true, displayName: true, isMe: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  for (const ch of confirmedHistories) {
+    if (!ch.event) continue;
+    for (const p of ch.event.participants) {
+      // Skip self, skip the subject friend, skip the user's "me" friend
+      if (p.friend.isMe) continue;
+      if (p.friendId === friendId) continue;
+      if (isSelfReference(p.friend.username, subject)) continue;
+
+      const key = `confirmed|${p.friend.username.toLowerCase()}|${ch.date.toDateString()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      signals.push({
+        partnerName: p.friend.displayName,
+        partnerLogin: p.friend.username,
+        detectedAt: ch.date,
+        source: "confirmed_event",
+        evidence: `Confirmed event: ${ch.title}`,
+        confidence: "high",
+      });
+    }
+  }
+
+  // ── Source 4 (stub): Helix Guest Star ───────────────────────────────────
+  // The Twitch Guest Star API (channel:read:guest_star) only works for
+  // channels the authenticated user owns or moderates. When that scope is
+  // available, call GET /helix/guest_star/session here and create signals
+  // with source: "guest_star", confidence: "high".
+  //
+  // Not yet wired — requires adding the scope to the Twitch OAuth flow and
+  // storing a broadcaster-level access token per user. The infrastructure
+  // accepts "guest_star" as a valid source string, so plugging it in later
+  // is a single function addition with no schema or display changes.
+
+  // ── Source 5 & 6: Stream overlap detection ──────────────────────────────
+  // The strongest non-title signal we can derive without API access to
+  // another channel: overlapping live windows between two friends, scored
+  // higher when they're playing the same game.
   for (const myVod of friend.streamHistory) {
     const myStart = myVod.startTime.getTime();
     const myEnd = myVod.endTime.getTime();
@@ -185,9 +247,34 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
   }
 
   // ── Persist signals ──────────────────────────────────────────────────────
+  // Confidence ranking used to decide whether an update should overwrite an
+  // existing signal. Higher-tier sources never get downgraded by re-runs of
+  // lower-tier detection.
+  const CONFIDENCE_RANK: Record<string, number> = {
+    high: 3,
+    medium: 2,
+    weak: 1,
+  };
+
   let stored = 0;
   for (const s of signals) {
     try {
+      const existing = await prisma.collabSignal.findUnique({
+        where: {
+          friendId_partnerLogin_detectedAt: {
+            friendId,
+            partnerLogin: s.partnerLogin,
+            detectedAt: s.detectedAt,
+          },
+        },
+        select: { confidence: true },
+      });
+
+      // Only overwrite if the new signal is at least as confident
+      if (existing && (CONFIDENCE_RANK[existing.confidence] ?? 0) > (CONFIDENCE_RANK[s.confidence] ?? 0)) {
+        continue;
+      }
+
       await prisma.collabSignal.upsert({
         where: {
           friendId_partnerLogin_detectedAt: {
