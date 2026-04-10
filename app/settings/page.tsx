@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, Loader2, Twitch, MessageSquare, Unlink, ExternalLink } from "lucide-react";
+import { Check, ExternalLink, Link2, Loader2, MessageSquare, Twitch, Unlink } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import Image from "next/image";
 
@@ -266,6 +266,59 @@ function SettingsForm() {
             Read the API docs
             <ExternalLink className="h-3 w-3" />
           </a>
+        </CardContent>
+      </Card>
+
+      {/* Smart Links explainer */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Link2 className="h-5 w-5 text-primary" />
+            Smart Collab Links
+          </CardTitle>
+          <CardDescription>
+            Share one link — everyone gets added, the event pre-fills, and you can see who&apos;s in at a glance.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm text-muted-foreground">
+          <div className="space-y-3">
+            <div className="flex gap-3">
+              <span className="shrink-0 text-xs font-bold text-primary mt-0.5">1</span>
+              <p>
+                <span className="font-medium text-foreground">Create an invite</span> — from any People card,
+                the New Session page, or the People header. Pick a title, game, message, and who you want.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <span className="shrink-0 text-xs font-bold text-primary mt-0.5">2</span>
+              <p>
+                <span className="font-medium text-foreground">Share the link</span> — paste it in Discord, DMs,
+                or anywhere. Recipients don&apos;t need an account to see the invite page, but they sign in with
+                Twitch to respond.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <span className="shrink-0 text-xs font-bold text-primary mt-0.5">3</span>
+              <p>
+                <span className="font-medium text-foreground">Recipients respond</span> — accept, decline, or
+                &ldquo;Claim &amp; Plan&rdquo; which opens the event planner with the invite&apos;s title, game, and
+                participants already filled in.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <span className="shrink-0 text-xs font-bold text-primary mt-0.5">4</span>
+              <p>
+                <span className="font-medium text-foreground">Auto-add friends</span> — anyone from the invite
+                who isn&apos;t in your People list yet gets added automatically with their full stream history and
+                schedule already loaded. No manual entry.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-md bg-muted/40 border border-border px-3 py-2.5 text-xs leading-5">
+            <span className="font-medium text-foreground">Invite limits:</span> Links expire after up to
+            7 days. You can optionally cap how many times an invite can be claimed. Expired or exhausted links
+            show a friendly message to visitors instead of a dead page.
+          </div>
         </CardContent>
       </Card>
 

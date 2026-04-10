@@ -105,6 +105,7 @@ export default function LoginPage() {
           {[
             "reads your VOD history",
             "finds schedule overlaps",
+            "smart collab links",
             "posts to Discord",
             "tracks who you collab with",
           ].map((pill) => (
@@ -222,6 +223,86 @@ export default function LoginPage() {
               <p className="text-zinc-500 text-sm leading-relaxed">{body}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Smart Links */}
+      <section className="max-w-5xl mx-auto w-full px-6 pb-20">
+        <div className="text-center mb-10">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 font-mono mb-5">
+            smart collab links
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+            Drop a link. Everyone&apos;s in.
+          </h2>
+          <p className="mt-3 text-sm text-zinc-400 max-w-lg mx-auto leading-relaxed">
+            One URL carries the title, game, participants, and a personal message. Anyone who clicks
+            can accept, decline, or claim the session — even if they&apos;ve never signed up.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-zinc-800/50 rounded-2xl overflow-hidden border border-zinc-800/50">
+          {[
+            {
+              emoji: "🔗",
+              title: "Share one link",
+              body: "Create an invite with a title, game, and message. Pick who you want. Copy the link. Paste it in Discord, DMs, anywhere.",
+            },
+            {
+              emoji: "👥",
+              title: "Auto-add friends",
+              body: "When someone claims your invite, they get added to your crew automatically — with their full stream history and schedule already loaded.",
+            },
+            {
+              emoji: "📋",
+              title: "Pre-filled event",
+              body: "Clicking \"Claim & Plan\" drops them straight into event creation with the title, game, and participants already set. Zero re-typing.",
+            },
+            {
+              emoji: "📊",
+              title: "See who's in",
+              body: "The invite page shows live status — who accepted, who declined, who's still thinking. Everyone sees the same state in real time.",
+            },
+          ].map(({ emoji, title, body }) => (
+            <div
+              key={title}
+              className="bg-zinc-950 px-7 py-7 space-y-2.5"
+            >
+              <span className="text-xl">{emoji}</span>
+              <h3 className="font-semibold text-white text-sm leading-snug">{title}</h3>
+              <p className="text-zinc-500 text-sm leading-relaxed">{body}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 rounded-xl border border-zinc-800/60 bg-zinc-950 px-6 py-5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-3">
+              <div className="flex -space-x-2">
+                {MOCK_FRIENDS.map((f) => (
+                  <div
+                    key={f.handle}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-zinc-950"
+                    style={{ backgroundColor: f.color + "30", color: f.color }}
+                  >
+                    {f.initials}
+                  </div>
+                ))}
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-zinc-200">3 accepted</p>
+                <p className="text-[11px] font-mono text-zinc-600">collab.deutschmark.online/invite/abc123</p>
+              </div>
+            </div>
+            <div className="sm:ml-auto flex items-center gap-2">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-[10px] font-semibold text-emerald-400">
+                3 accepted
+              </span>
+              <span className="px-2.5 py-1 rounded-full bg-zinc-800 border border-zinc-700 text-[10px] font-semibold text-zinc-400">
+                0 pending
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
