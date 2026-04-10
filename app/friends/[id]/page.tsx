@@ -17,6 +17,17 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+// Common Twitch schedule-slot placeholder strings. Streamers often leave
+// these untouched on their schedule slots and it makes the UI look bad.
+// Treat any of these as "no title" and hide the title line instead.
+const PLACEHOLDER_TITLE_RE =
+  /^\s*(new schedule slot|new slot|schedule slot|untitled|title here|placeholder|tbd|tba|stream|streaming|)\s*$/i;
+
+function isPlaceholderTitle(title: string | null | undefined): boolean {
+  if (!title) return true;
+  return PLACEHOLDER_TITLE_RE.test(title);
+}
+
 function getStreamingPattern(streamHistory: any[], scheduleSegments: any[]) {
   const dayCounts: Record<number, number> = {};
   const hourCounts: number[] = [];
@@ -141,7 +152,9 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
                 {friend.isMe && <Badge style={{ backgroundColor: accentColor, color: "#fff", border: "none" }}>You</Badge>}
                 {friend.isFavorite && <Badge variant="secondary">Favorite</Badge>}
               </div>
-              <p className="text-muted-foreground">@{friend.username}</p>
+              {friend.username ? (
+                <p className="text-muted-foreground">@{friend.username}</p>
+              ) : null}
               {editingDiscord ? (
                 <div className="flex items-center gap-1 mt-1">
                   <MessageSquare className="h-3.5 w-3.5 text-[#5865F2] shrink-0" />
@@ -190,9 +203,11 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
                 <Link href={`/events/new?friendId=${friend.id}`}>
                   <Button size="sm">New Session</Button>
                 </Link>
-                <Button variant="ghost" size="sm" className="text-destructive" onClick={removeFriend}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {!friend.isMe && (
+                  <Button variant="ghost" size="sm" className="text-destructive" onClick={removeFriend}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -365,24 +380,34 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Posted Schedule
-                  <Badge variant="secondary" className="text-xs ml-auto">Optional</Badge>
+                  Upcoming
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {upcomingSegments.map((s: any) => (
-                    <div key={s.id} className="border rounded-md p-2 text-xs space-y-0.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium truncate">{s.title}</p>
-                        {s.isRecurring && <Badge variant="outline" className="text-xs shrink-0">Recurring</Badge>}
+                  {upcomingSegments.map((s: any) => {
+                    const hideTitle = isPlaceholderTitle(s.title);
+                    return (
+                      <div key={s.id} className="border rounded-md p-2 text-xs space-y-0.5">
+                        <div className="flex items-center justify-between gap-2">
+                          {hideTitle ? (
+                            <p className="font-medium truncate text-muted-foreground italic">
+                              {s.gameName || "Scheduled stream"}
+                            </p>
+                          ) : (
+                            <p className="font-medium truncate">{s.title}</p>
+                          )}
+                          {s.isRecurring && <Badge variant="outline" className="text-xs shrink-0">Weekly</Badge>}
+                        </div>
+                        <p className="text-muted-foreground">
+                          {format(new Date(s.startTime), "EEE MMM d, h:mm a")} – {format(new Date(s.endTime), "h:mm a")}
+                        </p>
+                        {!hideTitle && s.gameName ? (
+                          <p className="text-muted-foreground">{s.gameName}</p>
+                        ) : null}
                       </div>
-                      <p className="text-muted-foreground">
-                        {format(new Date(s.startTime), "EEE MMM d, h:mm a")} – {format(new Date(s.endTime), "h:mm a")}
-                      </p>
-                      {s.gameName && <p className="text-muted-foreground">{s.gameName}</p>}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

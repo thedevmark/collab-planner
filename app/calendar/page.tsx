@@ -15,6 +15,18 @@ import { useRouter } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+// Twitch schedule slots often carry placeholder titles the streamer never
+// replaced — most commonly "New schedule slot". Match them case-insensitively
+// so the calendar swaps in the friend's display name instead of rendering a
+// wall of "New schedule slot" cells.
+const PLACEHOLDER_SCHEDULE_TITLE_RE =
+  /^\s*(new schedule slot|new slot|schedule slot|untitled|title here|placeholder|tbd|tba|stream|streaming|)\s*$/i;
+
+function isPlaceholderScheduleTitle(title: string | null | undefined): boolean {
+  if (!title) return true;
+  return PLACEHOLDER_SCHEDULE_TITLE_RE.test(title);
+}
+
 /**
  * Cap an event's end time to 23:59:59 LOCAL time of its start day so it stays
  * within one cell in dayGridMonth view. FullCalendar renders in local time, so
@@ -177,14 +189,20 @@ export default function CalendarPage() {
       extendedProps: { type: "event", eventId: e.id },
     })),
 
-    // Friend posted schedules — only when toggled on
+    // Friend posted schedules — only when toggled on.
+    // If the schedule slot has a placeholder/garbage title (common — Twitch
+    // defaults to "New schedule slot"), display the friend's display name
+    // instead so the calendar isn't cluttered with "New schedule slot" cells.
     ...scheduleSegments
       .filter((s: any) => !hiddenFriends.has(s.friendId))
       .map((s: any) => {
         const color = friendColorMap.get(s.friendId) ?? "#64748b";
+        const cleanTitle = isPlaceholderScheduleTitle(s.title)
+          ? s.friend.displayName
+          : s.title;
         return {
           id: `seg-${s.id}`,
-          title: s.title,
+          title: cleanTitle,
           start: s.startTime,
           end: capEndToStartDay(s.startTime, s.endTime),
           backgroundColor: "hsl(215 28% 15%)",

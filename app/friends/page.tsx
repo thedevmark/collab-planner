@@ -576,10 +576,9 @@ export default function FriendsPage() {
                       <InviteDialog friends={friends} defaultFriendIds={[friend.id]}>
                         <Button
                           size="sm"
-                          className="h-9 w-full gap-1.5 text-white"
-                          style={{ backgroundColor: accentColor }}
+                          className="group h-9 w-full gap-1.5 bg-primary text-primary-foreground shadow-sm transition-all duration-150 hover:-translate-y-px hover:bg-primary/90 hover:shadow-md active:translate-y-0 active:shadow-sm"
                         >
-                          <Link2 className="h-3.5 w-3.5" />
+                          <Link2 className="h-3.5 w-3.5 transition-transform group-hover:-rotate-12" />
                           Invite to Collab
                         </Button>
                       </InviteDialog>
