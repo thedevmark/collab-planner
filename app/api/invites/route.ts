@@ -12,6 +12,7 @@ const createInviteSchema = z.object({
   message: z.string().optional(),
   expiresIn: z.number().max(7 * 24).optional(),
   maxUses: z.number().nullable().optional(),
+  postToDiscord: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -79,8 +80,12 @@ export async function POST(req: Request) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     const url = `${baseUrl}/invite/${invite.token}`;
 
-    // Fire-and-forget Discord notification with the invite link
-    void notifyDiscordInviteCreated(userId, invite, url);
+    // Discord notification is available but only fires when the caller
+    // explicitly requests it (postToDiscord: true in the request body).
+    // Nothing auto-posts without user consent.
+    if (data.postToDiscord) {
+      void notifyDiscordInviteCreated(userId, invite, url);
+    }
 
     return NextResponse.json({ token: invite.token, url, invite }, { status: 201 });
   } catch (err) {

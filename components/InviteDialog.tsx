@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Check, Copy, CheckCheck, Loader2, ExternalLink } from "lucide-react";
+import { Check, Copy, CheckCheck, Loader2, ExternalLink, MessageSquare } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -50,10 +50,14 @@ export function InviteDialog({ friends, defaultFriendIds = [], children }: Invit
     });
   }
 
+  const { data: settings } = useSWR("/api/settings", fetcher, { revalidateOnFocus: false });
+  const hasDiscordWebhook = Boolean(settings?.discordWebhookUrl);
+
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("Collab Stream");
   const [gameName, setGameName] = useState("");
   const [gameSearch, setGameSearch] = useState("");
+  const [postToDiscord, setPostToDiscord] = useState(false);
   const { data: gameResults = [] } = useSWR(
     gameSearch.length >= 2 ? `/api/twitch/categories?q=${encodeURIComponent(gameSearch)}` : null,
     fetcher
@@ -73,6 +77,7 @@ export function InviteDialog({ friends, defaultFriendIds = [], children }: Invit
     setMessage("");
     setSelectedIds(initialSelectedIds());
     setExpiry(7 * 24);
+    setPostToDiscord(false);
     setCreated(null);
     setCopied(false);
     setError("");
@@ -98,6 +103,7 @@ export function InviteDialog({ friends, defaultFriendIds = [], children }: Invit
           message: message.trim() || undefined,
           participantFriendIds: selectedIds,
           expiresIn: expiry,
+          postToDiscord: postToDiscord || undefined,
         }),
       });
       const data = await res.json();
@@ -238,6 +244,19 @@ export function InviteDialog({ friends, defaultFriendIds = [], children }: Invit
                 ))}
               </div>
             </div>
+
+            {hasDiscordWebhook && (
+              <label className="flex items-center gap-2.5 rounded-md border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={postToDiscord}
+                  onChange={(e) => setPostToDiscord(e.target.checked)}
+                  className="h-4 w-4 rounded border-border accent-[#5865F2]"
+                />
+                <MessageSquare className="h-3.5 w-3.5 text-[#5865F2] shrink-0" />
+                <span className="text-xs text-muted-foreground">Post to Discord</span>
+              </label>
+            )}
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
