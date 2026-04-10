@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser, unauthorized } from "@/lib/auth";
+import { notifyDiscordInviteCreated } from "@/lib/discord/notify";
 import { z } from "zod";
 
 const createInviteSchema = z.object({
@@ -77,6 +78,9 @@ export async function POST(req: Request) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     const url = `${baseUrl}/invite/${invite.token}`;
+
+    // Fire-and-forget Discord notification with the invite link
+    void notifyDiscordInviteCreated(userId, invite, url);
 
     return NextResponse.json({ token: invite.token, url, invite }, { status: 201 });
   } catch (err) {

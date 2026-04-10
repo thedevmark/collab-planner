@@ -5,6 +5,7 @@ import {
   buildConfirmedEmbed,
   buildReminderEmbed,
   buildCanceledEmbed,
+  buildInviteEmbed,
 } from "./client";
 
 interface EventData {
@@ -61,5 +62,43 @@ export async function notifyDiscord(
     await postWebhookMessage(profile.discordWebhookUrl, embed, pings || undefined);
   } catch {
     // Fire-and-forget — never block the main response
+  }
+}
+
+/**
+ * Post a smart-link invite to the user's Discord webhook when they create one.
+ * Fire-and-forget — never blocks the API response.
+ */
+export async function notifyDiscordInviteCreated(
+  userId: string,
+  invite: {
+    title: string;
+    gameName: string;
+    message: string;
+    expiresAt: Date | null;
+    participantDisplayNames: string[];
+  },
+  inviteUrl: string,
+) {
+  try {
+    const profile = await prisma.profile.findUnique({
+      where: { id: userId },
+      select: { discordWebhookUrl: true, timezone: true },
+    });
+    if (!profile?.discordWebhookUrl) return;
+
+    const embed = buildInviteEmbed({
+      title: invite.title,
+      gameName: invite.gameName || undefined,
+      message: invite.message || undefined,
+      participants: invite.participantDisplayNames,
+      inviteUrl,
+      expiresAt: invite.expiresAt ?? new Date(Date.now() + 7 * 86400000),
+      timezone: profile.timezone ?? "UTC",
+    });
+
+    await postWebhookMessage(profile.discordWebhookUrl, embed);
+  } catch {
+    // Fire-and-forget
   }
 }

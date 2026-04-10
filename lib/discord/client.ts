@@ -199,6 +199,35 @@ export function buildCanceledEmbed(data: { title: string }) {
   };
 }
 
+interface InviteEmbedData {
+  title: string;
+  gameName?: string;
+  message?: string;
+  participants: string[];
+  inviteUrl: string;
+  expiresAt: Date;
+  timezone: string;
+}
+
+export function buildInviteEmbed(data: InviteEmbedData) {
+  const fields = [
+    { name: "🔗 Link", value: `[Open invite](${data.inviteUrl})`, inline: false },
+    ...(data.gameName ? [{ name: "🎮 Game", value: data.gameName, inline: true }] : []),
+    ...(data.participants.length > 0
+      ? [{ name: "👥 Invited", value: data.participants.join(", "), inline: true }]
+      : []),
+    { name: "⏳ Expires", value: formatDateTime(data.expiresAt, data.timezone), inline: false },
+    ...(data.message ? [{ name: "💬 Message", value: data.message }] : []),
+  ];
+  return {
+    title: `🔗 Collab Invite: ${data.title}`,
+    color: TWITCH_PURPLE,
+    fields,
+    footer: { text: "Collab Planner · Smart Links" },
+    timestamp: new Date().toISOString(),
+  };
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface DiscordGuild {
