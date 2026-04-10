@@ -18,7 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Search, Loader2, TrendingUp, Users2, CalendarClock, Gamepad2, Link2, Sparkles, RefreshCw, Check, X, Star } from "lucide-react";
+import { UserPlus, Search, Loader2, TrendingUp, Users2, CalendarClock, Gamepad2, Link2, Sparkles, RefreshCw, Check, X, Star, Trash2 } from "lucide-react";
 import { InviteDialog } from "@/components/InviteDialog";
 
 const FALLBACK_COLORS = [
@@ -145,6 +145,7 @@ export default function FriendsPage() {
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [dismissingId, setDismissingId] = useState<number | null>(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const { data: channelResults = [] } = useSWR(
     channelQuery.length >= 2 ? `/api/twitch/channels?q=${encodeURIComponent(channelQuery)}` : null,
@@ -246,6 +247,17 @@ export default function FriendsPage() {
       mutate();
     } finally {
       setTogglingFavoriteId(null);
+    }
+  }
+
+  async function deleteFriend(id: number, displayName: string) {
+    if (!window.confirm(`Remove ${displayName} from your people list?`)) return;
+    setDeletingId(id);
+    try {
+      await fetch(`/api/friends/${id}`, { method: "DELETE" });
+      mutate();
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -360,7 +372,9 @@ export default function FriendsPage() {
                     <p className="font-semibold truncate">{meFriend.displayName}</p>
                     <Badge className="text-xs shrink-0" style={{ backgroundColor: meColor, color: "#fff", border: "none" }}>You</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">@{meFriend.username}</p>
+                  {meFriend.username ? (
+                    <p className="text-sm text-muted-foreground">@{meFriend.username}</p>
+                  ) : null}
                 </div>
                 <div className="shrink-0">
                   <StreamPattern friend={meFriend} accentColor={meColor} />
@@ -423,22 +437,23 @@ export default function FriendsPage() {
         </div>
       )}
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search friends..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
-      </div>
-
-      {favoriteCount > 0 && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Star className="h-3.5 w-3.5 fill-current text-yellow-400" />
-          Favorites appear first in planning and session setup.
+      <div className="space-y-3 pt-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search people..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-10 pl-9"
+          />
         </div>
-      )}
+        {favoriteCount > 0 && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Star className="h-3.5 w-3.5 fill-current text-yellow-400" />
+            Favorites appear first in planning and session setup.
+          </div>
+        )}
+      </div>
 
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
@@ -451,17 +466,35 @@ export default function FriendsPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
+        <div className="grid auto-rows-fr grid-cols-2 gap-4 xl:grid-cols-3">
           {filtered.map((friend: any, idx: number) => {
             const accentColor = friend.channelColor || FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
+            // Filter self-mentions out of the collab partner list
+            const partnerNames = (() => {
+              if (!friend.collabSignals?.length) return { names: [] as string[], extra: 0 };
+              const partnerMap = new Map<string, string>();
+              const selfKeys = new Set(
+                [friend.username, friend.displayName]
+                  .filter(Boolean)
+                  .map((s: string) => s.toLowerCase()),
+              );
+              for (const s of friend.collabSignals) {
+                const key = (s.partnerLogin || s.partnerName || "").toLowerCase();
+                if (!key || selfKeys.has(key)) continue;
+                if (!partnerMap.has(key)) partnerMap.set(key, s.partnerName);
+              }
+              const all = Array.from(partnerMap.values());
+              return { names: all.slice(0, 2), extra: Math.max(0, all.length - 2) };
+            })();
+
             return (
               <Link key={friend.id} href={`/friends/${friend.id}`}>
                 <Card
-                  className="hover:shadow-md transition-shadow cursor-pointer h-full"
+                  className="flex h-full flex-col transition-shadow hover:shadow-md cursor-pointer"
                   style={{ borderColor: accentColor + "50" }}
                 >
                   <div className="h-0.5 rounded-t-lg" style={{ backgroundColor: accentColor }} />
-                  <CardContent className="pt-5 space-y-3">
+                  <CardContent className="flex flex-1 flex-col pt-5 space-y-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-12 w-12" style={{ outline: `2px solid ${accentColor}40`, outlineOffset: "2px" }}>
                         <AvatarImage src={friend.avatarUrl} />
@@ -478,45 +511,60 @@ export default function FriendsPage() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground">@{friend.username}</p>
+                        {friend.username ? (
+                          <p className="text-sm text-muted-foreground truncate">@{friend.username}</p>
+                        ) : null}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 shrink-0 p-0"
-                        disabled={togglingFavoriteId === friend.id}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          void toggleFavorite(friend.id, !friend.isFavorite);
-                        }}
-                        title={friend.isFavorite ? "Remove favorite" : "Mark as favorite"}
-                      >
-                        {togglingFavoriteId === friend.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Star className={`h-4 w-4 ${friend.isFavorite ? "fill-current text-yellow-400" : "text-muted-foreground"}`} />
-                        )}
-                      </Button>
+                      <div className="flex shrink-0 items-center gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          disabled={togglingFavoriteId === friend.id}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            void toggleFavorite(friend.id, !friend.isFavorite);
+                          }}
+                          title={friend.isFavorite ? "Remove favorite" : "Mark as favorite"}
+                        >
+                          {togglingFavoriteId === friend.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Star className={`h-4 w-4 ${friend.isFavorite ? "fill-current text-yellow-400" : "text-muted-foreground"}`} />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          disabled={deletingId === friend.id}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            void deleteFriend(friend.id, friend.displayName);
+                          }}
+                          title={`Remove ${friend.displayName}`}
+                        >
+                          {deletingId === friend.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
 
                     <StreamPattern friend={friend} accentColor={accentColor} />
                     <RecentCollabSummary friend={friend} accentColor={accentColor} />
 
-                    {(friend.collabSignals?.length ?? 0) > 0 && (() => {
-                      // Summarize collab partners from signals
-                      const partnerMap = new Map<string, string>();
-                      for (const s of friend.collabSignals) {
-                        if (!partnerMap.has(s.partnerLogin)) partnerMap.set(s.partnerLogin, s.partnerName);
-                      }
-                      const names = Array.from(partnerMap.values()).slice(0, 2);
-                      const extra = partnerMap.size - names.length;
-                      return (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Users2 className="h-3 w-3 shrink-0" />
-                          <span className="truncate">w/ {names.join(", ")}{extra > 0 ? ` +${extra}` : ""}</span>
-                        </div>
-                      );
-                    })()}
+                    {partnerNames.names.length > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Users2 className="h-3 w-3 shrink-0" />
+                        <span className="truncate">
+                          w/ {partnerNames.names.join(", ")}
+                          {partnerNames.extra > 0 ? ` +${partnerNames.extra}` : ""}
+                        </span>
+                      </div>
+                    )}
 
                     {friend.notes && (
                       <p className="text-xs text-muted-foreground line-clamp-2 italic">
@@ -524,14 +572,14 @@ export default function FriendsPage() {
                       </p>
                     )}
 
-                    <div onClick={(e) => e.preventDefault()}>
+                    <div className="mt-auto pt-2" onClick={(e) => e.preventDefault()}>
                       <InviteDialog friends={friends} defaultFriendIds={[friend.id]}>
                         <Button
-                          variant="ghost"
                           size="sm"
-                          className="w-full mt-1 h-7 text-xs text-muted-foreground"
+                          className="h-9 w-full gap-1.5 text-white"
+                          style={{ backgroundColor: accentColor }}
                         >
-                          <Link2 className="h-3 w-3" />
+                          <Link2 className="h-3.5 w-3.5" />
                           Invite to Collab
                         </Button>
                       </InviteDialog>

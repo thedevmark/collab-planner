@@ -6,6 +6,7 @@ import { z } from "zod";
 const settingsSchema = z.object({
   timezone: z.string().optional(),
   notificationsEnabled: z.boolean().optional(),
+  publicApiEnabled: z.boolean().optional(),
   discordGuildId: z.string().nullable().optional(),
   discordGuildName: z.string().nullable().optional(),
   discordChannelId: z.string().nullable().optional(),
@@ -26,6 +27,7 @@ export async function GET() {
       displayName: profile.displayName,
       avatarUrl: profile.avatarUrl,
       timezone: profile.timezone,
+      publicApiEnabled: profile.publicApiEnabled,
       discordUsername: profile.discordUsername,
       discordGuildId: profile.discordGuildId,
       discordGuildName: profile.discordGuildName,
@@ -34,6 +36,7 @@ export async function GET() {
       discordWebhookUrl: profile.discordWebhookUrl,
     });
   } catch (err) {
+    console.error("[api/settings] GET failed:", err);
     return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 });
   }
 }
@@ -50,6 +53,7 @@ export async function PUT(req: Request) {
       where: { id: user.id },
       data: {
         ...(data.timezone && { timezone: data.timezone }),
+        ...(data.publicApiEnabled !== undefined && { publicApiEnabled: data.publicApiEnabled }),
         ...(data.discordGuildId !== undefined && { discordGuildId: data.discordGuildId }),
         ...(data.discordGuildName !== undefined && { discordGuildName: data.discordGuildName }),
         ...(data.discordChannelId !== undefined && { discordChannelId: data.discordChannelId }),
@@ -63,6 +67,7 @@ export async function PUT(req: Request) {
       displayName: profile.displayName,
       avatarUrl: profile.avatarUrl,
       timezone: profile.timezone,
+      publicApiEnabled: profile.publicApiEnabled,
       discordUsername: profile.discordUsername,
       discordGuildId: profile.discordGuildId,
       discordGuildName: profile.discordGuildName,
@@ -74,6 +79,7 @@ export async function PUT(req: Request) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: err.message }, { status: 400 });
     }
+    console.error("[api/settings] PUT failed:", err);
     return NextResponse.json({ error: "Failed to update settings" }, { status: 500 });
   }
 }

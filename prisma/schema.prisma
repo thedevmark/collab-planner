@@ -26,6 +26,7 @@ model Profile {
   discordChannelId      String?
   discordChannelName    String?
   discordWebhookUrl     String?
+  publicApiEnabled      Boolean   @default(false)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 }

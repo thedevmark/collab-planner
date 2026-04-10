@@ -40,7 +40,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       ...event,
       participants: normalizeParticipantsInviteStatus(event.participants),
     });
-  } catch {
+  } catch (err) {
+    console.error("[api/events/[id]] GET failed:", err);
     return NextResponse.json({ error: "Failed to fetch event" }, { status: 500 });
   }
 }
@@ -110,6 +111,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed" }, { status: 400 });
     }
+    console.error("[api/events/[id]] PATCH failed:", err);
     return NextResponse.json({ error: "Failed to update event" }, { status: 500 });
   }
 }
@@ -128,7 +130,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       data: { status: "canceled" },
     });
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (err) {
+    console.error("[api/events/[id]] DELETE failed:", err);
     return NextResponse.json({ error: "Failed to delete event" }, { status: 500 });
   }
 }

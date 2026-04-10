@@ -27,6 +27,7 @@ export async function GET(req: Request) {
     });
     return NextResponse.json(reminders);
   } catch (err) {
+    console.error("[api/reminders] GET failed:", err);
     return NextResponse.json({ error: "Failed to fetch reminders" }, { status: 500 });
   }
 }
@@ -54,6 +55,7 @@ export async function POST(req: Request) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed" }, { status: 400 });
     }
+    console.error("[api/reminders] POST failed:", err);
     return NextResponse.json({ error: "Failed to create reminder" }, { status: 500 });
   }
 }

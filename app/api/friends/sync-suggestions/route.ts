@@ -86,6 +86,7 @@ export async function POST() {
 
     return NextResponse.json({ added, total });
   } catch (err) {
+    console.error("[api/friends/sync-suggestions] POST failed:", err);
     return NextResponse.json({ error: "Failed to sync suggestions" }, { status: 500 });
   }
 }

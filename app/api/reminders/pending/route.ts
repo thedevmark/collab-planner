@@ -45,6 +45,7 @@ export async function GET() {
 
     return NextResponse.json(pending.map((r) => ({ id: r.id, label: r.label, event: { id: r.event.id, title: r.event.title } })));
   } catch (err) {
+    console.error("[api/reminders/pending] GET failed:", err);
     return NextResponse.json({ error: "Failed to fetch pending reminders" }, { status: 500 });
   }
 }

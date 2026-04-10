@@ -21,7 +21,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     const summary = summarizeCollabSignals(friend.displayName, signals);
     return NextResponse.json({ signals, summary });
-  } catch {
+  } catch (err) {
+    console.error("[api/friends/[id]/collabs] GET failed:", err);
     return NextResponse.json({ error: "Failed to fetch collab signals" }, { status: 500 });
   }
 }
@@ -46,7 +47,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     const summary = summarizeCollabSignals(friend.displayName, signals);
     return NextResponse.json({ detected: count, signals, summary });
-  } catch {
+  } catch (err) {
+    console.error("[api/friends/[id]/collabs] POST failed:", err);
     return NextResponse.json({ error: "Detection failed" }, { status: 500 });
   }
 }

@@ -48,6 +48,10 @@ function SettingsForm() {
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
 
+  // Public API state
+  const [publicApiEnabled, setPublicApiEnabled] = useState(false);
+  const [savingPublicApi, setSavingPublicApi] = useState(false);
+
   // Discord state
   const [webhookUrl, setWebhookUrl] = useState("");
   const [savingDiscord, setSavingDiscord] = useState(false);
@@ -57,9 +61,29 @@ function SettingsForm() {
   useEffect(() => {
     if (settings && !settings.error) {
       setTimezone(settings.timezone ?? "UTC");
+      setPublicApiEnabled(Boolean(settings.publicApiEnabled));
       setWebhookUrl(settings.discordWebhookUrl ?? "");
     }
   }, [settings]);
+
+  async function togglePublicApi(next: boolean) {
+    setPublicApiEnabled(next); // optimistic
+    setSavingPublicApi(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicApiEnabled: next }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      mutate();
+    } catch {
+      // revert on failure
+      setPublicApiEnabled(!next);
+    } finally {
+      setSavingPublicApi(false);
+    }
+  }
 
   // Handle ?discord= query param from OAuth callback
   useEffect(() => {
@@ -198,6 +222,52 @@ function SettingsForm() {
         </Button>
         {saveError && <p className="text-sm text-destructive">{saveError}</p>}
       </div>
+
+      {/* Public API */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Public API</CardTitle>
+          <CardDescription>
+            Expose your upcoming collabs via read-only JSON endpoints. Off by default.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Enable public API</p>
+              <p className="text-xs leading-5 text-muted-foreground">
+                Turning this on lets <em>anyone</em> fetch your upcoming confirmed events by your Twitch login — no authentication required. Only titles, times, game names, and participant display names are exposed. Descriptions, notes, and canceled events stay private.
+              </p>
+            </div>
+            <button
+              aria-checked={publicApiEnabled}
+              aria-label="Toggle public API"
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+                publicApiEnabled ? "bg-primary" : "bg-zinc-700"
+              } ${savingPublicApi ? "opacity-60" : ""}`}
+              disabled={savingPublicApi}
+              onClick={() => { void togglePublicApi(!publicApiEnabled); }}
+              role="switch"
+              type="button"
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                  publicApiEnabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+          <a
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            href="/api"
+            rel="noreferrer"
+            target="_blank"
+          >
+            Read the API docs
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </CardContent>
+      </Card>
 
       {/* Discord */}
       <Card>

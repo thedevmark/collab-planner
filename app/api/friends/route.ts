@@ -115,7 +115,8 @@ export async function GET(req: Request) {
         recentCollabs: (recentCollabsByFriend.get(friend.id) ?? []).slice(0, 3),
       }))
     );
-  } catch {
+  } catch (err) {
+    console.error("[api/friends] GET failed:", err);
     return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
   }
 }

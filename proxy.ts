@@ -53,8 +53,10 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/auth") ||
     pathname.startsWith("/invite") ||
     pathname.startsWith("/api/health") ||
+    pathname.startsWith("/api/public/") ||
     pathname.startsWith("/api/extension") ||
     pathname.startsWith("/api/auth/discord") ||
+    pathname === "/api" ||
     pathname.startsWith("/privacy") ||
     pathname.startsWith("/terms");
 

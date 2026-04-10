@@ -48,7 +48,8 @@ export async function GET(req: Request) {
         participants: normalizeParticipantsInviteStatus(event.participants),
       })),
     );
-  } catch {
+  } catch (err) {
+    console.error("[api/events] GET failed:", err);
     return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 });
   }
 }

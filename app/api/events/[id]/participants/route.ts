@@ -41,7 +41,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       },
     });
     return NextResponse.json(normalizeParticipantInviteStatus(participant), { status: 201 });
-  } catch {
+  } catch (err) {
+    console.error("[api/events/[id]/participants] POST failed:", err);
     return NextResponse.json({ error: "Failed to add participant" }, { status: 500 });
   }
 }
@@ -66,7 +67,8 @@ export async function PATCH(req: Request) {
       data: { inviteStatus: normalizedInviteStatus },
     });
     return NextResponse.json(normalizeParticipantInviteStatus(updated));
-  } catch {
+  } catch (err) {
+    console.error("[api/events/[id]/participants] PATCH failed:", err);
     return NextResponse.json({ error: "Failed to update participant" }, { status: 500 });
   }
 }
@@ -86,7 +88,8 @@ export async function DELETE(req: Request) {
 
     await prisma.eventParticipant.delete({ where: { id: participantId } });
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (err) {
+    console.error("[api/events/[id]/participants] DELETE failed:", err);
     return NextResponse.json({ error: "Failed to remove participant" }, { status: 500 });
   }
 }

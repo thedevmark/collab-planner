@@ -1,15 +1,21 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { publicApiJson, publicApiPreflight } from "@/lib/publicApiCors";
 
-export async function GET() {
+export async function OPTIONS(req: Request) {
+  return publicApiPreflight(req);
+}
+
+export async function GET(req: Request) {
   const dbUrl = process.env.DATABASE_URL;
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return NextResponse.json({ status: "ok", db: "connected", urlSet: !!dbUrl });
+    return publicApiJson(req, { status: "ok", db: "connected", urlSet: !!dbUrl });
   } catch (err) {
-    return NextResponse.json(
+    console.error("[api/health] GET failed:", err);
+    return publicApiJson(
+      req,
       { status: "error", error: String(err), urlSet: !!dbUrl },
-      { status: 500 }
+      500,
     );
   }
 }

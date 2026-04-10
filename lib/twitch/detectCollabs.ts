@@ -4,20 +4,23 @@ export interface CollabPartner {
   partnerName: string;
   partnerLogin: string;
   detectedAt: Date;
-  source: "vod_title_mention";
+  source: "vod_title_mention" | "stream_overlap";
   evidence: string;
-  confidence: "high" | "medium";
+  confidence: "high" | "medium" | "weak";
 }
 
 /**
  * Keywords that strongly suggest a collaboration VOD when combined with a name mention.
- * A VOD title matching these patterns + a name is HIGH confidence.
+ * A VOD title matching these patterns + a name is high confidence.
  */
 const COLLAB_KEYWORDS = [
   "collab", "collaboration", "ft.", "feat.", "with ", " w/ ", " w/", "guest",
   "duo", "trio", "squad", "together", "joined by", "join", "hosted",
-  "stream together", "co-stream", "co stream", "@",
+  "stream together", "co-stream", "co stream",
 ];
+
+/** Minimum overlap window (ms) between two streams to count as a collab signal. */
+const MIN_OVERLAP_MS = 30 * 60 * 1000; // 30 minutes
 
 /**
  * Parse @handle mentions from a VOD title.
@@ -29,15 +32,6 @@ function extractAtMentions(title: string): string[] {
 }
 
 /**
- * Check if a name (login or displayName) appears in a VOD title.
- * Returns the match or empty string.
- */
-function nameInTitle(title: string, name: string): boolean {
-  if (!name || name.length < 3) return false;
-  return title.toLowerCase().includes(name.toLowerCase());
-}
-
-/**
  * Does this title contain a collab-suggesting keyword?
  */
 function hasCollabKeyword(title: string): boolean {
@@ -45,15 +39,31 @@ function hasCollabKeyword(title: string): boolean {
   return COLLAB_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+function isSelfReference(
+  handleOrName: string,
+  subject: { username: string; displayName: string },
+) {
+  const norm = handleOrName.toLowerCase();
+  return (
+    norm === subject.username.toLowerCase() ||
+    norm === subject.displayName.toLowerCase()
+  );
+}
+
 /**
- * Extract collab signals from a single friend's VOD history by cross-referencing
- * with all other known friends.
+ * Extract collab signals for a single friend.
  *
  * Sources:
- * 1. @handle mentions in VOD title → HIGH confidence
- * 2. Friend username/displayName in title + collab keyword → HIGH confidence
- * 3. Friend username/displayName in title alone → MEDIUM confidence
- * 4. Concurrent stream overlap (both streaming at same time for ≥30 min) → MEDIUM confidence
+ *   1. `@handle` mentions in a VOD title → high confidence
+ *   2. Another friend's name/login in a VOD title plus a collab keyword → high confidence
+ *   3. Another friend streamed in an overlapping time window (≥30min) with the same game → high confidence
+ *   4. Another friend streamed in an overlapping time window (≥30min) with a different game → medium confidence
+ *
+ * Bare name-in-title matches WITHOUT a collab keyword are no longer persisted as signals —
+ * they produced too many false positives from unrelated titles like "practicing w/ no mic".
+ *
+ * Self-references are filtered out at every source so a streamer's own VODs don't produce
+ * a signal of themselves as a collab partner.
  */
 export async function detectCollabSignals(friendId: number): Promise<number> {
   const friend = await prisma.friend.findUnique({
@@ -65,7 +75,7 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
 
   if (!friend || !friend.streamHistory.length) return 0;
 
-  // All other friends to cross-reference against
+  // All other active friends to cross-reference against
   const allFriends = await prisma.friend.findMany({
     where: { isActive: true, id: { not: friendId } },
     include: {
@@ -73,24 +83,27 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
     },
   });
 
+  const subject = { username: friend.username, displayName: friend.displayName };
   const signals: CollabPartner[] = [];
-  const seen = new Set<string>(); // deduplicate by "login|date"
+  const seen = new Set<string>();
 
-  // ── Source 1 & 2 & 3: VOD title analysis ─────────────────────────────────
+  // ── Source 1 & 2: VOD title analysis ─────────────────────────────────────
   for (const vod of friend.streamHistory) {
     const title = vod.title;
     const detectedAt = vod.startTime;
 
-    // Extract @mentions
+    // 1. @handle mentions
     const atMentions = extractAtMentions(title);
     for (const handle of atMentions) {
-      const key = `${handle}|${detectedAt.toDateString()}`;
+      if (isSelfReference(handle, subject)) continue;
+      const key = `mention|${handle}|${detectedAt.toDateString()}`;
       if (seen.has(key)) continue;
       seen.add(key);
 
-      // Try to match to a known friend
       const matched = allFriends.find(
-        (f) => f.username.toLowerCase() === handle || f.displayName.toLowerCase() === handle
+        (f) =>
+          f.username.toLowerCase() === handle ||
+          f.displayName.toLowerCase() === handle,
       );
 
       signals.push({
@@ -103,24 +116,20 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
       });
     }
 
-    // Check for known friend names in title
+    // 2. Other friend name + collab keyword in title
+    if (!hasCollabKeyword(title)) continue;
     for (const other of allFriends) {
-      const loginMatch = nameInTitle(title, other.username);
-      const displayMatch = nameInTitle(title, other.displayName);
+      if (isSelfReference(other.username, subject)) continue;
+      if (isSelfReference(other.displayName, subject)) continue;
+      const lowerTitle = title.toLowerCase();
+      const matches =
+        lowerTitle.includes(other.username.toLowerCase()) ||
+        (other.displayName.length >= 3 && lowerTitle.includes(other.displayName.toLowerCase()));
+      if (!matches) continue;
 
-      if (!loginMatch && !displayMatch) continue;
-
-      const key = `${other.username}|${detectedAt.toDateString()}`;
+      const key = `mention|${other.username.toLowerCase()}|${detectedAt.toDateString()}`;
       if (seen.has(key)) continue;
-
-      // Skip if already caught by @mention check
-      const alreadyCaught = atMentions.some(
-        (h) => h === other.username.toLowerCase() || h === other.displayName.toLowerCase()
-      );
-      if (alreadyCaught) continue;
-
       seen.add(key);
-      const isHighConfidence = hasCollabKeyword(title);
 
       signals.push({
         partnerName: other.displayName,
@@ -128,12 +137,54 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
         detectedAt,
         source: "vod_title_mention",
         evidence: title,
-        confidence: isHighConfidence ? "high" : "medium",
+        confidence: "high",
       });
     }
   }
 
-  // ── Persist signals ───────────────────────────────────────────────────────
+  // ── Source 3 & 4: Stream overlap detection ───────────────────────────────
+  // Twitch doesn't expose a public "guest star" / "collab channels" API, so
+  // the strongest non-title signal we can derive is overlapping live windows
+  // between two friends, scored higher when they're playing the same game.
+  for (const myVod of friend.streamHistory) {
+    const myStart = myVod.startTime.getTime();
+    const myEnd = myVod.endTime.getTime();
+    if (myEnd - myStart < MIN_OVERLAP_MS) continue;
+
+    for (const other of allFriends) {
+      if (isSelfReference(other.username, subject)) continue;
+      if (isSelfReference(other.displayName, subject)) continue;
+
+      for (const theirVod of other.streamHistory) {
+        const theirStart = theirVod.startTime.getTime();
+        const theirEnd = theirVod.endTime.getTime();
+        const overlap = Math.min(myEnd, theirEnd) - Math.max(myStart, theirStart);
+        if (overlap < MIN_OVERLAP_MS) continue;
+
+        const sameGame =
+          myVod.gameId && theirVod.gameId && myVod.gameId === theirVod.gameId;
+        const detectedAt = new Date(Math.max(myStart, theirStart));
+        const key = `overlap|${other.username.toLowerCase()}|${detectedAt.toDateString()}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        const evidence = sameGame
+          ? `Both streamed ${myVod.gameName} for ${Math.round(overlap / 60000)} min`
+          : `Overlapping streams for ${Math.round(overlap / 60000)} min`;
+
+        signals.push({
+          partnerName: other.displayName,
+          partnerLogin: other.username,
+          detectedAt,
+          source: "stream_overlap",
+          evidence,
+          confidence: sameGame ? "high" : "medium",
+        });
+      }
+    }
+  }
+
+  // ── Persist signals ──────────────────────────────────────────────────────
   let stored = 0;
   for (const s of signals) {
     try {
@@ -155,13 +206,14 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
           confidence: s.confidence,
         },
         update: {
-          confidence: s.confidence, // upgrade confidence if we now have a better signal
+          confidence: s.confidence,
           evidence: s.evidence,
+          source: s.source,
         },
       });
       stored++;
     } catch {
-      // skip constraint violations (duplicate detectedAt with empty partnerLogin)
+      // skip constraint violations
     }
   }
 
@@ -186,26 +238,25 @@ export interface CollabSummary {
 
 export function summarizeCollabSignals(
   displayName: string,
-  signals: { partnerName: string; partnerLogin: string; detectedAt: Date; source: string; confidence: string }[]
+  signals: { partnerName: string; partnerLogin: string; detectedAt: Date; source: string; confidence: string }[],
 ): CollabSummary {
   if (signals.length === 0) {
     return {
       totalSignals: 0,
       partners: [],
-      summaryText: `${displayName}: no collab signals detected from VOD history.`,
+      summaryText: `${displayName}: no collab signals detected.`,
     };
   }
 
-  // Group by partner
   const byPartner = new Map<string, typeof signals>();
   for (const s of signals) {
-    const key = s.partnerLogin || s.partnerName;
+    const key = (s.partnerLogin || s.partnerName).toLowerCase();
     if (!byPartner.has(key)) byPartner.set(key, []);
     byPartner.get(key)!.push(s);
   }
 
   const partners = Array.from(byPartner.entries())
-    .map(([key, sigs]) => ({
+    .map(([, sigs]) => ({
       name: sigs[0].partnerName,
       login: sigs[0].partnerLogin,
       count: sigs.length,
@@ -221,8 +272,8 @@ export function summarizeCollabSignals(
     .join("; ");
 
   const summaryText =
-    `${displayName} collab history (from VOD analysis): frequent partners — ${partnerList}. ` +
-    `Total collab signals: ${signals.length} from ${partners.length} unique partners.`;
+    `${displayName} collab history: frequent partners — ${partnerList}. ` +
+    `Total signals: ${signals.length} from ${partners.length} unique partners.`;
 
   return { totalSignals: signals.length, partners, summaryText };
 }

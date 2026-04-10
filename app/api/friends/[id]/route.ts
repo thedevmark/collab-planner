@@ -45,7 +45,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     if (!friend) return NextResponse.json({ error: "Friend not found" }, { status: 404 });
     return NextResponse.json(friend);
-  } catch {
+  } catch (err) {
+    console.error("[api/friends/[id]] GET failed:", err);
     return NextResponse.json({ error: "Failed to fetch friend" }, { status: 500 });
   }
 }
@@ -71,6 +72,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed" }, { status: 400 });
     }
+    console.error("[api/friends/[id]] PATCH failed:", err);
     return NextResponse.json({ error: "Failed to update friend" }, { status: 500 });
   }
 }
@@ -89,7 +91,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       data: { isActive: false },
     });
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (err) {
+    console.error("[api/friends/[id]] DELETE failed:", err);
     return NextResponse.json({ error: "Failed to remove friend" }, { status: 500 });
   }
 }
