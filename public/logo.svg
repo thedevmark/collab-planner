@@ -24,6 +24,9 @@
       <stop offset="0%"  stop-color="#5eead4"/>
       <stop offset="100%" stop-color="#0d9488"/>
     </linearGradient>
+    <filter id="text-shadow" x="-10%" y="-10%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="0.5" stdDeviation="0.4" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
   </defs>
 
   <!-- Interlocking rings -->
@@ -35,8 +38,8 @@
   </g>
 
   <!-- Wordmark -->
-  <g font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" fill="#ffffff">
+  <g font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" fill="#ffffff" filter="url(#text-shadow)">
     <text x="31" y="19" font-size="10.5" font-weight="600" letter-spacing="-0.2">Collab</text>
-    <text x="31" y="32" font-size="10.5" font-weight="400" letter-spacing="0.35" opacity="0.55">Planner</text>
+    <text x="31" y="32" font-size="10.5" font-weight="400" letter-spacing="0.35">Planner</text>
   </g>
 </svg>
