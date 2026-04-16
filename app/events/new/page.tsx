@@ -364,10 +364,10 @@ function NewEventForm() {
     }
   }
 
-  const showPanel = selectedNonMe.length > 0;
+  const hasSelection = selectedNonMe.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl">
       <div className="flex items-center gap-3">
         <Link href="/calendar">
           <Button variant="ghost" size="sm">
@@ -375,7 +375,7 @@ function NewEventForm() {
             Back
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold">New Session</h1>
+        <h1 className="text-3xl font-bold">Plan a session</h1>
       </div>
 
       {inviteBanner && (
@@ -390,210 +390,96 @@ function NewEventForm() {
         </div>
       )}
 
-      <div className={`gap-6 max-w-5xl ${showPanel ? "grid grid-cols-[minmax(0,1fr)_320px]" : "flex flex-col max-w-2xl"}`}>
-        {/* Left column */}
-        <div className="space-y-6 min-w-0">
-          <Card>
-            <CardHeader><CardTitle className="text-base">Event Details</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title *</Label>
-                <Input
-                  id="title"
-                  placeholder="e.g. Weekend Gaming Session"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Start Time *</Label>
-                  <DateTimePicker
-                    value={startTime}
-                    onChange={(v) => {
-                      setStartTime(v);
-                      if (v) setEndTime(toLocalDatetimeValue(addHours(new Date(v), 3)));
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>End Time *</Label>
-                  <DateTimePicker value={endTime} onChange={setEndTime} />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="What's the plan?"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-
-              {/* Game / Genre */}
-              <div className="space-y-2">
-                <Label htmlFor="game">Game or Genre</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Input
-                      id="game"
-                      placeholder="e.g. Minecraft, horror games, co-op shooters..."
-                      value={gameName}
-                      onChange={(e) => { setGameName(e.target.value); setGameSearch(e.target.value); }}
-                    />
-                    {gameResults.length > 0 && gameSearch && (
-                      <div className="absolute top-full left-0 right-0 z-10 mt-1 border rounded-md bg-background shadow-md">
-                        {gameResults.slice(0, 6).map((g: any) => (
-                          <button
-                            key={g.id}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent"
-                            onClick={() => { setGameName(g.name); setGameSearch(""); }}
-                          >
-                            {g.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={suggestGames}
-                    disabled={suggestingGames || selectedNonMe.length === 0}
-                    title={selectedNonMe.length === 0 ? "Select friends to get game suggestions" : "Suggest games based on stream history"}
-                  >
-                    {suggestingGames ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                    Suggest
-                  </Button>
-                </div>
-                {gameSuggestions.length > 0 && (
-                  <div className="border rounded-md p-3 space-y-1 bg-muted/30 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      Games your group has streamed:
-                    </p>
-                    {gameSuggestions.slice(0, 8).map((g) => (
-                      <button
-                        key={g.name}
-                        onClick={() => { setGameName(g.name); setGameSuggestions([]); setGameSuggestEmpty(false); }}
-                        className="w-full text-left p-2 rounded hover:bg-accent text-sm transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{g.name}</span>
-                          <Badge
-                            variant={
-                              g.bucket === "everyone"
-                                ? "success"
-                                : g.bucket === "group"
-                                  ? "secondary"
-                                  : "outline"
-                            }
-                            className="text-xs capitalize"
-                          >
-                            {g.bucket === "everyone" ? "everyone plays" : g.bucket}
-                          </Badge>
-                          {g.friendCount > 1 && (
-                            <Badge variant="secondary" className="text-xs">{g.friendCount} friends</Badge>
-                          )}
-                          <span className="text-xs text-muted-foreground ml-auto">
-                            {Math.round(g.score * 100)}%
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {g.totalSessions} streams · {g.recentFriendCount} active recently · last seen{" "}
-                          {formatDistanceToNowStrict(new Date(g.lastPlayedAt), { addSuffix: true })}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {gameSuggestEmpty && !suggestingGames && (
-                  <p className="text-xs text-muted-foreground px-1">
-                    No shared game history yet — add friends and refresh their data first.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Friends */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Choose People</CardTitle>
-              <div className="flex items-center gap-2">
-                <InviteDialog friends={friends} defaultFriendIds={selectedNonMe}>
-                  <Button variant="outline" size="sm">
-                    <Link2 className="h-4 w-4" />
-                    Share Link
-                  </Button>
-                </InviteDialog>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={suggestTimes}
-                  disabled={suggestingTimes || aiIds.length === 0}
-                  title={aiIds.length === 0 ? "Select friends to suggest times" : "Analyze stream patterns"}
-                >
-                  {suggestingTimes ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-                  {suggestingTimes ? "Analyzing…" : "Suggest Times"}
+      {/* ── 1. Choose people ─────────────────────────────────────────────
+          Who-first. Every downstream panel (pattern overlap, workable
+          windows, suggest times, share link) depends on this. Moved to
+          the top so users don't scroll past Event Details to discover
+          the scheduling tools need a selection. */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <CardTitle className="text-base">Choose People</CardTitle>
+            <div className="flex items-center gap-2">
+              <InviteDialog friends={friends} defaultFriendIds={selectedNonMe}>
+                <Button variant="outline" size="sm">
+                  <Link2 className="h-4 w-4" />
+                  Share Link
                 </Button>
-              </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {timeSuggestions.length > 0 && (
-                <div className="border rounded-md p-3 space-y-1 bg-muted/30 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                    <Zap className="h-3 w-3 text-yellow-500" />
-                    Best windows based on stream history ({timeSuggestTimezone}):
+              </InviteDialog>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={suggestTimes}
+                disabled={suggestingTimes || aiIds.length === 0}
+                title={aiIds.length === 0 ? "Select friends to suggest times" : "Analyze stream patterns"}
+              >
+                {suggestingTimes ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                {suggestingTimes ? "Analyzing…" : "Suggest Times"}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {timeSuggestions.length > 0 && (
+            <div className="border rounded-md p-3 space-y-1 bg-muted/30 animate-in fade-in slide-in-from-top-1 duration-200">
+              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                <Zap className="h-3 w-3 text-yellow-500" />
+                Best windows based on stream history ({timeSuggestTimezone}):
+              </p>
+              {timeSuggestions.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => applyTimeSuggestion(s, i)}
+                  className={`w-full text-left p-2 rounded text-sm transition-all ${
+                    appliedSlot === i
+                      ? "bg-primary/20 border border-primary/40 scale-[0.99]"
+                      : "hover:bg-accent"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {appliedSlot === i
+                      ? <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                      : <span className="text-xs text-muted-foreground w-3.5 shrink-0">{i + 1}.</span>
+                    }
+                    <span className="font-medium">{s.displayStart}</span>
+                    <Badge variant={s.confidence === "high" ? "success" : s.confidence === "medium" ? "secondary" : "outline"} className="text-[10px] capitalize">
+                      {s.confidence}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground ml-auto font-medium">{s.combinedScore}% match</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 ml-5">
+                    through {s.displayEnd} · {s.windowHours}h window
                   </p>
-                  {timeSuggestions.map((s, i) => (
-                    <button
-                      key={i}
-                      onClick={() => applyTimeSuggestion(s, i)}
-                      className={`w-full text-left p-2 rounded text-sm transition-all ${
-                        appliedSlot === i
-                          ? "bg-primary/20 border border-primary/40 scale-[0.99]"
-                          : "hover:bg-accent"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {appliedSlot === i
-                          ? <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                          : <span className="text-xs text-muted-foreground w-3.5 shrink-0">{i + 1}.</span>
-                        }
-                        <span className="font-medium">{s.displayStart}</span>
-                        <Badge variant={s.confidence === "high" ? "success" : s.confidence === "medium" ? "secondary" : "outline"} className="text-[10px] capitalize">
-                          {s.confidence}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground ml-auto font-medium">{s.combinedScore}% match</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 ml-5">
-                        through {s.displayEnd} · {s.windowHours}h window
-                      </p>
-                      {s.friendScores?.length > 0 && (
-                        <div className="flex gap-2 flex-wrap mt-1 ml-5">
-                          {s.friendScores.map((f: any) => (
-                            <span key={f.friendId} className="text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5">
-                              {f.displayName} {f.probability}%
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {timeSuggestEmpty && !suggestingTimes && (
-                <p className="text-xs text-muted-foreground px-1 flex items-center gap-1">
-                  <Zap className="h-3 w-3" />
-                  Not enough stream history yet — refresh friend data and try again.
-                </p>
-              )}
+                  {s.friendScores?.length > 0 && (
+                    <div className="flex gap-2 flex-wrap mt-1 ml-5">
+                      {s.friendScores.map((f: any) => (
+                        <span key={f.friendId} className="text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+                          {f.displayName} {f.probability}%
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+          {timeSuggestEmpty && !suggestingTimes && (
+            <p className="text-xs text-muted-foreground px-1 flex items-center gap-1">
+              <Zap className="h-3 w-3" />
+              Not enough stream history yet — refresh friend data and try again.
+            </p>
+          )}
+
+          {/* Person grid — 2/3/4 columns depending on viewport so the
+              cards aren't wasted on a ~200px slab at wide widths. `me`
+              is pinned first as a muted card to keep the "who's in
+              this session" mental model visible. */}
+          {otherFriends.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              <Link href="/friends" className="underline">Add people</Link> to invite them
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {meFriend && (
                 <div className="flex items-center gap-2 p-2 rounded-md border border-muted bg-muted/20 opacity-60">
                   <Avatar className="h-7 w-7">
@@ -601,88 +487,212 @@ function NewEventForm() {
                     <AvatarFallback className="text-xs">{meFriend.displayName[0]}</AvatarFallback>
                   </Avatar>
                   <span className="text-sm truncate">{meFriend.displayName}</span>
-                  <span className="text-xs text-muted-foreground ml-auto">you</span>
+                  <span className="text-xs text-muted-foreground ml-auto shrink-0">you</span>
                 </div>
               )}
-
-              {otherFriends.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  <Link href="/friends" className="underline">Add people</Link> to invite them
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  {otherFriends.map((f: any) => {
-                    const selected = selectedFriendIds.includes(f.id);
-                    return (
-                      <button
-                        key={f.id}
-                        onClick={() => toggleFriend(f.id)}
-                        className={`flex items-center gap-2 p-2 rounded-md border text-left transition-colors ${
-                          selected ? "border-zinc-600 bg-zinc-800/40" : "hover:bg-accent"
-                        }`}
-                      >
-                        <Avatar className="h-7 w-7">
-                          <AvatarImage src={f.avatarUrl} />
-                          <AvatarFallback className="text-xs">{f.displayName[0]}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium truncate">{f.displayName}</span>
-                        <div className="ml-auto flex items-center gap-1.5 shrink-0">
-                          {f.isFavorite && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              Favorite
-                            </Badge>
-                          )}
-                          {selected && <Check className="h-3.5 w-3.5 text-zinc-300" />}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {selectedNonMe.length > 0 && (
-            <AvailabilityMatrix
-              friends={friends}
-              selectedFriendIds={aiIds}
-              timezone={plannerTimezone}
-              anchorStart={startTime}
-              selectedStartTime={startTime}
-              durationMs={currentDurationMs}
-              onApplySlot={applyMatrixSlot}
-            />
+              {otherFriends.map((f: any) => {
+                const selected = selectedFriendIds.includes(f.id);
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => toggleFriend(f.id)}
+                    className={`flex items-center gap-2 p-2 rounded-md border text-left transition-colors ${
+                      selected ? "border-zinc-600 bg-zinc-800/40" : "hover:bg-accent"
+                    }`}
+                  >
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={f.avatarUrl} />
+                      <AvatarFallback className="text-xs">{f.displayName[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium truncate">{f.displayName}</span>
+                    <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                      {f.isFavorite && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          Favorite
+                        </Badge>
+                      )}
+                      {selected && <Check className="h-3.5 w-3.5 text-zinc-300" />}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           )}
+        </CardContent>
+      </Card>
 
-          {selectedNonMe.length > 0 && (
-            <MessageBlock
-              title={title}
-              gameName={gameName || undefined}
-              startTime={new Date(startTime)}
-              endTime={new Date(endTime)}
-              participants={selectedMessageParticipants}
-              timezone={plannerTimezone}
+      {/* ── 2. Stream Pattern Overlap + Workable Windows ────────────────
+          Stacked full-width rather than a 320px sticky sidebar so the
+          week grid gets the whole row and the pattern panel doesn't have
+          a stack of narrow 7-day strips. */}
+      {hasSelection && (
+        <StreamPatternPanel
+          selectedFriendIds={aiIds}
+          allFriends={friends}
+          sticky={false}
+        />
+      )}
+
+      {hasSelection && (
+        <AvailabilityMatrix
+          friends={friends}
+          selectedFriendIds={aiIds}
+          timezone={plannerTimezone}
+          anchorStart={startTime}
+          selectedStartTime={startTime}
+          durationMs={currentDurationMs}
+          onApplySlot={applyMatrixSlot}
+        />
+      )}
+
+      {/* ── 3. Event Details ────────────────────────────────────────────
+          Moved below the planning tools. Users know WHO and WHEN before
+          they polish the title / description. */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">Event Details</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="title">Title *</Label>
+            <Input
+              id="title"
+              placeholder="e.g. Weekend Gaming Session"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
             />
-          )}
-
-          <div className="flex gap-3">
-            <Button onClick={handleSubmit} disabled={saving || !title || !startTime || !endTime}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              Create Session
-            </Button>
-            <Link href="/calendar">
-              <Button variant="outline">Cancel</Button>
-            </Link>
           </div>
-        </div>
 
-        {/* Right column — pattern panel */}
-        {showPanel && (
-          <StreamPatternPanel
-            selectedFriendIds={aiIds}
-            allFriends={friends}
-          />
-        )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Start Time *</Label>
+              <DateTimePicker
+                value={startTime}
+                onChange={(v) => {
+                  setStartTime(v);
+                  if (v) setEndTime(toLocalDatetimeValue(addHours(new Date(v), 3)));
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>End Time *</Label>
+              <DateTimePicker value={endTime} onChange={setEndTime} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              placeholder="What's the plan?"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+
+          {/* Game / Genre */}
+          <div className="space-y-2">
+            <Label htmlFor="game">Game or Genre</Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  id="game"
+                  placeholder="e.g. Minecraft, horror games, co-op shooters..."
+                  value={gameName}
+                  onChange={(e) => { setGameName(e.target.value); setGameSearch(e.target.value); }}
+                />
+                {gameResults.length > 0 && gameSearch && (
+                  <div className="absolute top-full left-0 right-0 z-10 mt-1 border rounded-md bg-background shadow-md">
+                    {gameResults.slice(0, 6).map((g: any) => (
+                      <button
+                        key={g.id}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent"
+                        onClick={() => { setGameName(g.name); setGameSearch(""); }}
+                      >
+                        {g.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={suggestGames}
+                disabled={suggestingGames || selectedNonMe.length === 0}
+                title={selectedNonMe.length === 0 ? "Select friends to get game suggestions" : "Suggest games based on stream history"}
+              >
+                {suggestingGames ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                Suggest
+              </Button>
+            </div>
+            {gameSuggestions.length > 0 && (
+              <div className="border rounded-md p-3 space-y-1 bg-muted/30 animate-in fade-in slide-in-from-top-1 duration-200">
+                <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Games your group has streamed:
+                </p>
+                {gameSuggestions.slice(0, 8).map((g) => (
+                  <button
+                    key={g.name}
+                    onClick={() => { setGameName(g.name); setGameSuggestions([]); setGameSuggestEmpty(false); }}
+                    className="w-full text-left p-2 rounded hover:bg-accent text-sm transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{g.name}</span>
+                      <Badge
+                        variant={
+                          g.bucket === "everyone"
+                            ? "success"
+                            : g.bucket === "group"
+                              ? "secondary"
+                              : "outline"
+                        }
+                        className="text-xs capitalize"
+                      >
+                        {g.bucket === "everyone" ? "everyone plays" : g.bucket}
+                      </Badge>
+                      {g.friendCount > 1 && (
+                        <Badge variant="secondary" className="text-xs">{g.friendCount} friends</Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        {Math.round(g.score * 100)}%
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {g.totalSessions} streams · {g.recentFriendCount} active recently · last seen{" "}
+                      {formatDistanceToNowStrict(new Date(g.lastPlayedAt), { addSuffix: true })}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+            {gameSuggestEmpty && !suggestingGames && (
+              <p className="text-xs text-muted-foreground px-1">
+                No shared game history yet — add friends and refresh their data first.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {hasSelection && (
+        <MessageBlock
+          title={title}
+          gameName={gameName || undefined}
+          startTime={new Date(startTime)}
+          endTime={new Date(endTime)}
+          participants={selectedMessageParticipants}
+          timezone={plannerTimezone}
+        />
+      )}
+
+      <div className="flex gap-3">
+        <Button onClick={handleSubmit} disabled={saving || !title || !startTime || !endTime}>
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          Create Session
+        </Button>
+        <Link href="/calendar">
+          <Button variant="outline">Cancel</Button>
+        </Link>
       </div>
     </div>
   );

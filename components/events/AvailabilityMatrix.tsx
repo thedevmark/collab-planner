@@ -247,16 +247,19 @@ export function AvailabilityMatrix({
           <span>Grid shows the next {MATRIX_DAYS} days.</span>
         </div>
 
+        {/* Grid uses the full card width. `min-w-[560px]` keeps it usable
+            on mobile without clipping; on desktop the 1fr columns expand
+            into whatever space the /plan canvas gives us. */}
         <div className="overflow-x-auto">
-          <div className="min-w-[720px]">
+          <div className="min-w-[560px]">
             <div
-              className="grid gap-1"
-              style={{ gridTemplateColumns: `72px repeat(${columns.length}, minmax(0, 1fr))` }}
+              className="grid gap-0.5"
+              style={{ gridTemplateColumns: `52px repeat(${columns.length}, minmax(0, 1fr))` }}
             >
               <div />
               {columns.map((column) => (
                 <div key={column.key} className="px-1 pb-2 text-center">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{column.dayLabel}</div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{column.dayLabel}</div>
                   <div className="text-sm font-semibold">{column.dateLabel}</div>
                 </div>
               ))}
@@ -355,7 +358,7 @@ function FragmentRow({
 }: FragmentRowProps) {
   return (
     <>
-      <div className="flex items-start justify-end pr-3 pt-1.5 text-xs text-muted-foreground">
+      <div className="flex items-center justify-end pr-2 text-[10px] text-muted-foreground">
         {formatLocalHour(hour)}
       </div>
       {columns.map((column) => {
@@ -363,7 +366,7 @@ function FragmentRow({
         const slot = cellMap.get(key);
 
         if (!slot) {
-          return <div key={key} className="h-7 rounded-md border border-transparent bg-muted/20" />;
+          return <div key={key} className="h-5 rounded-sm border border-transparent bg-muted/20" />;
         }
 
         const isActive = activeKey === key;
@@ -382,13 +385,13 @@ function FragmentRow({
             aria-label={`${column.dayLabel} ${column.dateLabel} at ${formatLocalHour(hour)}. ${Math.round(
               slot.combinedScore * 100
             )}% group fit.`}
-            className="relative h-7 rounded-md border text-[10px] font-medium transition-all hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            className="relative h-5 rounded-sm border text-[9px] font-medium leading-none transition-all hover:z-10 hover:scale-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             style={{
               ...tone,
               boxShadow: isActive ? "inset 0 0 0 1px rgba(255,255,255,0.7)" : undefined,
             }}
           >
-            <span className="absolute right-1 top-1 leading-none">
+            <span className="absolute right-1 top-1/2 -translate-y-1/2 leading-none tabular-nums">
               {readyCount}/{slot.friendScores.length}
             </span>
           </button>

@@ -96,54 +96,66 @@ export function StreamPatternPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {patterns.map(({ friend, color, pattern }) => (
-          <div key={friend.id} className="space-y-1.5 animate-fade-in-up">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={friend.avatarUrl} />
-                <AvatarFallback className="text-[10px]">{friend.displayName[0]}</AvatarFallback>
-              </Avatar>
-              <span className="text-xs font-semibold truncate" style={{ color }}>
-                {friend.isMe ? "You" : friend.displayName}
-              </span>
-              {pattern && (
-                <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{pattern.typicalTime}</span>
+        {/* Per-friend rows laid out as a responsive grid so wide-viewport
+            main content doesn't leave 700+ px of empty space to the right
+            of a 280 px 7-day strip. `sticky` (sidebar) mode stays single-
+            column — the sidebar is too narrow to benefit from splitting. */}
+        <div
+          className={
+            sticky
+              ? "space-y-4"
+              : "grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          }
+        >
+          {patterns.map(({ friend, color, pattern }) => (
+            <div key={friend.id} className="space-y-1.5 animate-fade-in-up">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={friend.avatarUrl} />
+                  <AvatarFallback className="text-[10px]">{friend.displayName[0]}</AvatarFallback>
+                </Avatar>
+                <span className="text-xs font-semibold truncate" style={{ color }}>
+                  {friend.isMe ? "You" : friend.displayName}
+                </span>
+                {pattern && (
+                  <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{pattern.typicalTime}</span>
+                )}
+              </div>
+
+              {pattern ? (
+                <div className="flex gap-0.5">
+                  {DAYS.map((d, i) => {
+                    const active = pattern.topDayIndices.includes(i);
+                    const overlap = overlapDays.includes(i);
+                    return (
+                      <span
+                        key={d}
+                        className="flex-1 text-center text-[10px] py-0.5 rounded font-medium"
+                        style={
+                          active
+                            ? {
+                                backgroundColor: overlap ? color : color + "55",
+                                color: overlap ? "#fff" : color,
+                                outline: overlap ? `1px solid ${color}` : "none",
+                              }
+                            : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
+                        }
+                      >
+                        {d}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-[10px] text-muted-foreground italic">Not enough data yet</p>
               )}
             </div>
-
-            {pattern ? (
-              <div className="flex gap-0.5">
-                {DAYS.map((d, i) => {
-                  const active = pattern.topDayIndices.includes(i);
-                  const overlap = overlapDays.includes(i);
-                  return (
-                    <span
-                      key={d}
-                      className="flex-1 text-center text-[10px] py-0.5 rounded font-medium"
-                      style={
-                        active
-                          ? {
-                              backgroundColor: overlap ? color : color + "55",
-                              color: overlap ? "#fff" : color,
-                              outline: overlap ? `1px solid ${color}` : "none",
-                            }
-                          : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
-                      }
-                    >
-                      {d}
-                    </span>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-[10px] text-muted-foreground italic">Not enough data yet</p>
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
 
         {overlapDays.length > 0 && patterns.length > 1 && (
-          <div className="pt-1 border-t border-border">
-            <p className="text-[10px] text-muted-foreground mb-1">Best overlap days</p>
+          <div className="pt-3 border-t border-border flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Best overlap days</span>
             <div className="flex gap-1 flex-wrap">
               {overlapDays.map((d) => (
                 <Badge key={d} variant="secondary" className="text-[10px] px-2 py-0.5">
@@ -155,7 +167,7 @@ export function StreamPatternPanel({
         )}
 
         {patterns.length > 1 && overlapDays.length === 0 && patternsWithData.length > 1 && (
-          <p className="text-[10px] text-muted-foreground italic pt-1 border-t border-border">
+          <p className="text-[10px] text-muted-foreground italic pt-3 border-t border-border">
             No consistent overlap — try Suggest Times for the best fit.
           </p>
         )}
