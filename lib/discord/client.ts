@@ -108,11 +108,33 @@ export async function createGuildScheduledEvent(
   });
 }
 
-export async function postChannelMessage(channelId: string, token: string, embed: object) {
-  return discordFetch(`/channels/${channelId}/messages`, token, {
-    method: "POST",
-    body: JSON.stringify({ embeds: [embed] }),
-  });
+/**
+ * Fetch metadata for a Discord webhook by calling its public info endpoint.
+ * The webhook token in the URL is the authentication — no OAuth required.
+ *
+ * Returns the server (guild_id) and channel_id the webhook posts to, which
+ * we store so scheduled-event creation knows which server to target. Returns
+ * null if the URL doesn't parse or Discord rejects it (invalid/revoked
+ * webhook).
+ */
+export async function resolveWebhookMetadata(
+  webhookUrl: string,
+): Promise<{ guildId: string; channelId: string } | null> {
+  const match = webhookUrl.match(
+    /^https:\/\/(?:(?:ptb|canary)\.)?discord\.com\/api\/webhooks\/(\d+)\/([\w-]+)/,
+  );
+  if (!match) return null;
+  const [, id, token] = match;
+
+  try {
+    const res = await fetch(`${DISCORD_API}/webhooks/${id}/${token}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.guild_id || !data.channel_id) return null;
+    return { guildId: data.guild_id, channelId: data.channel_id };
+  } catch {
+    return null;
+  }
 }
 
 export async function postWebhookMessage(webhookUrl: string, embed: object, content?: string) {

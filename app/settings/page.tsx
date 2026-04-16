@@ -5,9 +5,8 @@ import useSWR from "swr";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, ExternalLink, Link2, Loader2, MessageSquare, Twitch, Unlink } from "lucide-react";
+import { Check, ExternalLink, Hash, Link2, Loader2, MessageSquare, Twitch, Unlink } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import Image from "next/image";
 
@@ -53,16 +52,12 @@ function SettingsForm() {
   const [savingPublicApi, setSavingPublicApi] = useState(false);
 
   // Discord state
-  const [webhookUrl, setWebhookUrl] = useState("");
-  const [savingDiscord, setSavingDiscord] = useState(false);
-  const [savedDiscord, setSavedDiscord] = useState(false);
   const [discordBanner, setDiscordBanner] = useState<"connected" | "error" | "canceled" | null>(null);
 
   useEffect(() => {
     if (settings && !settings.error) {
       setTimezone(settings.timezone ?? "UTC");
       setPublicApiEnabled(Boolean(settings.publicApiEnabled));
-      setWebhookUrl(settings.discordWebhookUrl ?? "");
     }
   }, [settings]);
 
@@ -94,24 +89,6 @@ function SettingsForm() {
     }
   }, [searchParams, mutate]);
 
-  async function saveDiscordSettings() {
-    setSavingDiscord(true);
-    try {
-      await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          discordWebhookUrl: webhookUrl.trim() || null,
-        }),
-      });
-      mutate();
-      setSavedDiscord(true);
-      setTimeout(() => setSavedDiscord(false), 2000);
-    } finally {
-      setSavingDiscord(false);
-    }
-  }
-
   async function disconnectDiscord() {
     await fetch("/api/settings", {
       method: "PUT",
@@ -125,7 +102,6 @@ function SettingsForm() {
       }),
     });
     await fetch("/api/auth/discord/disconnect", { method: "POST" });
-    setWebhookUrl("");
     mutate();
   }
 
@@ -346,12 +322,17 @@ function SettingsForm() {
           )}
 
           {!settings?.discordUsername ? (
-            <a href="/api/auth/discord">
-              <Button className="bg-[#5865F2] hover:bg-[#4752c4] text-white gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Connect Discord
-              </Button>
-            </a>
+            <div className="space-y-3">
+              <a href="/api/auth/discord">
+                <Button className="bg-[#5865F2] hover:bg-[#4752c4] text-white gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Connect Discord
+                </Button>
+              </a>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Discord will ask you to pick the server and channel Collab Planner can post to. No copy-pasting webhook URLs — it&apos;s all handled in Discord&apos;s own UI.
+              </p>
+            </div>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -367,46 +348,44 @@ function SettingsForm() {
               </div>
 
               <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="webhook-url">Webhook URL</Label>
-                  <Input
-                    id="webhook-url"
-                    type="url"
-                    placeholder="https://discord.com/api/webhooks/..."
-                    value={webhookUrl}
-                    onChange={(e) => setWebhookUrl(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    In Discord: open your server → channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL.{" "}
-                    <a
-                      href="https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-0.5 underline underline-offset-2 hover:text-foreground"
-                    >
-                      Learn more <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </p>
-                </div>
-
-                <Button
-                  size="sm"
-                  onClick={saveDiscordSettings}
-                  disabled={savingDiscord}
-                >
-                  {savingDiscord ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : savedDiscord ? (
-                    <Check className="h-4 w-4" />
-                  ) : null}
-                  {savedDiscord ? "Saved!" : "Save Webhook"}
-                </Button>
-
-                {settings.discordWebhookUrl && (
-                  <p className="text-xs text-muted-foreground">
-                    Webhook configured — notifications will post to this channel.
-                  </p>
+                <Label>Posting to</Label>
+                {settings.discordWebhookUrl ? (
+                  <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {settings.discordChannelName ?? "channel"}
+                      </span>
+                      {settings.discordGuildName && (
+                        <>
+                          <span className="text-muted-foreground">in</span>
+                          <span className="font-medium">{settings.discordGuildName}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-200">
+                    No channel configured yet. Click below to pick one.
+                  </div>
                 )}
+
+                <div className="flex items-center gap-2">
+                  <a href="/api/auth/discord">
+                    <Button size="sm" variant="outline" className="gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      {settings.discordWebhookUrl ? "Change channel" : "Pick a channel"}
+                    </Button>
+                  </a>
+                  <a
+                    href="https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-0.5 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                  >
+                    How this works <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
               </div>
             </div>
           )}

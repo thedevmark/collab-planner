@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { getAuthUser, unauthorized } from "@/lib/auth";
 import { z } from "zod";
-import { notifyDiscord } from "@/lib/discord/notify";
+import { notifyDiscord, createDiscordScheduledEvent } from "@/lib/discord/notify";
 import { normalizeParticipantsInviteStatus } from "@/lib/participantStatus";
 
 const createEventSchema = z.object({
@@ -15,6 +16,44 @@ const createEventSchema = z.object({
   participantIds: z.array(z.number()).optional(),
   fromInviteToken: z.string().optional(),
 });
+
+async function consumeInviteOrThrow(
+  tx: Prisma.TransactionClient,
+  token: string,
+) {
+  const now = new Date();
+  const updatedRows = await tx.$queryRaw<Array<{ id: number }>>`
+    UPDATE "CollabInvite"
+    SET "usedCount" = "usedCount" + 1
+    WHERE "token" = ${token}
+      AND ("expiresAt" IS NULL OR "expiresAt" >= ${now})
+      AND ("maxUses" IS NULL OR "usedCount" < "maxUses")
+    RETURNING "id"
+  `;
+
+  if (updatedRows.length > 0) {
+    return;
+  }
+
+  const invite = await tx.collabInvite.findUnique({
+    where: { token },
+    select: { expiresAt: true, maxUses: true, usedCount: true },
+  });
+
+  if (!invite) {
+    throw new Error("Invite not found");
+  }
+
+  if (invite.expiresAt != null && invite.expiresAt < now) {
+    throw new Error("Invite has expired");
+  }
+
+  if (invite.maxUses != null && invite.usedCount >= invite.maxUses) {
+    throw new Error("Invite has reached its usage limit");
+  }
+
+  throw new Error("Failed to consume invite");
+}
 
 export async function GET(req: Request) {
   const user = await getAuthUser();
@@ -65,29 +104,22 @@ export async function POST(req: Request) {
 
     const start = new Date(data.startTime);
     const end = new Date(data.endTime);
+    const participantIds = data.participantIds
+      ? [...new Set(data.participantIds)]
+      : [];
+
     if (end <= start) {
       return NextResponse.json({ error: "End time must be after start time" }, { status: 400 });
     }
 
-    if (data.fromInviteToken) {
-      const invite = await prisma.collabInvite.findUnique({
-        where: { token: data.fromInviteToken },
+    if (participantIds.length > 0) {
+      const ownedParticipants = await prisma.friend.findMany({
+        where: { id: { in: participantIds }, userId },
+        select: { id: true },
       });
 
-      if (!invite) {
-        return NextResponse.json({ error: "Invite not found" }, { status: 404 });
-      }
-
-      const now = new Date();
-      const expired = invite.expiresAt != null && invite.expiresAt < now;
-      const exhausted = invite.maxUses != null && invite.usedCount >= invite.maxUses;
-
-      if (expired) {
-        return NextResponse.json({ error: "Invite has expired" }, { status: 400 });
-      }
-
-      if (exhausted) {
-        return NextResponse.json({ error: "Invite has reached its usage limit" }, { status: 400 });
+      if (ownedParticipants.length !== participantIds.length) {
+        return NextResponse.json({ error: "Participant not found" }, { status: 404 });
       }
     }
 
@@ -103,6 +135,10 @@ export async function POST(req: Request) {
       .filter(({ remindAt }) => remindAt > now);
 
     const event = await prisma.$transaction(async (tx) => {
+      if (data.fromInviteToken) {
+        await consumeInviteOrThrow(tx, data.fromInviteToken);
+      }
+
       const createdEvent = await tx.event.create({
         data: {
           userId,
@@ -112,8 +148,8 @@ export async function POST(req: Request) {
           endTime: end,
           gameName: data.gameName ?? "",
           gameId: data.gameId ?? "",
-          participants: data.participantIds
-            ? { create: data.participantIds.map((friendId) => ({ friendId })) }
+          participants: participantIds.length > 0
+            ? { create: participantIds.map((friendId) => ({ friendId })) }
             : undefined,
           reminders: reminders.length > 0 ? { create: reminders } : undefined,
         },
@@ -126,37 +162,17 @@ export async function POST(req: Request) {
         },
       });
 
-      if (data.fromInviteToken) {
-        const invite = await tx.collabInvite.findUnique({
-          where: { token: data.fromInviteToken },
-        });
-
-        if (!invite) {
-          throw new Error("Invite not found");
-        }
-
-        const inviteExpired = invite.expiresAt != null && invite.expiresAt < new Date();
-        const inviteExhausted = invite.maxUses != null && invite.usedCount >= invite.maxUses;
-
-        if (inviteExpired) {
-          throw new Error("Invite has expired");
-        }
-
-        if (inviteExhausted) {
-          throw new Error("Invite has reached its usage limit");
-        }
-
-        await tx.collabInvite.update({
-          where: { token: data.fromInviteToken },
-          data: { usedCount: { increment: 1 } },
-        });
-      }
-
       return createdEvent;
     });
 
-    // Fire-and-forget Discord notification
+    // Fire-and-forget Discord notifications
     notifyDiscord(userId, "created", event);
+    createDiscordScheduledEvent(userId, {
+      title: event.title,
+      description: event.description,
+      startTime: event.startTime,
+      endTime: event.endTime,
+    });
 
     return NextResponse.json(
       {
@@ -169,7 +185,14 @@ export async function POST(req: Request) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: err.message }, { status: 400 });
     }
-    if (err instanceof Error && (err.message === "Invite not found" || err.message === "Invite has expired" || err.message === "Invite has reached its usage limit")) {
+    if (
+      err instanceof Error
+      && (
+        err.message === "Invite not found"
+        || err.message === "Invite has expired"
+        || err.message === "Invite has reached its usage limit"
+      )
+    ) {
       return NextResponse.json({ error: err.message }, { status: err.message === "Invite not found" ? 404 : 400 });
     }
     return NextResponse.json({ error: "Failed to create event" }, { status: 500 });

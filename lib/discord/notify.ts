@@ -6,6 +6,8 @@ import {
   buildReminderEmbed,
   buildCanceledEmbed,
   buildInviteEmbed,
+  createGuildScheduledEvent,
+  getDiscordToken,
 } from "./client";
 
 interface EventData {
@@ -62,6 +64,49 @@ export async function notifyDiscord(
     await postWebhookMessage(profile.discordWebhookUrl, embed, pings || undefined);
   } catch {
     // Fire-and-forget — never block the main response
+  }
+}
+
+/**
+ * Create a native Discord Scheduled Event in the user's connected server.
+ *
+ * Shows up in the server's Events tab with the collab title, time, and a
+ * "Twitch" external location. Fires once on event creation, fire-and-forget.
+ *
+ * No-ops if the user hasn't connected Discord OAuth or if their webhook URL
+ * couldn't be resolved to a server (see `resolveWebhookMetadata`). Silently
+ * swallows 403s — the user may not have "Manage Events" permission in the
+ * target server, which is fine; the webhook post still fires.
+ */
+export async function createDiscordScheduledEvent(
+  userId: string,
+  event: {
+    title: string;
+    description: string;
+    startTime: Date;
+    endTime: Date;
+  },
+) {
+  try {
+    const profile = await prisma.profile.findUnique({
+      where: { id: userId },
+      select: { discordGuildId: true },
+    });
+    if (!profile?.discordGuildId) return;
+
+    const token = await getDiscordToken(userId);
+    if (!token) return;
+
+    await createGuildScheduledEvent(profile.discordGuildId, token, {
+      // Discord caps: name ≤100 chars, description ≤1000 chars
+      name: event.title.slice(0, 100),
+      description: event.description.slice(0, 1000),
+      startTime: event.startTime.toISOString(),
+      endTime: event.endTime.toISOString(),
+    });
+  } catch {
+    // Fire-and-forget — permission errors, revoked tokens, etc. don't block
+    // the main event-creation response.
   }
 }
 

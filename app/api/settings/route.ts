@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser, unauthorized } from "@/lib/auth";
+import { resolveWebhookMetadata } from "@/lib/discord/client";
 import { z } from "zod";
 
 const settingsSchema = z.object({
@@ -49,6 +50,22 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const data = settingsSchema.parse(body);
 
+    // When a webhook URL is saved, resolve it to the guild + channel it posts to
+    // so scheduled-event creation knows which server to target. When it's cleared,
+    // clear the derived fields too unless the caller explicitly set them.
+    let resolvedGuildId: string | null | undefined;
+    let resolvedChannelId: string | null | undefined;
+    if (data.discordWebhookUrl !== undefined) {
+      if (data.discordWebhookUrl) {
+        const meta = await resolveWebhookMetadata(data.discordWebhookUrl);
+        resolvedGuildId = meta?.guildId ?? null;
+        resolvedChannelId = meta?.channelId ?? null;
+      } else {
+        resolvedGuildId = null;
+        resolvedChannelId = null;
+      }
+    }
+
     const profile = await prisma.profile.update({
       where: { id: user.id },
       data: {
@@ -59,6 +76,10 @@ export async function PUT(req: Request) {
         ...(data.discordChannelId !== undefined && { discordChannelId: data.discordChannelId }),
         ...(data.discordChannelName !== undefined && { discordChannelName: data.discordChannelName }),
         ...(data.discordWebhookUrl !== undefined && { discordWebhookUrl: data.discordWebhookUrl }),
+        // Auto-resolved IDs override any explicit values from the client for the
+        // same request — the client shouldn't be guessing these.
+        ...(resolvedGuildId !== undefined && { discordGuildId: resolvedGuildId }),
+        ...(resolvedChannelId !== undefined && { discordChannelId: resolvedChannelId }),
       },
     });
 

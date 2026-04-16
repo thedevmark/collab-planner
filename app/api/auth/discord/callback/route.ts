@@ -1,6 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import {
+  clearDiscordOAuthState,
+  hasValidDiscordOAuthState,
+} from "@/lib/discord/oauthState";
+import { getGuilds, getGuildChannels } from "@/lib/discord/client";
+
+interface DiscordWebhookResponse {
+  url: string;
+  channel_id: string;
+  guild_id: string;
+}
+
+/**
+ * Best-effort resolution of human-readable server/channel names for display.
+ * Returns nulls on any failure — we already have the IDs, so the integration
+ * works regardless of whether this succeeds.
+ */
+async function resolveWebhookNames(
+  accessToken: string,
+  guildId: string,
+  channelId: string,
+): Promise<{ guildName: string | null; channelName: string | null }> {
+  try {
+    const [guilds, channels] = await Promise.all([
+      getGuilds(accessToken).catch(() => []),
+      getGuildChannels(guildId, accessToken).catch(() => []),
+    ]);
+    return {
+      guildName: guilds.find((g) => g.id === guildId)?.name ?? null,
+      channelName: channels.find((c) => c.id === channelId)?.name ?? null,
+    };
+  } catch {
+    return { guildName: null, channelName: null };
+  }
+}
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUser();
@@ -11,9 +46,12 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const code = searchParams.get("code");
   const error = searchParams.get("error");
+  const returnedState = searchParams.get("state");
 
-  if (error || !code) {
-    return NextResponse.redirect(new URL("/settings?discord=canceled", req.url));
+  if (error || !code || !hasValidDiscordOAuthState(req, returnedState)) {
+    const response = NextResponse.redirect(new URL("/settings?discord=canceled", req.url));
+    clearDiscordOAuthState(response);
+    return response;
   }
 
   try {
@@ -43,6 +81,15 @@ export async function GET(req: NextRequest) {
 
     const discordUsername = me.global_name ?? me.username;
 
+    // If the user approved `webhook.incoming`, Discord returns a ready-to-use
+    // webhook object keyed on `webhook` in the token response. When present
+    // we store its URL + server/channel metadata so notifications work with
+    // zero extra setup on the user's side.
+    const webhook = tokens.webhook as DiscordWebhookResponse | undefined;
+    const names = webhook
+      ? await resolveWebhookNames(tokens.access_token, webhook.guild_id, webhook.channel_id)
+      : { guildName: null, channelName: null };
+
     const profile = await prisma.profile.update({
       where: { id: user.id },
       data: {
@@ -51,6 +98,13 @@ export async function GET(req: NextRequest) {
         discordAccessToken: tokens.access_token,
         discordRefreshToken: tokens.refresh_token,
         discordTokenExpiry: expiresAt,
+        ...(webhook && {
+          discordWebhookUrl: webhook.url,
+          discordGuildId: webhook.guild_id,
+          discordChannelId: webhook.channel_id,
+          discordGuildName: names.guildName,
+          discordChannelName: names.channelName,
+        }),
       },
       select: { twitchId: true },
     });
@@ -61,8 +115,12 @@ export async function GET(req: NextRequest) {
       data: { discordUsername, discordId: me.id },
     }).catch(() => {});
 
-    return NextResponse.redirect(new URL("/settings?discord=connected", req.url));
+    const response = NextResponse.redirect(new URL("/settings?discord=connected", req.url));
+    clearDiscordOAuthState(response);
+    return response;
   } catch {
-    return NextResponse.redirect(new URL("/settings?discord=error", req.url));
+    const response = NextResponse.redirect(new URL("/settings?discord=error", req.url));
+    clearDiscordOAuthState(response);
+    return response;
   }
 }
