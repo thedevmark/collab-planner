@@ -8,15 +8,14 @@ import { TrendingUp } from "lucide-react";
 /**
  * Stream Pattern Overlap visualization.
  *
- * Shown originally as a sidebar on /events/new and promoted here so it can
- * also be the entire content of the /plan/overlap route. For each selected
- * friend it renders:
+ * Lives as the right-hand sidebar on the /plan canvas once people are
+ * selected. For each selected friend it renders:
  *   - avatar + channel-color label + median "typical streaming time"
  *   - a 7-day heatmap highlighting their top-3 stream days
  *   - cross-group overlap days (highlighted more strongly on everyone's row)
  *
- * Pass `sticky={false}` when using as main page content — the sticky default
- * is intended for sidebar usage.
+ * Pass `sticky={false}` if a caller ever wants to use it as main page
+ * content — the sticky default is intended for sidebar usage.
  */
 
 const FALLBACK_COLORS = [

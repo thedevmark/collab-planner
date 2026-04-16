@@ -170,7 +170,7 @@ export default function EventsPage() {
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">History</h1>
-        <Link href="/events/new">
+        <Link href="/plan">
           <Button>
             <CalendarPlus className="h-4 w-4" />
             New Session
@@ -183,7 +183,7 @@ export default function EventsPage() {
           <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
           <p className="text-lg font-medium">No sessions yet</p>
           <p className="text-sm mb-4">Create a session to get started</p>
-          <Link href="/events/new">
+          <Link href="/plan">
             <Button>
               <CalendarPlus className="h-4 w-4" />
               New Session

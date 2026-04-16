@@ -200,7 +200,7 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
                     {friend.isFavorite ? "Favorited" : "Favorite"}
                   </Button>
                 )}
-                <Link href={`/events/new?friendId=${friend.id}`}>
+                <Link href={`/plan?friendId=${friend.id}`}>
                   <Button size="sm">New Session</Button>
                 </Link>
                 {!friend.isMe && (

@@ -131,7 +131,7 @@ Serve `panel.html` from your own domain (must be HTTPS). Set the panel viewer UR
 
 The CTA button links to:
 ```
-https://collab.deutschmark.online/events/new?addFriend=[streamerUsername]
+https://collab.deutschmark.online/plan?addFriend=[streamerUsername]
 ```
 
-The `events/new` page automatically reads the `addFriend` query param, pre-selects that streamer as a participant, and adds them as a friend if they aren't already in the viewer's friend list.
+The `/plan` canvas automatically reads the `addFriend` query param, pre-selects that streamer as a participant, and adds them as a friend if they aren't already in the viewer's friend list.

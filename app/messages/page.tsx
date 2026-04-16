@@ -11,5 +11,5 @@ export default async function MessagesPage({
     redirect(`/events/${eventId}`);
   }
 
-  redirect("/events/new");
+  redirect("/plan");
 }

@@ -288,7 +288,7 @@ export function InviteDialog({ friends, defaultFriendIds = [], children }: Invit
 
             <div className="flex items-center justify-between">
               <a
-                href={`/events/new?fromInvite=${created.token}`}
+                href={`/plan?fromInvite=${created.token}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"

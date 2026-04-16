@@ -53,7 +53,7 @@ export function InviteResponseActions({
       }
 
       if (redirectToPlanner) {
-        router.push(`/events/new?fromInvite=${token}`);
+        router.push(`/plan?fromInvite=${token}`);
       }
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : "Could not update invite.");

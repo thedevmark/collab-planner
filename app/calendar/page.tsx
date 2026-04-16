@@ -261,7 +261,7 @@ export default function CalendarPage() {
       }
 
       const ids = Array.from(visibleFriendIdsOnDay).join(",");
-      router.push(`/events/new?startTime=${clickedKey}&friendIds=${ids}`);
+      router.push(`/plan?startTime=${clickedKey}&friendIds=${ids}`);
     }
   }
 
@@ -273,7 +273,7 @@ export default function CalendarPage() {
     ripple.className = "calendar-date-ripple";
     el.appendChild(ripple);
     setTimeout(() => ripple.remove(), 600);
-    router.push(`/events/new?startTime=${info.dateStr}`);
+    router.push(`/plan?startTime=${info.dateStr}`);
   }
 
   function toggleFriend(friendId: number) {

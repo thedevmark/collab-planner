@@ -379,7 +379,7 @@
       // CTA
       var btn = document.getElementById('cta-btn');
       btn.textContent = 'Plan a collab with ' + (data.displayName || username);
-      btn.href = API_BASE + '/events/new?addFriend=' + encodeURIComponent(username);
+      btn.href = API_BASE + '/plan?addFriend=' + encodeURIComponent(username);
 
       showState('state-content');
     }
