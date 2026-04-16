@@ -31,7 +31,7 @@ export default function PublicApiDocsPage() {
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-6">
           <Link href={APP_URL} className="flex items-center text-zinc-400 transition-colors hover:text-zinc-100">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="Collab Planner" width={108} height={60} style={{ imageRendering: "pixelated" }} />
+            <img src="/logo.svg" alt="Collab Planner" width={108} height={60} />
           </Link>
           <nav className="flex items-center gap-4 text-xs text-zinc-500">
             <span className="font-medium text-zinc-300">Public API</span>

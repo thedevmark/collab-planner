@@ -1,147 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 40" shape-rendering="crispEdges">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 40" fill="none">
   <!--
-    Rings 2x-scaled (smaller), text restored to chunky 7x9 with
-    3-layer bevel shadow, shifted left.
-
-    Canvas 72x40.
-    Venn 2x: content spans x=20..52, y=10..30 — centered at (36,20).
-    Text left-shifted: COLLAB (47w) at x=6, PLANNER (55w) at x=3, both y=10/21.
-    Render order: black (+2,+2) → purple (+1,+1) → white (0,0).
+    Minimalist wordmark. 72x40 canvas.
+    Mark (overlapping rings) on the left, two-line sans-serif
+    wordmark on the right. Gradient rings: purple + teal, same
+    brand hues as before but rendered as smooth strokes, not
+    pixel bevels.
   -->
 
-  <!-- ── LEFT RING (purple, 2x) ─────────────────────────────── -->
-  <g fill="#8956FB">
-    <rect x="26" y="10" width="8"  height="2"/>
-    <rect x="22" y="12" width="4"  height="2"/>
-    <rect x="22" y="14" width="2"  height="2"/>
-    <rect x="20" y="16" width="2"  height="8"/>
-    <rect x="36" y="14" width="2"  height="2"/>
-    <rect x="38" y="16" width="2"  height="8"/>
-    <rect x="36" y="24" width="2"  height="2"/>
-    <rect x="22" y="24" width="2"  height="2"/>
-    <rect x="22" y="26" width="4"  height="2"/>
-    <rect x="26" y="28" width="8"  height="2"/>
-    <!-- bottom interlock: purple over teal -->
-    <rect x="34" y="26" width="4"  height="2"/>
-  </g>
-
-  <!-- ── RIGHT RING (teal, 2x) ──────────────────────────────── -->
-  <g fill="#14b8a6">
-    <rect x="38" y="10" width="8"  height="2"/>
-    <rect x="46" y="12" width="4"  height="2"/>
-    <rect x="48" y="14" width="2"  height="2"/>
-    <rect x="50" y="16" width="2"  height="8"/>
-    <rect x="34" y="14" width="2"  height="2"/>
-    <rect x="32" y="16" width="2"  height="8"/>
-    <rect x="34" y="24" width="2"  height="2"/>
-    <rect x="48" y="24" width="2"  height="2"/>
-    <rect x="46" y="26" width="4"  height="2"/>
-    <rect x="38" y="28" width="8"  height="2"/>
-    <!-- top interlock: teal over purple -->
-    <rect x="34" y="12" width="4"  height="2"/>
-  </g>
-
-  <!--
-    7x9 chunky pixel glyphs — 2px strokes, rounded corners.
-    Stride 8 (7w + 1px kerning).
-  -->
   <defs>
-    <g id="C">
-      <rect x="1" y="0" width="5" height="1"/>
-      <rect x="0" y="1" width="2" height="7"/>
-      <rect x="5" y="1" width="2" height="1"/>
-      <rect x="5" y="7" width="2" height="1"/>
-      <rect x="1" y="8" width="5" height="1"/>
-    </g>
-    <g id="O">
-      <rect x="1" y="0" width="5" height="1"/>
-      <rect x="0" y="1" width="2" height="7"/>
-      <rect x="5" y="1" width="2" height="7"/>
-      <rect x="1" y="8" width="5" height="1"/>
-    </g>
-    <g id="L">
-      <rect x="0" y="0" width="2" height="8"/>
-      <rect x="0" y="8" width="7" height="1"/>
-    </g>
-    <g id="A">
-      <rect x="2" y="0" width="3" height="1"/>
-      <rect x="1" y="1" width="5" height="1"/>
-      <rect x="0" y="2" width="2" height="7"/>
-      <rect x="5" y="2" width="2" height="7"/>
-      <rect x="2" y="5" width="3" height="1"/>
-    </g>
-    <g id="B">
-      <rect x="0" y="0" width="5" height="1"/>
-      <rect x="0" y="1" width="2" height="7"/>
-      <rect x="5" y="1" width="2" height="3"/>
-      <rect x="2" y="4" width="3" height="1"/>
-      <rect x="5" y="5" width="2" height="3"/>
-      <rect x="0" y="8" width="5" height="1"/>
-    </g>
-    <g id="P">
-      <rect x="0" y="0" width="5" height="1"/>
-      <rect x="0" y="1" width="2" height="8"/>
-      <rect x="5" y="1" width="2" height="3"/>
-      <rect x="2" y="4" width="3" height="1"/>
-    </g>
-    <g id="N">
-      <rect x="0" y="0" width="2" height="9"/>
-      <rect x="5" y="0" width="2" height="9"/>
-      <rect x="2" y="1" width="1" height="2"/>
-      <rect x="3" y="3" width="1" height="2"/>
-      <rect x="4" y="5" width="1" height="2"/>
-    </g>
-    <g id="E">
-      <rect x="0" y="0" width="7" height="1"/>
-      <rect x="0" y="1" width="2" height="7"/>
-      <rect x="2" y="4" width="4" height="1"/>
-      <rect x="0" y="8" width="7" height="1"/>
-    </g>
-    <g id="R">
-      <rect x="0" y="0" width="5" height="1"/>
-      <rect x="0" y="1" width="2" height="8"/>
-      <rect x="5" y="1" width="2" height="3"/>
-      <rect x="2" y="4" width="3" height="1"/>
-      <rect x="2" y="5" width="1" height="1"/>
-      <rect x="3" y="6" width="1" height="1"/>
-      <rect x="4" y="7" width="1" height="1"/>
-      <rect x="5" y="8" width="2" height="1"/>
-    </g>
+    <linearGradient id="lg-purple" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#c4b5fd"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="lg-teal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#5eead4"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
   </defs>
 
-  <!-- Deep shadow: black +2,+2 -->
-  <g fill="#000000">
-    <use href="#C" x="8"  y="12"/><use href="#O" x="16" y="12"/>
-    <use href="#L" x="24" y="12"/><use href="#L" x="32" y="12"/>
-    <use href="#A" x="40" y="12"/><use href="#B" x="48" y="12"/>
-
-    <use href="#P" x="5"  y="23"/><use href="#L" x="13" y="23"/>
-    <use href="#A" x="21" y="23"/><use href="#N" x="29" y="23"/>
-    <use href="#N" x="37" y="23"/><use href="#E" x="45" y="23"/>
-    <use href="#R" x="53" y="23"/>
+  <!-- Overlapping rings (Venn mark) -->
+  <g stroke-width="1.75" stroke-linecap="round">
+    <circle cx="10" cy="20" r="8" stroke="url(#lg-purple)"/>
+    <circle cx="18" cy="20" r="8" stroke="url(#lg-teal)"/>
   </g>
 
-  <!-- Mid shadow: brand purple +1,+1 -->
-  <g fill="#8956FB">
-    <use href="#C" x="7"  y="11"/><use href="#O" x="15" y="11"/>
-    <use href="#L" x="23" y="11"/><use href="#L" x="31" y="11"/>
-    <use href="#A" x="39" y="11"/><use href="#B" x="47" y="11"/>
-
-    <use href="#P" x="4"  y="22"/><use href="#L" x="12" y="22"/>
-    <use href="#A" x="20" y="22"/><use href="#N" x="28" y="22"/>
-    <use href="#N" x="36" y="22"/><use href="#E" x="44" y="22"/>
-    <use href="#R" x="52" y="22"/>
-  </g>
-
-  <!-- Main fill: white -->
-  <g fill="#ffffff">
-    <use href="#C" x="6"  y="10"/><use href="#O" x="14" y="10"/>
-    <use href="#L" x="22" y="10"/><use href="#L" x="30" y="10"/>
-    <use href="#A" x="38" y="10"/><use href="#B" x="46" y="10"/>
-
-    <use href="#P" x="3"  y="21"/><use href="#L" x="11" y="21"/>
-    <use href="#A" x="19" y="21"/><use href="#N" x="27" y="21"/>
-    <use href="#N" x="35" y="21"/><use href="#E" x="43" y="21"/>
-    <use href="#R" x="51" y="21"/>
+  <!-- Wordmark -->
+  <g font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" fill="#ffffff">
+    <text x="31" y="19" font-size="10.5" font-weight="600" letter-spacing="-0.2">Collab</text>
+    <text x="31" y="32" font-size="10.5" font-weight="400" letter-spacing="0.35" opacity="0.55">Planner</text>
   </g>
 </svg>

@@ -99,7 +99,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         <div className="flex items-center justify-between gap-2 p-4 border-b">
           <Link href="/" className="flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="Collab Planner" width={144} height={80} style={{ imageRendering: "pixelated" }} />
+            <img src="/logo.svg" alt="Collab Planner" width={144} height={80} />
           </Link>
           {onClose && (
             <button
