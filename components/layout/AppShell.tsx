@@ -31,7 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
           <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="" width={24} height={16} style={{ imageRendering: "pixelated" }} />
+            <img src="/logo.svg" alt="" width={36} height={24} style={{ imageRendering: "pixelated" }} />
             <span className="font-bold text-sm">Collab Planner</span>
           </div>
         </header>

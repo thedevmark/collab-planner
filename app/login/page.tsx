@@ -45,7 +45,7 @@ export default function LoginPage() {
       <header className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto w-full">
         <div className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="" width={30} height={20} style={{ imageRendering: "pixelated" }} />
+          <img src="/logo.svg" alt="" width={45} height={30} style={{ imageRendering: "pixelated" }} />
           <span className="font-bold text-sm text-zinc-200 tracking-tight">Collab Planner</span>
         </div>
         <button

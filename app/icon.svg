@@ -1,59 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <clipPath id="P-behind">
-      <rect x="0" y="236" width="512" height="276"/>
-    </clipPath>
-    <clipPath id="P-front">
-      <rect x="0" y="0" width="512" height="236"/>
-    </clipPath>
-    <filter id="halo" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="22"/>
-    </filter>
-  </defs>
-  <rect width="512" height="512" rx="88" fill="#0d0518"/>
-  <rect x="50" y="45" width="208" height="247" rx="18" fill="#5865F2" opacity="0.35" filter="url(#halo)"/>
-  <rect x="190" y="180" width="208" height="247" rx="18" fill="#9147ff" opacity="0.30" filter="url(#halo)"/>
-  <g clip-path="url(#P-behind)">
-    <path fill-rule="evenodd" fill="#9147ff" d="
-      M 190,180
-      L 379.8,180
-      L 398,198.2
-      L 398,377.6
-      L 252.4,377.6
-      L 252.4,427
-      L 190,377.6
-      L 190,198.2
-      Z
-      M 231.6,219 L 268,219 L 268,281.4 L 231.6,281.4 Z
-      M 320,219 L 356.4,219 L 356.4,281.4 L 320,281.4 Z
-    "/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 12" shape-rendering="crispEdges">
+  <!--
+    Pixel-art Venn: two overlapping 10x10 rings, interlocked like chain links.
+    Left ring: Twitch purple #8956FB
+    Right ring: teal #14b8a6
+    Interlock: teal crosses over at the top, purple crosses over at the bottom,
+    giving the rings a threaded/infinity feel at the intersection.
+  -->
+
+  <!-- ── LEFT RING (purple) ──────────────────────────────────── -->
+  <g fill="#8956FB">
+    <!-- top arc -->
+    <rect x="4" y="1" width="4" height="1"/>
+    <rect x="2" y="2" width="2" height="1"/>
+    <rect x="2" y="3" width="1" height="1"/>
+    <!-- left side -->
+    <rect x="1" y="4" width="1" height="4"/>
+    <!-- right arc (passes through lens) -->
+    <rect x="9" y="3" width="1" height="1"/>
+    <rect x="10" y="4" width="1" height="4"/>
+    <rect x="9" y="8" width="1" height="1"/>
+    <!-- bottom arc -->
+    <rect x="2" y="8" width="1" height="1"/>
+    <rect x="2" y="9" width="2" height="1"/>
+    <rect x="4" y="10" width="4" height="1"/>
+    <!-- bottom interlock: purple sits on top of teal here -->
+    <rect x="8" y="9" width="2" height="1"/>
   </g>
-  <path fill-rule="evenodd" fill="#5865F2" d="
-    M 50,45
-    L 239.8,45
-    L 258,63.2
-    L 258,242.6
-    L 112.4,242.6
-    L 112.4,292
-    L 50,242.6
-    L 50,63.2
-    Z
-    M 91.6,84 L 128,84 L 128,146.4 L 91.6,146.4 Z
-    M 180,84 L 216.4,84 L 216.4,146.4 L 180,146.4 Z
-  "/>
-  <g clip-path="url(#P-front)">
-    <path fill-rule="evenodd" fill="#9147ff" d="
-      M 190,180
-      L 379.8,180
-      L 398,198.2
-      L 398,377.6
-      L 252.4,377.6
-      L 252.4,427
-      L 190,377.6
-      L 190,198.2
-      Z
-      M 231.6,219 L 268,219 L 268,281.4 L 231.6,281.4 Z
-      M 320,219 L 356.4,219 L 356.4,281.4 L 320,281.4 Z
-    "/>
+
+  <!-- ── RIGHT RING (teal) ───────────────────────────────────── -->
+  <g fill="#14b8a6">
+    <!-- top arc -->
+    <rect x="10" y="1" width="4" height="1"/>
+    <rect x="14" y="2" width="2" height="1"/>
+    <rect x="15" y="3" width="1" height="1"/>
+    <!-- right side -->
+    <rect x="16" y="4" width="1" height="4"/>
+    <!-- left arc (passes through lens) -->
+    <rect x="8" y="3" width="1" height="1"/>
+    <rect x="7" y="4" width="1" height="4"/>
+    <rect x="8" y="8" width="1" height="1"/>
+    <!-- bottom arc -->
+    <rect x="15" y="8" width="1" height="1"/>
+    <rect x="14" y="9" width="2" height="1"/>
+    <rect x="10" y="10" width="4" height="1"/>
+    <!-- top interlock: teal sits on top of purple here -->
+    <rect x="8" y="2" width="2" height="1"/>
   </g>
 </svg>
