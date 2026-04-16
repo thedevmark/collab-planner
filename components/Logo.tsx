@@ -4,15 +4,17 @@
  * Wordmark logo rendered as inline SVG (not via <img>) so hover reaches
  * the individual ring elements.
  *
- * Hover effect: a thin accent arc travels around each ring's circumference
- * — purely a stroke-dashoffset animation, no x/y translation. The two rings
- * rotate in opposite directions so the chain-link weave illusion holds
- * (the intersection points and weave overlay stay exactly put).
+ * Hover effect — "chain bloom":
+ *   Both rings + the weave arc get a soft blurred duplicate layer sitting
+ *   directly beneath the crisp base. On hover the bloom fades in and then
+ *   breathes — a slow, single-rhythm opacity oscillation that reads as
+ *   the chain-link "lighting up." No rotation, no translation, no traveling
+ *   segments. Both rings pulse in sync (deliberate, not uncoordinated) so
+ *   it looks like one animated object, not two independent spinners.
  *
- * Visual rationale: rotating a solid circle is invisible on its own. We
- * leave the base circles untouched and fade in a thin bright arc on hover
- * whose stroke-dashoffset animates forever — reads as "spin" without
- * disturbing the idle silhouette.
+ * Why not an animated arc: a short traveling stroke on a circle reads as
+ * a loading spinner. A static ring with a breathing glow reads as
+ * presence / depth / alive.
  *
  * Keep public/logo.svg in sync with this component — it's still loaded
  * directly in a few static routes (terms, privacy, OG previews).
@@ -32,7 +34,7 @@ const CX1 = 10;
 const CX2 = 18;
 const CY = 20;
 const R = 9;
-const CIRCUMFERENCE = 2 * Math.PI * R; // ≈ 56.549
+const WEAVE_D = "M 11.78 11.18 A 9 9 0 0 1 15.95 13.25";
 
 export function Logo({
   width = 144,
@@ -67,36 +69,38 @@ export function Logo({
           <filter id={`text-shadow-${uid}`} x="-10%" y="-10%" width="120%" height="140%">
             <feDropShadow dx="0" dy="0.5" stdDeviation="0.4" floodColor="#000000" floodOpacity="0.55" />
           </filter>
+          {animated && (
+            // Soft symmetric bloom for the hover underlay. stdDeviation tuned
+            // against the 1.75 base stroke so the glow reads as "halo" not
+            // "blurry duplicate."
+            <filter id={`bloom-${uid}`} x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="0.9" />
+            </filter>
+          )}
         </defs>
+
+        {/* Bloom underlay — rendered BEFORE the base so the crisp strokes
+            always sit on top. Opacity is driven by hover state. */}
+        {animated && (
+          <g
+            className="logo-bloom"
+            filter={`url(#bloom-${uid})`}
+            fill="none"
+            strokeWidth="2.25"
+            strokeLinecap="round"
+          >
+            <circle cx={CX1} cy={CY} r={R} stroke={`url(#lg-purple-${uid})`} />
+            <circle cx={CX2} cy={CY} r={R} stroke={`url(#lg-teal-${uid})`} />
+            <path d={WEAVE_D} stroke={`url(#lg-purple-${uid})`} />
+          </g>
+        )}
 
         {/* Base rings + weave — unchanged from public/logo.svg. */}
         <g fill="none" strokeWidth="1.75" strokeLinecap="round">
           <circle cx={CX1} cy={CY} r={R} stroke={`url(#lg-purple-${uid})`} />
           <circle cx={CX2} cy={CY} r={R} stroke={`url(#lg-teal-${uid})`} />
-          <path d="M 11.78 11.18 A 9 9 0 0 1 15.95 13.25" stroke={`url(#lg-purple-${uid})`} />
+          <path d={WEAVE_D} stroke={`url(#lg-purple-${uid})`} />
         </g>
-
-        {/* Hover-only accent arcs. Same center/radius as base rings so they
-            sit exactly on top. stroke-dasharray leaves ~20% visible; the
-            dashoffset animation travels that segment around the ring. */}
-        {animated && (
-          <g fill="none" strokeWidth="1.5" strokeLinecap="round" className="logo-spin-layer">
-            <circle
-              cx={CX1}
-              cy={CY}
-              r={R}
-              stroke="#e9d5ff"
-              className="logo-spin logo-spin-cw"
-            />
-            <circle
-              cx={CX2}
-              cy={CY}
-              r={R}
-              stroke="#99f6e4"
-              className="logo-spin logo-spin-ccw"
-            />
-          </g>
-        )}
 
         {/* Wordmark */}
         <g
@@ -114,43 +118,40 @@ export function Logo({
       </svg>
 
       <style jsx>{`
-        .logo-root :global(.logo-spin) {
-          stroke-dasharray: ${CIRCUMFERENCE * 0.22} ${CIRCUMFERENCE * 2};
-          stroke-dashoffset: 0;
+        /* Bloom is invisible until hover. Transition handles both the
+           entrance (hover-in) and the exit (hover-out) smoothly. */
+        .logo-root :global(.logo-bloom) {
           opacity: 0;
-          transition: opacity 320ms ease;
+          transition: opacity 420ms cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .logo-root:hover :global(.logo-spin),
-        .logo-root:focus-visible :global(.logo-spin) {
-          opacity: 0.85;
+        /* On hover, fade in and hand off to the breathing keyframe. The
+           animation-delay matches the transition so the pulse begins only
+           after the glow has fully materialized — prevents the "pop to
+           mid-opacity" artifact a naive 0%-to-X keyframe would produce. */
+        .logo-root:hover :global(.logo-bloom),
+        .logo-root:focus-visible :global(.logo-bloom) {
+          opacity: 1;
+          animation: logoBloom 2.6s ease-in-out 420ms infinite;
         }
 
-        .logo-root:hover :global(.logo-spin-cw) {
-          animation: logoSpinCW 2.8s linear infinite;
-        }
-        .logo-root:hover :global(.logo-spin-ccw) {
-          animation: logoSpinCCW 2.8s linear infinite;
-        }
-
+        /* Users with reduced-motion get the static halo, no breathing. */
         @media (prefers-reduced-motion: reduce) {
-          .logo-root:hover :global(.logo-spin-cw),
-          .logo-root:hover :global(.logo-spin-ccw) {
+          .logo-root:hover :global(.logo-bloom),
+          .logo-root:focus-visible :global(.logo-bloom) {
             animation: none;
+            opacity: 0.85;
           }
         }
       `}</style>
 
       <style jsx global>{`
-        @keyframes logoSpinCW {
-          to {
-            stroke-dashoffset: ${-CIRCUMFERENCE};
-          }
-        }
-        @keyframes logoSpinCCW {
-          to {
-            stroke-dashoffset: ${CIRCUMFERENCE};
-          }
+        /* Single shared rhythm — both rings + weave pulse as one object.
+           Peaks at 1 (matches the hover-in fade target) and dips to ~0.45
+           so the glow stays present but softens rather than disappearing. */
+        @keyframes logoBloom {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.45; }
         }
       `}</style>
     </span>
