@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 export const metadata = {
   title: "Public API — Collab Planner",
@@ -30,8 +31,7 @@ export default function PublicApiDocsPage() {
       <header className="sticky top-0 z-10 border-b border-zinc-800/60 bg-[#09030f]/90 backdrop-blur-sm">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-6">
           <Link href={APP_URL} className="flex items-center text-zinc-400 transition-colors hover:text-zinc-100">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="Collab Planner" width={108} height={60} />
+            <Logo width={108} height={60} />
           </Link>
           <nav className="flex items-center gap-4 text-xs text-zinc-500">
             <span className="font-medium text-zinc-300">Public API</span>

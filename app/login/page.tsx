@@ -4,6 +4,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 function TwitchIcon({ className }: { className?: string }) {
   return (
@@ -149,8 +150,7 @@ export default function LoginPage() {
       {/* Nav */}
       <header className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto w-full">
         <div className="flex items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="Collab Planner" width={144} height={80} />
+          <Logo width={144} height={80} />
         </div>
         <button
           onClick={loginWithTwitch}
