@@ -1,106 +1,191 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 54 27" shape-rendering="crispEdges">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 40" shape-rendering="crispEdges">
   <!--
-    Pixel-art wordmark: "COLLAB PLANNER" in white 3x5 letters above a
-    2x-scaled Venn. Letters 3 wide, 5 tall, 1px kerning, +2px gap for the
-    word space. Text: 53px wide, starts at x=0. Venn: 32px wide, centered
-    at x=11. Total canvas 54x27, ratio 2:1.
-    Every glyph is rectangles — no embedded font.
+    Retro arcade title-card wordmark.
+
+    Canvas 72x40 (9:5). Venn scaled to fill, letters stamped on top —
+    centered horizontally and vertically. Pixel-art letters are 7w x 9h
+    with 2px-thick strokes for that NES-title-screen chunk. Rendered in
+    three passes for a 3D bevel:
+
+      1. black drop-shadow  (offset +2, +2)
+      2. purple mid-shadow  (offset +1, +1) — brand tie-in
+      3. white main fill    (offset  0,  0)
+
+    Every glyph is rectangles — no embedded font. Letters referenced
+    through <use> so the shape is defined once per glyph.
   -->
 
-  <!-- ── WORDMARK (white) ───────────────────────────────────── -->
-  <g fill="#ffffff">
-    <!-- C @ x=0 -->
-    <rect x="0" y="0" width="3" height="1"/>
-    <rect x="0" y="1" width="1" height="3"/>
-    <rect x="0" y="4" width="3" height="1"/>
-    <!-- O @ x=4 -->
-    <rect x="4" y="0" width="3" height="1"/>
-    <rect x="4" y="1" width="1" height="3"/>
-    <rect x="6" y="1" width="1" height="3"/>
-    <rect x="4" y="4" width="3" height="1"/>
-    <!-- L @ x=8 -->
-    <rect x="8" y="0" width="1" height="5"/>
-    <rect x="9" y="4" width="2" height="1"/>
-    <!-- L @ x=12 -->
-    <rect x="12" y="0" width="1" height="5"/>
-    <rect x="13" y="4" width="2" height="1"/>
-    <!-- A @ x=16 -->
-    <rect x="17" y="0" width="1" height="1"/>
-    <rect x="16" y="1" width="1" height="4"/>
-    <rect x="18" y="1" width="1" height="4"/>
-    <rect x="16" y="2" width="3" height="1"/>
-    <!-- B @ x=20 -->
-    <rect x="20" y="0" width="1" height="5"/>
-    <rect x="21" y="0" width="1" height="1"/>
-    <rect x="22" y="1" width="1" height="1"/>
-    <rect x="21" y="2" width="1" height="1"/>
-    <rect x="22" y="3" width="1" height="1"/>
-    <rect x="21" y="4" width="1" height="1"/>
-    <!-- (space: 2px extra gap at x=23..25) -->
-    <!-- P @ x=26 -->
-    <rect x="26" y="0" width="1" height="5"/>
-    <rect x="27" y="0" width="1" height="1"/>
-    <rect x="28" y="1" width="1" height="1"/>
-    <rect x="27" y="2" width="1" height="1"/>
-    <!-- L @ x=30 -->
-    <rect x="30" y="0" width="1" height="5"/>
-    <rect x="31" y="4" width="2" height="1"/>
-    <!-- A @ x=34 -->
-    <rect x="35" y="0" width="1" height="1"/>
-    <rect x="34" y="1" width="1" height="4"/>
-    <rect x="36" y="1" width="1" height="4"/>
-    <rect x="34" y="2" width="3" height="1"/>
-    <!-- N @ x=38 -->
-    <rect x="38" y="0" width="1" height="5"/>
-    <rect x="40" y="0" width="1" height="5"/>
-    <rect x="39" y="1" width="1" height="1"/>
-    <!-- N @ x=42 -->
-    <rect x="42" y="0" width="1" height="5"/>
-    <rect x="44" y="0" width="1" height="5"/>
-    <rect x="43" y="1" width="1" height="1"/>
-    <!-- E @ x=46 -->
-    <rect x="46" y="0" width="3" height="1"/>
-    <rect x="46" y="1" width="1" height="3"/>
-    <rect x="47" y="2" width="1" height="1"/>
-    <rect x="46" y="4" width="3" height="1"/>
-    <!-- R @ x=50 -->
-    <rect x="50" y="0" width="1" height="5"/>
-    <rect x="51" y="0" width="1" height="1"/>
-    <rect x="52" y="1" width="1" height="1"/>
-    <rect x="51" y="2" width="1" height="1"/>
-    <rect x="52" y="3" width="1" height="1"/>
-    <rect x="52" y="4" width="1" height="1"/>
-  </g>
+  <defs>
+    <!-- 7x9 chunky pixel glyphs. 2px strokes, rounded corners. -->
+    <!-- C: .#####.  /  ##...##  /  ##.....  /  ##.....  /  ##.....  /  ##.....  /  ##.....  /  ##...##  /  .#####. -->
+    <g id="g_C">
+      <rect x="1" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="7"/>
+      <rect x="5" y="1" width="2" height="1"/>
+      <rect x="5" y="7" width="2" height="1"/>
+      <rect x="1" y="8" width="5" height="1"/>
+    </g>
+    <!-- O: .#####.  /  ##...##  /  ##...##  /  ##...##  /  ##...##  /  ##...##  /  ##...##  /  ##...##  /  .#####. -->
+    <g id="g_O">
+      <rect x="1" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="7"/>
+      <rect x="5" y="1" width="2" height="7"/>
+      <rect x="1" y="8" width="5" height="1"/>
+    </g>
+    <!-- L: ##.....  /  ##.....  /  ##.....  /  ##.....  /  ##.....  /  ##.....  /  ##.....  /  ##.....  /  ####### -->
+    <g id="g_L">
+      <rect x="0" y="0" width="2" height="8"/>
+      <rect x="0" y="8" width="7" height="1"/>
+    </g>
+    <!-- A: ..###..  /  .#####.  /  ##...##  /  ##...##  /  ##...##  /  #######  /  ##...##  /  ##...##  /  ##...## -->
+    <g id="g_A">
+      <rect x="2" y="0" width="3" height="1"/>
+      <rect x="1" y="1" width="5" height="1"/>
+      <rect x="0" y="2" width="2" height="7"/>
+      <rect x="5" y="2" width="2" height="7"/>
+      <rect x="2" y="5" width="3" height="1"/>
+    </g>
+    <!-- B: #####..  /  ##...##  /  ##...##  /  ##...##  /  #####..  /  ##...##  /  ##...##  /  ##...##  /  #####.. -->
+    <g id="g_B">
+      <rect x="0" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="7"/>
+      <rect x="5" y="1" width="2" height="3"/>
+      <rect x="2" y="4" width="3" height="1"/>
+      <rect x="5" y="5" width="2" height="3"/>
+      <rect x="0" y="8" width="5" height="1"/>
+    </g>
+    <!-- P: #####..  /  ##...##  /  ##...##  /  ##...##  /  #####..  /  ##.....  /  ##.....  /  ##.....  /  ##..... -->
+    <g id="g_P">
+      <rect x="0" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="8"/>
+      <rect x="5" y="1" width="2" height="3"/>
+      <rect x="2" y="4" width="3" height="1"/>
+    </g>
+    <!-- N: ##...##  /  ###..##  /  ###..##  /  ####.##  /  ##.####  /  ##..###  /  ##..###  /  ##...##  /  ##...## -->
+    <g id="g_N">
+      <rect x="0" y="0" width="2" height="9"/>
+      <rect x="5" y="0" width="2" height="9"/>
+      <rect x="2" y="1" width="1" height="2"/>
+      <rect x="3" y="3" width="1" height="2"/>
+      <rect x="4" y="5" width="1" height="2"/>
+    </g>
+    <!-- E: #######  /  ##.....  /  ##.....  /  ##.....  /  ######.  /  ##.....  /  ##.....  /  ##.....  /  ####### -->
+    <g id="g_E">
+      <rect x="0" y="0" width="7" height="1"/>
+      <rect x="0" y="1" width="2" height="7"/>
+      <rect x="2" y="4" width="4" height="1"/>
+      <rect x="0" y="8" width="7" height="1"/>
+    </g>
+    <!-- R: #####..  /  ##...##  /  ##...##  /  ##...##  /  #####..  /  ###....  /  ##.#...  /  ##..#..  /  ##...## -->
+    <g id="g_R">
+      <rect x="0" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="8"/>
+      <rect x="5" y="1" width="2" height="3"/>
+      <rect x="2" y="4" width="3" height="1"/>
+      <rect x="2" y="5" width="1" height="1"/>
+      <rect x="3" y="6" width="1" height="1"/>
+      <rect x="4" y="7" width="1" height="1"/>
+      <rect x="5" y="8" width="2" height="1"/>
+    </g>
+  </defs>
 
-  <!-- ── LEFT RING (purple, 2x scale, offset +11,+7) ───────── -->
+  <!-- ── LEFT RING (purple, 3x scale of the 18x12 icon) ────── -->
   <g fill="#8956FB">
-    <rect x="17" y="7" width="8" height="2"/>
-    <rect x="13" y="9" width="4" height="2"/>
-    <rect x="13" y="11" width="2" height="2"/>
-    <rect x="11" y="13" width="2" height="8"/>
-    <rect x="27" y="11" width="2" height="2"/>
-    <rect x="29" y="13" width="2" height="8"/>
-    <rect x="27" y="21" width="2" height="2"/>
-    <rect x="13" y="21" width="2" height="2"/>
-    <rect x="13" y="23" width="4" height="2"/>
-    <rect x="17" y="25" width="8" height="2"/>
-    <!-- bottom interlock: purple sits on top of teal here -->
-    <rect x="25" y="23" width="4" height="2"/>
+    <rect x="12" y="5" width="12" height="3"/>
+    <rect x="6" y="8" width="6" height="3"/>
+    <rect x="6" y="11" width="3" height="3"/>
+    <rect x="3" y="14" width="3" height="12"/>
+    <rect x="27" y="11" width="3" height="3"/>
+    <rect x="30" y="14" width="3" height="12"/>
+    <rect x="27" y="26" width="3" height="3"/>
+    <rect x="6" y="26" width="3" height="3"/>
+    <rect x="6" y="29" width="6" height="3"/>
+    <rect x="12" y="32" width="12" height="3"/>
+    <rect x="24" y="29" width="6" height="3"/>
   </g>
 
-  <!-- ── RIGHT RING (teal, 2x scale, offset +11,+7) ────────── -->
+  <!-- ── RIGHT RING (teal, 3x scale) ──────────────────────── -->
   <g fill="#14b8a6">
-    <rect x="29" y="7" width="8" height="2"/>
-    <rect x="37" y="9" width="4" height="2"/>
-    <rect x="39" y="11" width="2" height="2"/>
-    <rect x="41" y="13" width="2" height="8"/>
-    <rect x="25" y="11" width="2" height="2"/>
-    <rect x="23" y="13" width="2" height="8"/>
-    <rect x="25" y="21" width="2" height="2"/>
-    <rect x="39" y="21" width="2" height="2"/>
-    <rect x="37" y="23" width="4" height="2"/>
-    <rect x="29" y="25" width="8" height="2"/>
-    <!-- top interlock: teal sits on top of purple here -->
-    <rect x="25" y="9" width="4" height="2"/>
+    <rect x="30" y="5" width="12" height="3"/>
+    <rect x="42" y="8" width="6" height="3"/>
+    <rect x="45" y="11" width="3" height="3"/>
+    <rect x="48" y="14" width="3" height="12"/>
+    <rect x="24" y="11" width="3" height="3"/>
+    <rect x="21" y="14" width="3" height="12"/>
+    <rect x="24" y="26" width="3" height="3"/>
+    <rect x="45" y="26" width="3" height="3"/>
+    <rect x="42" y="29" width="6" height="3"/>
+    <rect x="30" y="32" width="12" height="3"/>
+    <rect x="24" y="8" width="6" height="3"/>
+  </g>
+
+  <!--
+    Wordmark pass order: deepest shadow first, mid shadow over that,
+    white fill on top. Letters are 7w x 9h with 1px kerning.
+
+    COLLAB = 6 * 7 + 5 * 1 = 47w.  Centered in 72w → pad 12 left, 13 right → start x=13.
+    PLANNER = 7 * 7 + 6 * 1 = 55w.  Centered in 72w → pad  8 left,  9 right → start x=9.
+
+    Two lines stacked with a 2px gap:
+      COLLAB  y=10..18
+      (gap)   y=19..20
+      PLANNER y=21..29
+
+    Centered vertically on a 40-tall canvas (10 top, 11 bottom), nested
+    firmly across the Venn's overlap lens.
+  -->
+
+  <!-- Deepest shadow: black, offset +2, +2 -->
+  <g fill="#000000">
+    <use href="#g_C" x="15" y="12"/>
+    <use href="#g_O" x="23" y="12"/>
+    <use href="#g_L" x="31" y="12"/>
+    <use href="#g_L" x="39" y="12"/>
+    <use href="#g_A" x="47" y="12"/>
+    <use href="#g_B" x="55" y="12"/>
+
+    <use href="#g_P" x="11" y="23"/>
+    <use href="#g_L" x="19" y="23"/>
+    <use href="#g_A" x="27" y="23"/>
+    <use href="#g_N" x="35" y="23"/>
+    <use href="#g_N" x="43" y="23"/>
+    <use href="#g_E" x="51" y="23"/>
+    <use href="#g_R" x="59" y="23"/>
+  </g>
+
+  <!-- Mid shadow: brand purple, offset +1, +1 -->
+  <g fill="#8956FB">
+    <use href="#g_C" x="14" y="11"/>
+    <use href="#g_O" x="22" y="11"/>
+    <use href="#g_L" x="30" y="11"/>
+    <use href="#g_L" x="38" y="11"/>
+    <use href="#g_A" x="46" y="11"/>
+    <use href="#g_B" x="54" y="11"/>
+
+    <use href="#g_P" x="10" y="22"/>
+    <use href="#g_L" x="18" y="22"/>
+    <use href="#g_A" x="26" y="22"/>
+    <use href="#g_N" x="34" y="22"/>
+    <use href="#g_N" x="42" y="22"/>
+    <use href="#g_E" x="50" y="22"/>
+    <use href="#g_R" x="58" y="22"/>
+  </g>
+
+  <!-- Main fill: white -->
+  <g fill="#ffffff">
+    <use href="#g_C" x="13" y="10"/>
+    <use href="#g_O" x="21" y="10"/>
+    <use href="#g_L" x="29" y="10"/>
+    <use href="#g_L" x="37" y="10"/>
+    <use href="#g_A" x="45" y="10"/>
+    <use href="#g_B" x="53" y="10"/>
+
+    <use href="#g_P" x="9" y="21"/>
+    <use href="#g_L" x="17" y="21"/>
+    <use href="#g_A" x="25" y="21"/>
+    <use href="#g_N" x="33" y="21"/>
+    <use href="#g_N" x="41" y="21"/>
+    <use href="#g_E" x="49" y="21"/>
+    <use href="#g_R" x="57" y="21"/>
   </g>
 </svg>

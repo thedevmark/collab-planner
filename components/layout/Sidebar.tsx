@@ -97,10 +97,10 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         "lg:translate-x-0",
       )}>
         <div className="flex items-center justify-between gap-2 p-4 border-b">
-          <div className="flex items-center gap-2">
-            <Twitch className="h-6 w-6 text-primary" />
-            <span className="font-bold text-sm leading-tight">Collab<br />Planner</span>
-          </div>
+          <Link href="/" className="flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="Collab Planner" width={144} height={80} style={{ imageRendering: "pixelated" }} />
+          </Link>
           {onClose && (
             <button
               onClick={onClose}
