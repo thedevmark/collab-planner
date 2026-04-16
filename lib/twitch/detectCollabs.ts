@@ -3,8 +3,7 @@ import { prisma } from "@/lib/db";
 export type CollabSource =
   | "confirmed_event"   // ground truth — completed event with both participants
   | "guest_star"        // Helix Guest Star session history (own channel only)
-  | "vod_title_mention" // @handle or name+keyword in a VOD title
-  | "stream_overlap";   // concurrent live windows (≥30min)
+  | "vod_title_mention"; // @handle or name+keyword in a VOD title
 
 export interface CollabPartner {
   partnerName: string;
@@ -17,16 +16,20 @@ export interface CollabPartner {
 
 /**
  * Keywords that strongly suggest a collaboration VOD when combined with a name mention.
- * A VOD title matching these patterns + a name is high confidence.
+ *
+ * Kept deliberately narrow: generic words like "with", "w/", "duo", "trio", "squad",
+ * "guest", "join", "together", and "hosted" produced massive false-positive rates
+ * because they appear in unrelated titles ("streaming with no mic", "squad grind",
+ * "guest character gameplay", "join the discord") and in standard BR/FPS game-mode
+ * names. The remaining keywords are unambiguous collab signals.
  */
 const COLLAB_KEYWORDS = [
-  "collab", "collaboration", "ft.", "feat.", "with ", " w/ ", " w/", "guest",
-  "duo", "trio", "squad", "together", "joined by", "join", "hosted",
-  "stream together", "co-stream", "co stream",
+  "collab", "collaboration", "ft.", "feat.", "featuring",
+  "co-stream", "co stream", "costream", "stream together",
 ];
 
-/** Minimum overlap window (ms) between two streams to count as a collab signal. */
-const MIN_OVERLAP_MS = 30 * 60 * 1000; // 30 minutes
+/** Minimum length of a friend's name to be matched by substring in a VOD title. */
+const MIN_NAME_MATCH_LEN = 4;
 
 /**
  * Parse @handle mentions from a VOD title.
@@ -45,6 +48,26 @@ function hasCollabKeyword(title: string): boolean {
   return COLLAB_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+/**
+ * Escape a string for safe use inside a RegExp.
+ */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Does `title` contain `name` as a whole word (word-boundary match), case-insensitive?
+ *
+ * We use `\b` on both sides so "ninja" does NOT match "ninjago" and "boyz" does NOT
+ * match "cowboyz". Names shorter than MIN_NAME_MATCH_LEN are rejected outright — they
+ * produce too many coincidental matches even with word boundaries.
+ */
+function containsNameAsWord(title: string, name: string): boolean {
+  if (!name || name.length < MIN_NAME_MATCH_LEN) return false;
+  const re = new RegExp(`\\b${escapeRegex(name)}\\b`, "i");
+  return re.test(title);
+}
+
 function isSelfReference(
   handleOrName: string,
   subject: { username: string; displayName: string },
@@ -61,15 +84,19 @@ function isSelfReference(
  *
  * Sources:
  *   1. `@handle` mentions in a VOD title → high confidence
- *   2. Another friend's name/login in a VOD title plus a collab keyword → high confidence
- *   3. Another friend streamed in an overlapping time window (≥30min) with the same game → high confidence
- *   4. Another friend streamed in an overlapping time window (≥30min) with a different game → medium confidence
+ *   2. Another friend's name/login appearing as a whole word in a VOD title
+ *      plus a collab keyword → high confidence
  *
- * Bare name-in-title matches WITHOUT a collab keyword are no longer persisted as signals —
- * they produced too many false positives from unrelated titles like "practicing w/ no mic".
+ * Bare name-in-title matches WITHOUT a collab keyword are not persisted as signals.
+ * Stream overlap (both streamers live at the same time) is NOT a signal — two people
+ * being live simultaneously doesn't mean they collaborated, and at peak hours this
+ * produced an overwhelming flood of false positives.
  *
- * Self-references are filtered out at every source so a streamer's own VODs don't produce
- * a signal of themselves as a collab partner.
+ * All non-ground-truth signals are cleared before re-detection so stale entries from
+ * earlier (looser) detection rules don't linger.
+ *
+ * Self-references are filtered out at every source so a streamer's own VODs don't
+ * produce a signal of themselves as a collab partner.
  */
 export async function detectCollabSignals(friendId: number): Promise<number> {
   const friend = await prisma.friend.findUnique({
@@ -80,6 +107,16 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
   });
 
   if (!friend) return 0;
+
+  // Wipe derived signals from earlier runs so renamed/removed friends and
+  // signals that no longer meet the current rules disappear on refresh.
+  // confirmed_event is ground truth from the events table — keep those.
+  await prisma.collabSignal.deleteMany({
+    where: {
+      friendId,
+      source: { not: "confirmed_event" },
+    },
+  });
 
   // All other active friends to cross-reference against
   const allFriends = await prisma.friend.findMany({
@@ -127,10 +164,12 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
     for (const other of allFriends) {
       if (isSelfReference(other.username, subject)) continue;
       if (isSelfReference(other.displayName, subject)) continue;
-      const lowerTitle = title.toLowerCase();
+      // Word-boundary match on both login and displayName. Names shorter than
+      // MIN_NAME_MATCH_LEN are rejected — even with \b they false-match too often
+      // (e.g. "Gbo" appearing as a user handle would match any 3-letter run).
       const matches =
-        lowerTitle.includes(other.username.toLowerCase()) ||
-        (other.displayName.length >= 3 && lowerTitle.includes(other.displayName.toLowerCase()));
+        containsNameAsWord(title, other.username) ||
+        containsNameAsWord(title, other.displayName);
       if (!matches) continue;
 
       const key = `mention|${other.username.toLowerCase()}|${detectedAt.toDateString()}`;
@@ -204,47 +243,11 @@ export async function detectCollabSignals(friendId: number): Promise<number> {
   // accepts "guest_star" as a valid source string, so plugging it in later
   // is a single function addition with no schema or display changes.
 
-  // ── Source 5 & 6: Stream overlap detection ──────────────────────────────
-  // The strongest non-title signal we can derive without API access to
-  // another channel: overlapping live windows between two friends, scored
-  // higher when they're playing the same game.
-  for (const myVod of friend.streamHistory) {
-    const myStart = myVod.startTime.getTime();
-    const myEnd = myVod.endTime.getTime();
-    if (myEnd - myStart < MIN_OVERLAP_MS) continue;
-
-    for (const other of allFriends) {
-      if (isSelfReference(other.username, subject)) continue;
-      if (isSelfReference(other.displayName, subject)) continue;
-
-      for (const theirVod of other.streamHistory) {
-        const theirStart = theirVod.startTime.getTime();
-        const theirEnd = theirVod.endTime.getTime();
-        const overlap = Math.min(myEnd, theirEnd) - Math.max(myStart, theirStart);
-        if (overlap < MIN_OVERLAP_MS) continue;
-
-        const sameGame =
-          myVod.gameId && theirVod.gameId && myVod.gameId === theirVod.gameId;
-        const detectedAt = new Date(Math.max(myStart, theirStart));
-        const key = `overlap|${other.username.toLowerCase()}|${detectedAt.toDateString()}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-
-        const evidence = sameGame
-          ? `Both streamed ${myVod.gameName} for ${Math.round(overlap / 60000)} min`
-          : `Overlapping streams for ${Math.round(overlap / 60000)} min`;
-
-        signals.push({
-          partnerName: other.displayName,
-          partnerLogin: other.username,
-          detectedAt,
-          source: "stream_overlap",
-          evidence,
-          confidence: sameGame ? "high" : "medium",
-        });
-      }
-    }
-  }
+  // NOTE: we deliberately do NOT use concurrent-stream overlap as a signal.
+  // Two streamers being live at the same time — even on the same game — is
+  // circumstantial at best; at peak hours it produced a flood of false
+  // positives (any popular streamer the user also watches would be flagged).
+  // A real collab is signaled by VOD titles, @mentions, or a completed event.
 
   // ── Persist signals ──────────────────────────────────────────────────────
   // Confidence ranking used to decide whether an update should overwrite an

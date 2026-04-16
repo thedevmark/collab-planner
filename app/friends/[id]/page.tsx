@@ -304,7 +304,13 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
                         {p.count}× detected · last {format(new Date(p.lastSeen), "MMM d, yyyy")}
                       </p>
                     </div>
-                    <span className="text-[10px] bg-muted px-1 rounded shrink-0">VOD</span>
+                    <span className="text-[10px] bg-muted px-1 rounded shrink-0">
+                      {(p.sources ?? []).includes("confirmed_event")
+                        ? "event"
+                        : (p.sources ?? []).includes("guest_star")
+                        ? "guest"
+                        : "VOD"}
+                    </span>
                   </div>
                 ))}
                 {collabPartners.length > 6 && (
