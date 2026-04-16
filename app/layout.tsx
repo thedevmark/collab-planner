@@ -9,11 +9,11 @@ export const metadata: Metadata = {
   description: "Plan stream collabs with your Twitch friends",
   icons: {
     icon: [
-      { url: "/collab-icon.svg", type: "image/svg+xml" },
+      { url: "/logo.svg", type: "image/svg+xml" },
       { url: "/favicon.ico", sizes: "any" },
     ],
-    shortcut: "/collab-icon.svg",
-    apple: "/collab-icon.svg",
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
   },
 };
 

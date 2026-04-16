@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, Twitch } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -30,7 +30,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex items-center gap-2">
-            <Twitch className="h-4 w-4 text-primary" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="" width={24} height={16} style={{ imageRendering: "pixelated" }} />
             <span className="font-bold text-sm">Collab Planner</span>
           </div>
         </header>
