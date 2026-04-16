@@ -2,6 +2,7 @@
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 function TwitchIcon({ className }: { className?: string }) {
   return (
@@ -19,11 +20,15 @@ function DiscordIcon({ className }: { className?: string }) {
   );
 }
 
-// Mock friend data for the UI preview
-const MOCK_FRIENDS = [
-  { initials: "KR", color: "#9147ff", name: "KiroStreams", handle: "kirostreams", window: "Tue 8 PM", live: true },
-  { initials: "NX", color: "#5865F2", name: "NexusPlays", handle: "nexusplays", window: "Tue 9 PM", live: false },
-  { initials: "SA", color: "#e0af68", name: "SilverArc", handle: "silverarc_tv", window: "Wed 7 PM", live: false },
+// Rotating pool of mock Discord friend handles — one is picked at random per page load
+// so the hero demo feels alive and name-checks real streamers in Mark's orbit.
+const ROTATING_DM_FRIENDS = [
+  { name: "thedeutschmark", handle: "thedeutschmark", initials: "TD" },
+  { name: "a1exzandra",     handle: "a1exzandra",     initials: "A1" },
+  { name: "OOKVOID",        handle: "ookvoid",        initials: "OV" },
+  { name: "DANGERDORK",     handle: "dangerdork",     initials: "DD" },
+  { name: "Koryzma",        handle: "koryzma",        initials: "KZ" },
+  { name: "aerisoncam",     handle: "aerisoncam",     initials: "AC" },
 ];
 
 // Mock "Best windows" data — mirrors the real FindTimeView output shape
@@ -34,14 +39,14 @@ const MOCK_SLOTS = [
 ];
 
 // Single DM bubble for the Discord loop mock
-function DMLine({ who, color, time, muted, children }: {
-  who: "kirostreams" | "you";
+function DMLine({ who, initials, color, time, muted, children }: {
+  who: string;
+  initials: string;
   color: string;
   time: string;
   muted?: boolean;
   children: React.ReactNode;
 }) {
-  const initials = who === "you" ? "ME" : "KR";
   return (
     <div className="flex gap-2.5">
       <div
@@ -64,6 +69,23 @@ function DMLine({ who, color, time, muted, children }: {
 }
 
 export default function LoginPage() {
+  // Pick a random DM-demo friend after hydration. Initial state matches SSR (first entry)
+  // so there's no hydration mismatch; the randomization happens on the client after mount.
+  const [dmFriend, setDmFriend] = useState(ROTATING_DM_FRIENDS[0]);
+  useEffect(() => {
+    setDmFriend(
+      ROTATING_DM_FRIENDS[Math.floor(Math.random() * ROTATING_DM_FRIENDS.length)]
+    );
+  }, []);
+
+  // The rotating friend slots into the first (purple) row of the overlap card too,
+  // so every visible reference to the DM partner stays in sync.
+  const MOCK_FRIENDS = [
+    { ...dmFriend, color: "#9147ff", window: "Tue 8 PM", live: true },
+    { initials: "NX", color: "#5865F2", name: "NexusPlays", handle: "nexusplays", window: "Tue 9 PM", live: false },
+    { initials: "SA", color: "#e0af68", name: "SilverArc", handle: "silverarc_tv", window: "Wed 7 PM", live: false },
+  ];
+
   async function loginWithTwitch() {
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signInWithOAuth({
@@ -96,8 +118,9 @@ export default function LoginPage() {
       {/* Hero */}
       <main className="flex-1 flex flex-col items-center text-center px-6 pt-16 pb-12 relative">
 
-        {/* Background glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-[#9147ff]/8 rounded-full blur-[100px] pointer-events-none" />
+        {/* Background glow — purple + teal, matches the logo rings */}
+        <div className="absolute top-0 left-[15%] w-[480px] h-[260px] bg-[#7c3aed]/[0.07] rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-8 right-[15%] w-[480px] h-[260px] bg-[#14b8a6]/[0.05] rounded-full blur-[120px] pointer-events-none" />
 
         <div className="relative max-w-2xl mx-auto space-y-6">
 
@@ -107,14 +130,14 @@ export default function LoginPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
             </span>
-            <span className="font-mono">free &amp; open</span>
+            <span>free &amp; open</span>
           </div>
 
           {/* Headline */}
           <div className="space-y-4">
             <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight leading-[1.05] text-white">
               Stop scheduling<br />
-              <span className="text-[#9147ff]">collabs over DMs.</span>
+              <span className="bg-gradient-to-r from-[#a78bfa] to-[#5eead4] bg-clip-text text-transparent">collabs over DMs.</span>
             </h1>
             <p className="text-base text-zinc-400 leading-relaxed max-w-md mx-auto">
               It looks at when everyone actually streams, finds the overlap,
@@ -126,12 +149,12 @@ export default function LoginPage() {
           <div className="flex flex-col items-center gap-2.5">
             <button
               onClick={loginWithTwitch}
-              className="inline-flex items-center gap-3 bg-[#9147ff] hover:bg-[#7d2ff7] active:scale-[0.98] text-white font-bold py-3.5 px-7 rounded-xl transition-all duration-150 shadow-[0_0_30px_rgba(145,71,255,0.3)] hover:shadow-[0_0_50px_rgba(145,71,255,0.45)] text-sm"
+              className="inline-flex items-center gap-3 bg-[#9147ff] hover:bg-[#7d2ff7] active:scale-[0.98] text-white font-bold py-3.5 px-7 rounded-xl transition-all duration-150 shadow-[0_0_24px_rgba(145,71,255,0.22)] hover:shadow-[0_0_36px_rgba(145,71,255,0.32)] text-sm"
             >
               <TwitchIcon className="h-4 w-4" />
               Connect with Twitch — it&apos;s free
             </button>
-            <p className="text-[11px] font-mono text-zinc-600">
+            <p className="text-[11.5px] text-zinc-500">
               just your twitch login · nothing to install
             </p>
           </div>
@@ -148,7 +171,7 @@ export default function LoginPage() {
           ].map((pill) => (
             <span
               key={pill}
-              className="px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/60 text-[11px] font-mono text-zinc-500"
+              className="px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/60 text-[11.5px] text-zinc-400"
             >
               {pill}
             </span>
@@ -165,30 +188,30 @@ export default function LoginPage() {
             {/* Discord-style channel header */}
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-black/40 bg-[#2b2d31]">
               <DiscordIcon className="w-4 h-4 text-[#5865f2]" />
-              <span className="text-[11px] font-semibold text-zinc-200">@kirostreams</span>
-              <span className="ml-auto text-[10px] font-mono text-zinc-500">direct message</span>
+              <span className="text-[11px] font-semibold text-zinc-200">@{dmFriend.handle}</span>
+              <span className="ml-auto text-[10.5px] text-zinc-500">direct message</span>
             </div>
 
             <div className="px-4 py-3 space-y-3">
-              <DMLine who="kirostreams" color="#c4b5fd" time="Mon 8:42 PM">
+              <DMLine who={dmFriend.name} initials={dmFriend.initials} color="#c4b5fd" time="Mon 8:42 PM">
                 hey wanna plan a stream together soon?
               </DMLine>
-              <DMLine who="you" color="#5eead4" time="Mon 8:43 PM">
+              <DMLine who="you" initials="ME" color="#5eead4" time="Mon 8:43 PM">
                 sure when?
               </DMLine>
-              <DMLine who="kirostreams" color="#c4b5fd" time="Mon 8:43 PM">
+              <DMLine who={dmFriend.name} initials={dmFriend.initials} color="#c4b5fd" time="Mon 8:43 PM">
                 idk — when can you? and what game?
               </DMLine>
-              <DMLine who="you" color="#5eead4" time="Mon 8:44 PM">
+              <DMLine who="you" initials="ME" color="#5eead4" time="Mon 8:44 PM">
                 idk 😅 you don&apos;t post your schedule either
               </DMLine>
-              <DMLine who="kirostreams" color="#c4b5fd" time="Mon 8:45 PM" muted>
+              <DMLine who={dmFriend.name} initials={dmFriend.initials} color="#c4b5fd" time="Mon 8:45 PM" muted>
                 lol let&apos;s figure it out later
               </DMLine>
             </div>
 
             {/* Fake DM footer */}
-            <div className="px-4 py-2 bg-[#383a40] border-t border-black/30 text-[10.5px] text-zinc-500 italic">
+            <div className="px-4 py-2 bg-[#383a40] border-t border-black/30 text-[11px] text-zinc-500 italic">
               later = never
             </div>
           </div>
@@ -207,20 +230,20 @@ export default function LoginPage() {
             </svg>
           </div>
 
-          {/* RIGHT — Find Time / overlap calendar (the fix) */}
-          <div className="rounded-2xl border border-[#9147ff]/25 bg-zinc-950 overflow-hidden shadow-[0_0_50px_rgba(145,71,255,0.2)]">
+          {/* RIGHT — Find Time / overlap calendar (the fix). Teal-accented: this is "our tool" side. */}
+          <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950 overflow-hidden shadow-[0_0_50px_rgba(20,184,166,0.12),0_0_40px_rgba(124,58,237,0.08)]">
             {/* Header */}
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-zinc-800/80 bg-zinc-900/40">
-              <svg className="w-3.5 h-3.5 text-[#9147ff]" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-[#14b8a6]" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
               </svg>
-              <span className="text-[11px] font-semibold text-zinc-200">Best windows</span>
-              <span className="ml-auto px-1.5 py-0.5 rounded bg-zinc-800 text-[9px] font-mono text-zinc-500">America/New_York</span>
+              <span className="text-[11.5px] font-semibold text-zinc-200">Best windows</span>
+              <span className="ml-auto px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-500">America/New_York</span>
             </div>
 
             {/* Participants row */}
             <div className="flex items-center flex-wrap gap-1.5 px-4 py-2.5 border-b border-zinc-800/60">
-              <span className="text-[10px] font-mono text-zinc-600 mr-1">with</span>
+              <span className="text-[10.5px] text-zinc-600 mr-1">with</span>
               {MOCK_FRIENDS.map((f) => (
                 <div
                   key={f.handle}
@@ -232,7 +255,7 @@ export default function LoginPage() {
                   >
                     {f.initials}
                   </span>
-                  <span className="text-[10px] font-medium text-zinc-400">{f.name}</span>
+                  <span className="text-[10.5px] font-medium text-zinc-400">{f.name}</span>
                 </div>
               ))}
             </div>
@@ -244,11 +267,11 @@ export default function LoginPage() {
                   key={s.when}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border ${
                     i === 0
-                      ? "border-[#9147ff]/30 bg-[#9147ff]/[0.08]"
+                      ? "border-[#14b8a6]/30 bg-[#14b8a6]/[0.07]"
                       : "border-zinc-800/60"
                   }`}
                 >
-                  <span className={`text-xs font-mono font-bold w-5 text-right ${i === 0 ? "text-[#9147ff]" : "text-zinc-500"}`}>
+                  <span className={`text-xs font-bold w-5 text-right ${i === 0 ? "text-[#14b8a6]" : "text-zinc-500"}`}>
                     #{i + 1}
                   </span>
                   <div className="flex-1 min-w-0">
@@ -257,9 +280,9 @@ export default function LoginPage() {
                         {s.when}
                       </span>
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                        className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider ${
                           i === 0
-                            ? "bg-emerald-500/15 text-emerald-400"
+                            ? "bg-[#14b8a6]/15 text-[#5eead4]"
                             : "bg-zinc-800 text-zinc-400"
                         }`}
                       >
@@ -270,7 +293,7 @@ export default function LoginPage() {
                       {MOCK_FRIENDS.map((f, fi) => (
                         <span
                           key={f.handle}
-                          className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[9px] font-mono text-zinc-500"
+                          className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[9.5px] text-zinc-500"
                         >
                           {f.initials} {s.scores[fi]}%
                         </span>
@@ -278,7 +301,7 @@ export default function LoginPage() {
                     </div>
                   </div>
                   {i === 0 && (
-                    <button className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-[#9147ff] text-white hover:bg-[#7d2ff7] transition-colors">
+                    <button className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-[#14b8a6] text-white hover:bg-[#0d9488] transition-colors">
                       Plan this
                     </button>
                   )}
@@ -291,10 +314,10 @@ export default function LoginPage() {
               <svg className="w-3 h-3 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
-              <span className="text-[10px] font-mono text-zinc-500 truncate">
+              <span className="text-[10.5px] text-zinc-500 truncate">
                 collab.deutschmark.online/invite/<span className="text-zinc-300">tue-8pm-eldenring</span>
               </span>
-              <span className="ml-auto shrink-0 px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-[9px] font-mono text-zinc-400">
+              <span className="ml-auto shrink-0 px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-[10px] text-zinc-400">
                 copy
               </span>
             </div>
@@ -302,7 +325,7 @@ export default function LoginPage() {
         </div>
 
         {/* Caption under the split */}
-        <p className="mt-6 text-center text-[11px] font-mono text-zinc-600">
+        <p className="mt-6 text-center text-[11.5px] text-zinc-600">
           same two streamers · no more guesswork
         </p>
       </section>
@@ -332,7 +355,7 @@ export default function LoginPage() {
               key={step}
               className="bg-zinc-950 px-7 py-8 space-y-3 group"
             >
-              <span className={`text-xs font-mono font-bold ${accent ? "text-[#9147ff]" : "text-zinc-600"}`}>
+              <span className={`text-xs font-bold tracking-wider ${accent ? "text-[#14b8a6]" : "text-zinc-600"}`}>
                 {step}
               </span>
               <h3 className="font-semibold text-white text-sm leading-snug">{title}</h3>
@@ -345,7 +368,7 @@ export default function LoginPage() {
       {/* Smart Links */}
       <section className="max-w-5xl mx-auto w-full px-6 pb-20">
         <div className="text-center mb-10">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 font-mono mb-5">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 mb-5">
             smart collab links
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
@@ -407,7 +430,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <p className="text-xs font-semibold text-zinc-200">3 accepted</p>
-                <p className="text-[11px] font-mono text-zinc-600">collab.deutschmark.online/invite/abc123</p>
+                <p className="text-[11.5px] text-zinc-500">collab.deutschmark.online/invite/abc123</p>
               </div>
             </div>
             <div className="sm:ml-auto flex items-center gap-2">
@@ -432,7 +455,7 @@ export default function LoginPage() {
         </div>
         <button
           onClick={loginWithTwitch}
-          className="inline-flex items-center gap-3 bg-[#9147ff] hover:bg-[#7d2ff7] active:scale-[0.98] text-white font-bold py-3.5 px-7 rounded-xl transition-all duration-150 shadow-[0_0_30px_rgba(145,71,255,0.3)] text-sm"
+          className="inline-flex items-center gap-3 bg-[#9147ff] hover:bg-[#7d2ff7] active:scale-[0.98] text-white font-bold py-3.5 px-7 rounded-xl transition-all duration-150 shadow-[0_0_24px_rgba(145,71,255,0.22)] text-sm"
         >
           <TwitchIcon className="h-4 w-4" />
           Get started free
@@ -453,7 +476,7 @@ export default function LoginPage() {
       {/* Footer */}
       <footer className="border-t border-zinc-800/50 py-5 px-6">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-700">
-          <span className="font-mono">© {new Date().getFullYear()} collab.deutschmark.online</span>
+          <span>© {new Date().getFullYear()} collab.deutschmark.online</span>
           <div className="flex items-center gap-5">
             <Link href="/privacy" className="hover:text-zinc-400 transition-colors">Privacy</Link>
             <Link href="/terms" className="hover:text-zinc-400 transition-colors">Terms</Link>
