@@ -26,6 +26,43 @@ const MOCK_FRIENDS = [
   { initials: "SA", color: "#e0af68", name: "SilverArc", handle: "silverarc_tv", window: "Wed 7 PM", live: false },
 ];
 
+// Mock "Best windows" data — mirrors the real FindTimeView output shape
+const MOCK_SLOTS = [
+  { when: "Tue · 8–10 PM", match: 92, scores: [95, 88, 92] },
+  { when: "Wed · 9–11 PM", match: 84, scores: [78, 90, 85] },
+  { when: "Sat · 7–9 PM",  match: 76, scores: [72, 75, 82] },
+];
+
+// Single DM bubble for the Discord loop mock
+function DMLine({ who, color, time, muted, children }: {
+  who: "kirostreams" | "you";
+  color: string;
+  time: string;
+  muted?: boolean;
+  children: React.ReactNode;
+}) {
+  const initials = who === "you" ? "ME" : "KR";
+  return (
+    <div className="flex gap-2.5">
+      <div
+        className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+        style={{ backgroundColor: color + "25", color }}
+      >
+        {initials}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2">
+          <span className="text-[12px] font-semibold" style={{ color }}>{who}</span>
+          <span className="text-[9.5px] text-zinc-500">{time}</span>
+        </div>
+        <p className={`text-[12.5px] leading-snug mt-0.5 ${muted ? "text-zinc-400 italic" : "text-zinc-200"}`}>
+          {children}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function LoginPage() {
   async function loginWithTwitch() {
     const supabase = createSupabaseBrowserClient();
@@ -119,76 +156,155 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* UI Preview */}
-      <section className="px-6 pb-16 max-w-2xl mx-auto w-full">
-        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950 overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.6)]">
+      {/* Hero demo: the DM death loop → overlap calendar */}
+      <section className="px-4 sm:px-6 pb-16 max-w-5xl mx-auto w-full">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-5 md:gap-4 items-center">
 
-          {/* Fake window chrome */}
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800/80 bg-zinc-900/60">
-            <div className="flex gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-zinc-700" />
-              <div className="w-3 h-3 rounded-full bg-zinc-700" />
-              <div className="w-3 h-3 rounded-full bg-zinc-700" />
+          {/* LEFT — Discord DM loop (the pain) */}
+          <div className="rounded-2xl border border-zinc-800/80 bg-[#313338] overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+            {/* Discord-style channel header */}
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-black/40 bg-[#2b2d31]">
+              <DiscordIcon className="w-4 h-4 text-[#5865f2]" />
+              <span className="text-[11px] font-semibold text-zinc-200">@kirostreams</span>
+              <span className="ml-auto text-[10px] font-mono text-zinc-500">direct message</span>
             </div>
-            <div className="flex-1 flex justify-center">
-              <span className="text-[11px] font-mono text-zinc-600">collab.deutschmark.online/friends</span>
+
+            <div className="px-4 py-3 space-y-3">
+              <DMLine who="kirostreams" color="#c4b5fd" time="Mon 8:42 PM">
+                hey wanna plan a stream together soon?
+              </DMLine>
+              <DMLine who="you" color="#5eead4" time="Mon 8:43 PM">
+                sure when?
+              </DMLine>
+              <DMLine who="kirostreams" color="#c4b5fd" time="Mon 8:43 PM">
+                idk — when can you? and what game?
+              </DMLine>
+              <DMLine who="you" color="#5eead4" time="Mon 8:44 PM">
+                idk 😅 you don&apos;t post your schedule either
+              </DMLine>
+              <DMLine who="kirostreams" color="#c4b5fd" time="Mon 8:45 PM" muted>
+                lol let&apos;s figure it out later
+              </DMLine>
+            </div>
+
+            {/* Fake DM footer */}
+            <div className="px-4 py-2 bg-[#383a40] border-t border-black/30 text-[10.5px] text-zinc-500 italic">
+              later = never
             </div>
           </div>
 
-          {/* App preview content */}
-          <div className="p-5 space-y-3">
+          {/* ARROW */}
+          <div className="flex justify-center items-center text-zinc-600 md:text-zinc-500 py-1 md:py-0">
+            <svg
+              className="w-9 h-9 md:w-10 md:h-10 rotate-90 md:rotate-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              aria-hidden
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7m0 0l-7 7m7-7H4" />
+            </svg>
+          </div>
 
-            {/* Section label */}
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Your Crew</span>
-              <span className="text-[11px] font-mono text-zinc-600">3 tracked</span>
+          {/* RIGHT — Find Time / overlap calendar (the fix) */}
+          <div className="rounded-2xl border border-[#9147ff]/25 bg-zinc-950 overflow-hidden shadow-[0_0_50px_rgba(145,71,255,0.2)]">
+            {/* Header */}
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-zinc-800/80 bg-zinc-900/40">
+              <svg className="w-3.5 h-3.5 text-[#9147ff]" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+              <span className="text-[11px] font-semibold text-zinc-200">Best windows</span>
+              <span className="ml-auto px-1.5 py-0.5 rounded bg-zinc-800 text-[9px] font-mono text-zinc-500">America/New_York</span>
             </div>
 
-            {/* Friend rows */}
-            {MOCK_FRIENDS.map((f) => (
-              <div key={f.handle} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/60">
+            {/* Participants row */}
+            <div className="flex items-center flex-wrap gap-1.5 px-4 py-2.5 border-b border-zinc-800/60">
+              <span className="text-[10px] font-mono text-zinc-600 mr-1">with</span>
+              {MOCK_FRIENDS.map((f) => (
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
-                  style={{ backgroundColor: f.color + "26", border: `1px solid ${f.color}40` }}
+                  key={f.handle}
+                  className="flex items-center gap-1.5 pl-0.5 pr-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800"
                 >
-                  <span style={{ color: f.color }}>{f.initials}</span>
+                  <span
+                    className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold"
+                    style={{ backgroundColor: f.color + "30", color: f.color }}
+                  >
+                    {f.initials}
+                  </span>
+                  <span className="text-[10px] font-medium text-zinc-400">{f.name}</span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-zinc-200">{f.name}</span>
-                    {f.live && (
-                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/25 text-[9px] font-bold text-red-400 uppercase tracking-wider">
-                        <span className="w-1 h-1 rounded-full bg-red-500" />
-                        Live
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[11px] font-mono text-zinc-600">@{f.handle}</span>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="text-[11px] font-mono text-zinc-500">next window</div>
-                  <div className="text-xs font-semibold text-[#9147ff]">{f.window}</div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
-            {/* Best window callout */}
-            <div className="mt-1 flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[#9147ff]/20 bg-[#9147ff]/5">
-              <div className="w-7 h-7 rounded-lg bg-[#9147ff]/15 flex items-center justify-center shrink-0">
-                <svg className="w-3.5 h-3.5 text-[#9147ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-zinc-200">Best collab window</div>
-                <div className="text-[11px] font-mono text-zinc-500">Tuesday · 8–10 PM ET · 3 of 3 available</div>
-              </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#9147ff]/15 text-[#9147ff] border border-[#9147ff]/25 shrink-0">
-                schedule it
+            {/* Ranked slots */}
+            <div className="p-3 space-y-2">
+              {MOCK_SLOTS.map((s, i) => (
+                <div
+                  key={s.when}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border ${
+                    i === 0
+                      ? "border-[#9147ff]/30 bg-[#9147ff]/[0.08]"
+                      : "border-zinc-800/60"
+                  }`}
+                >
+                  <span className={`text-xs font-mono font-bold w-5 text-right ${i === 0 ? "text-[#9147ff]" : "text-zinc-500"}`}>
+                    #{i + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-xs font-semibold ${i === 0 ? "text-zinc-100" : "text-zinc-300"}`}>
+                        {s.when}
+                      </span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                          i === 0
+                            ? "bg-emerald-500/15 text-emerald-400"
+                            : "bg-zinc-800 text-zinc-400"
+                        }`}
+                      >
+                        {s.match}% match
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                      {MOCK_FRIENDS.map((f, fi) => (
+                        <span
+                          key={f.handle}
+                          className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[9px] font-mono text-zinc-500"
+                        >
+                          {f.initials} {s.scores[fi]}%
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {i === 0 && (
+                    <button className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-[#9147ff] text-white hover:bg-[#7d2ff7] transition-colors">
+                      Plan this
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Smart invite link footer */}
+            <div className="flex items-center gap-2 px-4 py-2.5 border-t border-zinc-800/60 bg-zinc-900/30">
+              <svg className="w-3 h-3 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              <span className="text-[10px] font-mono text-zinc-500 truncate">
+                collab.deutschmark.online/invite/<span className="text-zinc-300">tue-8pm-eldenring</span>
+              </span>
+              <span className="ml-auto shrink-0 px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-[9px] font-mono text-zinc-400">
+                copy
               </span>
             </div>
           </div>
         </div>
+
+        {/* Caption under the split */}
+        <p className="mt-6 text-center text-[11px] font-mono text-zinc-600">
+          same two streamers · no more guesswork
+        </p>
       </section>
 
       {/* How it works */}
