@@ -7,14 +7,8 @@ import { headers } from "next/headers";
 export const metadata: Metadata = {
   title: "Collab Planner",
   description: "Plan stream collabs with your Twitch friends",
-  icons: {
-    icon: [
-      { url: "/logo.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico", sizes: "any" },
-    ],
-    shortcut: "/logo.svg",
-    apple: "/logo.svg",
-  },
+  // Favicons are auto-registered from app/icon.svg and app/favicon.ico
+  // (Venn-only, readable at 16/32/48px). /logo.svg is the wordmark for in-app use.
 };
 
 export default async function RootLayout({

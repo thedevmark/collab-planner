@@ -1,49 +1,106 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 12" shape-rendering="crispEdges">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 54 27" shape-rendering="crispEdges">
   <!--
-    Pixel-art Venn: two overlapping 10x10 rings, interlocked like chain links.
-    Left ring: Twitch purple #8956FB
-    Right ring: teal #14b8a6
-    Interlock: teal crosses over at the top, purple crosses over at the bottom,
-    giving the rings a threaded/infinity feel at the intersection.
+    Pixel-art wordmark: "COLLAB PLANNER" in white 3x5 letters above a
+    2x-scaled Venn. Letters 3 wide, 5 tall, 1px kerning, +2px gap for the
+    word space. Text: 53px wide, starts at x=0. Venn: 32px wide, centered
+    at x=11. Total canvas 54x27, ratio 2:1.
+    Every glyph is rectangles — no embedded font.
   -->
 
-  <!-- ── LEFT RING (purple) ──────────────────────────────────── -->
-  <g fill="#8956FB">
-    <!-- top arc -->
-    <rect x="4" y="1" width="4" height="1"/>
-    <rect x="2" y="2" width="2" height="1"/>
-    <rect x="2" y="3" width="1" height="1"/>
-    <!-- left side -->
-    <rect x="1" y="4" width="1" height="4"/>
-    <!-- right arc (passes through lens) -->
-    <rect x="9" y="3" width="1" height="1"/>
-    <rect x="10" y="4" width="1" height="4"/>
-    <rect x="9" y="8" width="1" height="1"/>
-    <!-- bottom arc -->
-    <rect x="2" y="8" width="1" height="1"/>
-    <rect x="2" y="9" width="2" height="1"/>
-    <rect x="4" y="10" width="4" height="1"/>
-    <!-- bottom interlock: purple sits on top of teal here -->
-    <rect x="8" y="9" width="2" height="1"/>
+  <!-- ── WORDMARK (white) ───────────────────────────────────── -->
+  <g fill="#ffffff">
+    <!-- C @ x=0 -->
+    <rect x="0" y="0" width="3" height="1"/>
+    <rect x="0" y="1" width="1" height="3"/>
+    <rect x="0" y="4" width="3" height="1"/>
+    <!-- O @ x=4 -->
+    <rect x="4" y="0" width="3" height="1"/>
+    <rect x="4" y="1" width="1" height="3"/>
+    <rect x="6" y="1" width="1" height="3"/>
+    <rect x="4" y="4" width="3" height="1"/>
+    <!-- L @ x=8 -->
+    <rect x="8" y="0" width="1" height="5"/>
+    <rect x="9" y="4" width="2" height="1"/>
+    <!-- L @ x=12 -->
+    <rect x="12" y="0" width="1" height="5"/>
+    <rect x="13" y="4" width="2" height="1"/>
+    <!-- A @ x=16 -->
+    <rect x="17" y="0" width="1" height="1"/>
+    <rect x="16" y="1" width="1" height="4"/>
+    <rect x="18" y="1" width="1" height="4"/>
+    <rect x="16" y="2" width="3" height="1"/>
+    <!-- B @ x=20 -->
+    <rect x="20" y="0" width="1" height="5"/>
+    <rect x="21" y="0" width="1" height="1"/>
+    <rect x="22" y="1" width="1" height="1"/>
+    <rect x="21" y="2" width="1" height="1"/>
+    <rect x="22" y="3" width="1" height="1"/>
+    <rect x="21" y="4" width="1" height="1"/>
+    <!-- (space: 2px extra gap at x=23..25) -->
+    <!-- P @ x=26 -->
+    <rect x="26" y="0" width="1" height="5"/>
+    <rect x="27" y="0" width="1" height="1"/>
+    <rect x="28" y="1" width="1" height="1"/>
+    <rect x="27" y="2" width="1" height="1"/>
+    <!-- L @ x=30 -->
+    <rect x="30" y="0" width="1" height="5"/>
+    <rect x="31" y="4" width="2" height="1"/>
+    <!-- A @ x=34 -->
+    <rect x="35" y="0" width="1" height="1"/>
+    <rect x="34" y="1" width="1" height="4"/>
+    <rect x="36" y="1" width="1" height="4"/>
+    <rect x="34" y="2" width="3" height="1"/>
+    <!-- N @ x=38 -->
+    <rect x="38" y="0" width="1" height="5"/>
+    <rect x="40" y="0" width="1" height="5"/>
+    <rect x="39" y="1" width="1" height="1"/>
+    <!-- N @ x=42 -->
+    <rect x="42" y="0" width="1" height="5"/>
+    <rect x="44" y="0" width="1" height="5"/>
+    <rect x="43" y="1" width="1" height="1"/>
+    <!-- E @ x=46 -->
+    <rect x="46" y="0" width="3" height="1"/>
+    <rect x="46" y="1" width="1" height="3"/>
+    <rect x="47" y="2" width="1" height="1"/>
+    <rect x="46" y="4" width="3" height="1"/>
+    <!-- R @ x=50 -->
+    <rect x="50" y="0" width="1" height="5"/>
+    <rect x="51" y="0" width="1" height="1"/>
+    <rect x="52" y="1" width="1" height="1"/>
+    <rect x="51" y="2" width="1" height="1"/>
+    <rect x="52" y="3" width="1" height="1"/>
+    <rect x="52" y="4" width="1" height="1"/>
   </g>
 
-  <!-- ── RIGHT RING (teal) ───────────────────────────────────── -->
+  <!-- ── LEFT RING (purple, 2x scale, offset +11,+7) ───────── -->
+  <g fill="#8956FB">
+    <rect x="17" y="7" width="8" height="2"/>
+    <rect x="13" y="9" width="4" height="2"/>
+    <rect x="13" y="11" width="2" height="2"/>
+    <rect x="11" y="13" width="2" height="8"/>
+    <rect x="27" y="11" width="2" height="2"/>
+    <rect x="29" y="13" width="2" height="8"/>
+    <rect x="27" y="21" width="2" height="2"/>
+    <rect x="13" y="21" width="2" height="2"/>
+    <rect x="13" y="23" width="4" height="2"/>
+    <rect x="17" y="25" width="8" height="2"/>
+    <!-- bottom interlock: purple sits on top of teal here -->
+    <rect x="25" y="23" width="4" height="2"/>
+  </g>
+
+  <!-- ── RIGHT RING (teal, 2x scale, offset +11,+7) ────────── -->
   <g fill="#14b8a6">
-    <!-- top arc -->
-    <rect x="10" y="1" width="4" height="1"/>
-    <rect x="14" y="2" width="2" height="1"/>
-    <rect x="15" y="3" width="1" height="1"/>
-    <!-- right side -->
-    <rect x="16" y="4" width="1" height="4"/>
-    <!-- left arc (passes through lens) -->
-    <rect x="8" y="3" width="1" height="1"/>
-    <rect x="7" y="4" width="1" height="4"/>
-    <rect x="8" y="8" width="1" height="1"/>
-    <!-- bottom arc -->
-    <rect x="15" y="8" width="1" height="1"/>
-    <rect x="14" y="9" width="2" height="1"/>
-    <rect x="10" y="10" width="4" height="1"/>
+    <rect x="29" y="7" width="8" height="2"/>
+    <rect x="37" y="9" width="4" height="2"/>
+    <rect x="39" y="11" width="2" height="2"/>
+    <rect x="41" y="13" width="2" height="8"/>
+    <rect x="25" y="11" width="2" height="2"/>
+    <rect x="23" y="13" width="2" height="8"/>
+    <rect x="25" y="21" width="2" height="2"/>
+    <rect x="39" y="21" width="2" height="2"/>
+    <rect x="37" y="23" width="4" height="2"/>
+    <rect x="29" y="25" width="8" height="2"/>
     <!-- top interlock: teal sits on top of purple here -->
-    <rect x="8" y="2" width="2" height="1"/>
+    <rect x="25" y="9" width="4" height="2"/>
   </g>
 </svg>

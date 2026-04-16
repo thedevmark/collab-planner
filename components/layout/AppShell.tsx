@@ -29,10 +29,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="" width={36} height={24} style={{ imageRendering: "pixelated" }} />
-            <span className="font-bold text-sm">Collab Planner</span>
+            <img src="/logo.svg" alt="Collab Planner" width={90} height={45} style={{ imageRendering: "pixelated" }} />
           </div>
         </header>
 

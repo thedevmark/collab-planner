@@ -43,10 +43,9 @@ export default function LoginPage() {
 
       {/* Nav */}
       <header className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto w-full">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="" width={45} height={30} style={{ imageRendering: "pixelated" }} />
-          <span className="font-bold text-sm text-zinc-200 tracking-tight">Collab Planner</span>
+          <img src="/logo.svg" alt="Collab Planner" width={108} height={54} style={{ imageRendering: "pixelated" }} />
         </div>
         <button
           onClick={loginWithTwitch}

@@ -16,10 +16,9 @@ export default function PrivacyPage() {
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-zinc-800/60 bg-[#09030f]/90 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href={APP_URL} className="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 transition-colors">
+          <Link href={APP_URL} className="flex items-center text-zinc-400 hover:text-zinc-100 transition-colors">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="" width={45} height={30} style={{ imageRendering: "pixelated" }} />
-            <span className="text-sm font-semibold text-zinc-200">Collab Planner</span>
+            <img src="/logo.svg" alt="Collab Planner" width={108} height={54} style={{ imageRendering: "pixelated" }} />
           </Link>
           <nav className="flex items-center gap-4 text-xs text-zinc-500">
             <span className="text-zinc-300 font-medium">Privacy Policy</span>
@@ -201,8 +200,7 @@ export default function PrivacyPage() {
         <div className="max-w-3xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-zinc-500 text-sm">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="" width={36} height={24} style={{ imageRendering: "pixelated" }} />
-            <span>Collab Planner</span>
+            <img src="/logo.svg" alt="Collab Planner" width={72} height={36} style={{ imageRendering: "pixelated" }} />
             <span className="text-zinc-700">·</span>
             <span>{new Date().getFullYear()}</span>
           </div>
