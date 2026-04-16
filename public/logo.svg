@@ -3,7 +3,7 @@
     Minimalist wordmark, 72x40 canvas.
 
     Mark = two interlocking rings (chain-link / Olympic illusion).
-    Intersections at (14, 13.07) and (14, 26.93). Render order:
+    Intersections at (14, 11.94) and (14, 28.06). Render order:
       1. purple ring (full)
       2. teal ring (full) — currently covers purple at BOTH crossings
       3. short purple arc over TOP crossing only
@@ -16,11 +16,11 @@
   -->
 
   <defs>
-    <linearGradient id="lg-purple" x1="0" y1="12" x2="0" y2="28" gradientUnits="userSpaceOnUse">
+    <linearGradient id="lg-purple" x1="0" y1="11" x2="0" y2="29" gradientUnits="userSpaceOnUse">
       <stop offset="0%"  stop-color="#c4b5fd"/>
       <stop offset="100%" stop-color="#7c3aed"/>
     </linearGradient>
-    <linearGradient id="lg-teal" x1="0" y1="12" x2="0" y2="28" gradientUnits="userSpaceOnUse">
+    <linearGradient id="lg-teal" x1="0" y1="11" x2="0" y2="29" gradientUnits="userSpaceOnUse">
       <stop offset="0%"  stop-color="#5eead4"/>
       <stop offset="100%" stop-color="#0d9488"/>
     </linearGradient>
@@ -29,14 +29,14 @@
     </filter>
   </defs>
 
-  <!-- Interlocking rings — thin delicate stroke (1.75 on r=8) matching the
-       original sleek aesthetic. Round linecaps on every stroke end so the
-       weave overlay blends seamlessly with the ring it sits on. -->
+  <!-- Interlocking rings — r=9 (slightly larger mark while text stays put).
+       Stroke held at 1.75 so the lines don't read as heavier, only bigger.
+       Round linecaps so the weave overlay blends seamlessly with ring 1. -->
   <g fill="none" stroke-width="1.75" stroke-linecap="round">
-    <circle cx="10" cy="20" r="8" stroke="url(#lg-purple)"/>
-    <circle cx="18" cy="20" r="8" stroke="url(#lg-teal)"/>
-    <!-- Weave overlay: 30° arc centered on top intersection (θ=-75° to -45°). -->
-    <path d="M 12.07 12.27 A 8 8 0 0 1 15.66 14.34" stroke="url(#lg-purple)"/>
+    <circle cx="10" cy="20" r="9" stroke="url(#lg-purple)"/>
+    <circle cx="18" cy="20" r="9" stroke="url(#lg-teal)"/>
+    <!-- Weave overlay: 30° arc centered on top intersection (θ=-78.6° to -48.6°). -->
+    <path d="M 11.78 11.18 A 9 9 0 0 1 15.95 13.25" stroke="url(#lg-purple)"/>
   </g>
 
   <!-- Wordmark -->

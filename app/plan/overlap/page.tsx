@@ -15,8 +15,9 @@ export default function PlanOverlapPage() {
       <div className="space-y-1">
         <h1 className="text-3xl font-bold">When are we all free?</h1>
         <p className="text-sm text-muted-foreground">
-          Pick who you want to plan with. We&apos;ll rank the time windows that
-          work for everyone based on their stream history and posted schedule.
+          Pick your group — see which days everyone typically streams and where
+          your schedules overlap. For a specific time block, try{" "}
+          <a className="underline" href="/plan/with-friend">Plan with a friend</a>.
         </p>
       </div>
       <FindTimeView />

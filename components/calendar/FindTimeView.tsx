@@ -1,49 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Loader2, Search, Zap } from "lucide-react";
+import { Check, Plus } from "lucide-react";
+import { StreamPatternPanel } from "@/components/events/StreamPatternPanel";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-interface Suggestion {
-  start: string;
-  end: string;
-  combinedScore: number;
-  confidence: string;
-  displayStart: string;
-  displayEnd: string;
-  timezone: string;
-  windowHours: number;
-  friendScores: {
-    friendId: number;
-    displayName: string;
-    probability: number;
-  }[];
-}
-
 /**
- * "Find Time" calendar sub-view.
+ * Find Overlap — person-group overlap visualization.
  *
- * Lets the user pick which friends to check for overlap, fires the
- * suggest-times API, and renders ranked time slots. Each slot has a
- * "Plan this" action that deep-links into /events/new with the time
- * pre-filled.
+ * Workflow: pick any subset of friends, then read the Stream Pattern Overlap
+ * heatmap (extracted from /events/new's sidebar) to see which days the group
+ * typically streams on and where they overlap. Clicking "Plan a session"
+ * forwards the selection into the session builder.
+ *
+ * The per-slot Workable Windows grid lives on /plan/with-friend instead —
+ * this page is deliberately broad-strokes (day-of-week overlap), not hourly.
  */
 export default function FindTimeView() {
   const { data: friends = [] } = useSWR("/api/friends", fetcher);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [empty, setEmpty] = useState(false);
-  const [timezone, setTimezone] = useState("UTC");
 
+  const meFriend = friends.find((f: any) => f.isMe);
   const nonMe = friends.filter((f: any) => !f.isMe && !f.isSuggested);
+
+  // Include "me" in the pattern calc so overlap days are computed against
+  // the full group. The select-people UI only lists others — "you" is
+  // implicit.
+  const panelIds = useMemo(() => {
+    const ids = Array.from(selectedIds);
+    if (meFriend && !ids.includes(meFriend.id)) ids.push(meFriend.id);
+    return ids;
+  }, [selectedIds, meFriend]);
+
+  const planHref = useMemo(() => {
+    if (selectedIds.size === 0) return null;
+    const params = new URLSearchParams();
+    params.set("friendIds", Array.from(selectedIds).join(","));
+    return `/events/new?${params.toString()}`;
+  }, [selectedIds]);
 
   function toggle(id: number) {
     setSelectedIds((prev) => {
@@ -60,42 +60,6 @@ export default function FindTimeView() {
 
   function clearAll() {
     setSelectedIds(new Set());
-    setSuggestions([]);
-    setEmpty(false);
-  }
-
-  async function findTime() {
-    if (selectedIds.size === 0) return;
-    setLoading(true);
-    setSuggestions([]);
-    setEmpty(false);
-    try {
-      const res = await fetch("/api/suggest-times", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friendIds: Array.from(selectedIds) }),
-      });
-      const data = await res.json();
-      const list: Suggestion[] = data.suggestions ?? [];
-      setSuggestions(list);
-      setTimezone(list[0]?.timezone ?? "UTC");
-      if (list.length === 0) setEmpty(true);
-    } catch {
-      setEmpty(true);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function buildPlanLink(slot: Suggestion) {
-    const params = new URLSearchParams({
-      start: slot.start,
-      end: slot.end,
-    });
-    for (const id of selectedIds) {
-      params.append("friendId", String(id));
-    }
-    return `/events/new?${params.toString()}`;
   }
 
   return (
@@ -143,101 +107,28 @@ export default function FindTimeView() {
               })}
             </div>
           )}
-
-          <div className="mt-4 flex items-center gap-3">
-            <Button
-              onClick={() => { void findTime(); }}
-              disabled={loading || selectedIds.size === 0}
-              className="gap-1.5"
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              {loading ? "Analyzing…" : `Find time for ${selectedIds.size || "…"}`}
-            </Button>
-            {selectedIds.size > 0 && !loading && (
-              <span className="text-xs text-muted-foreground">
-                {selectedIds.size} selected
-              </span>
-            )}
-          </div>
         </CardContent>
       </Card>
 
-      {suggestions.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Zap className="h-4 w-4 text-yellow-500" />
-              Best windows
-              <span className="text-xs font-normal text-muted-foreground ml-auto">
-                {timezone}
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {suggestions.map((slot, i) => (
-              <div
-                key={`${slot.start}-${i}`}
-                className="rounded-lg border bg-card p-3 space-y-1.5"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground w-4 shrink-0">{i + 1}.</span>
-                  <span className="font-medium text-sm">{slot.displayStart}</span>
-                  <Badge
-                    variant={
-                      slot.confidence === "high"
-                        ? "success"
-                        : slot.confidence === "medium"
-                          ? "secondary"
-                          : "outline"
-                    }
-                    className="text-[10px] capitalize"
-                  >
-                    {slot.confidence}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground ml-auto font-medium">
-                    {slot.combinedScore}% match
-                  </span>
-                </div>
+      {selectedIds.size > 0 && (
+        <>
+          <StreamPatternPanel
+            selectedFriendIds={panelIds}
+            allFriends={friends}
+            sticky={false}
+          />
 
-                <p className="text-xs text-muted-foreground ml-4">
-                  through {slot.displayEnd} · {slot.windowHours}h window
-                </p>
-
-                {slot.friendScores.length > 0 && (
-                  <div className="flex gap-2 flex-wrap ml-4">
-                    {slot.friendScores.map((f) => (
-                      <span
-                        key={f.friendId}
-                        className="text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5"
-                      >
-                        {f.displayName} {f.probability}%
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="ml-4 pt-1">
-                  <Link href={buildPlanLink(slot)}>
-                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                      Plan this
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {empty && !loading && (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <Zap className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />
-            <p className="text-sm text-muted-foreground">
-              Not enough stream history for these people — refresh their data from the People tab and try again.
-            </p>
-          </CardContent>
-        </Card>
+          {planHref && (
+            <div className="flex justify-end">
+              <Link href={planHref}>
+                <Button className="gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  Plan a session with {selectedIds.size === 1 ? "them" : `these ${selectedIds.size}`}
+                </Button>
+              </Link>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

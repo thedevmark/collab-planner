@@ -3,6 +3,7 @@
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 
 function TwitchIcon({ className }: { className?: string }) {
   return (
@@ -24,14 +25,21 @@ function DiscordIcon({ className }: { className?: string }) {
 
 // Rotating pool of mock Discord friend handles — one is picked at random per page load
 // so the hero demo feels alive and name-checks real streamers in Mark's orbit.
+// Each friend has a deterministic emoji icon paired in — zero network cost (vs per-user
+// avatar PNGs), zero runtime calc (vs hash → color → letter pipeline), and every visible
+// avatar instance for that friend reads from the same const. System emoji fonts render
+// these as full-color glyphs on every modern OS.
 const ROTATING_DM_FRIENDS = [
-  { name: "thedeutschmark", handle: "thedeutschmark", initials: "TD" },
-  { name: "a1exzandra",     handle: "a1exzandra",     initials: "A1" },
-  { name: "OOKVOID",        handle: "ookvoid",        initials: "OV" },
-  { name: "DANGERDORK",     handle: "dangerdork",     initials: "DD" },
-  { name: "Koryzma",        handle: "koryzma",        initials: "KZ" },
-  { name: "aerisoncam",     handle: "aerisoncam",     initials: "AC" },
+  { name: "thedeutschmark", handle: "thedeutschmark", icon: "🎤" },
+  { name: "a1exzandra",     handle: "a1exzandra",     icon: "🌙" },
+  { name: "OOKVOID",        handle: "ookvoid",        icon: "👾" },
+  { name: "DANGERDORK",     handle: "dangerdork",     icon: "⚡" },
+  { name: "Koryzma",        handle: "koryzma",        icon: "🔥" },
+  { name: "aerisoncam",     handle: "aerisoncam",     icon: "🎨" },
 ];
+
+// Your own avatar on the "you" side of the DM loop. Fixed — it's Mark's side of the chat.
+const ME_ICON = "🐉";
 
 // Mock "Best windows" data — mirrors the real FindTimeView output shape
 const MOCK_SLOTS = [
@@ -41,9 +49,9 @@ const MOCK_SLOTS = [
 ];
 
 // Single DM bubble for the Discord loop mock
-function DMLine({ who, initials, color, time, muted, children }: {
+function DMLine({ who, icon, color, time, muted, children }: {
   who: string;
-  initials: string;
+  icon: string;
   color: string;
   time: string;
   muted?: boolean;
@@ -52,10 +60,10 @@ function DMLine({ who, initials, color, time, muted, children }: {
   return (
     <div className="flex gap-2.5">
       <div
-        className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-        style={{ backgroundColor: color + "25", color }}
+        className="w-7 h-7 rounded-full flex items-center justify-center text-[14px] leading-none shrink-0"
+        style={{ backgroundColor: color + "25" }}
       >
-        {initials}
+        {icon}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2">
@@ -84,23 +92,59 @@ export default function LoginPage() {
   // so every visible reference to the DM partner stays in sync.
   const MOCK_FRIENDS = [
     { ...dmFriend, color: "#9147ff", window: "Tue 8 PM", live: true },
-    { initials: "NX", color: "#5865F2", name: "NexusPlays", handle: "nexusplays", window: "Tue 9 PM", live: false },
-    { initials: "SA", color: "#e0af68", name: "SilverArc", handle: "silverarc_tv", window: "Wed 7 PM", live: false },
+    { icon: "🎮", color: "#5865F2", name: "NexusPlays", handle: "nexusplays", window: "Tue 9 PM", live: false },
+    { icon: "🏹", color: "#e0af68", name: "SilverArc", handle: "silverarc_tv", window: "Wed 7 PM", live: false },
   ];
 
+  // OAuth handoff can feel instant-but-stuck: the user clicks, Supabase builds the redirect URL,
+  // and there's a ~300-800ms gap before the browser actually leaves the page. Show a spinner in
+  // every CTA + a sliding progress bar up top so the click always feels acknowledged.
+  const [loginLoading, setLoginLoading] = useState(false);
+
   async function loginWithTwitch() {
-    const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "twitch",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        scopes: "user:read:email",
-      },
-    });
+    if (loginLoading) return;
+    setLoginLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "twitch",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          scopes: "user:read:email",
+        },
+      });
+      if (error) {
+        console.error("[login] Twitch OAuth failed:", error);
+        setLoginLoading(false);
+      }
+      // On success the browser is about to navigate to Twitch — keep the spinner up.
+    } catch (err) {
+      console.error("[login] Twitch OAuth threw:", err);
+      setLoginLoading(false);
+    }
   }
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white flex flex-col overflow-x-hidden">
+
+      {/* Top progress bar — YouTube/GitHub-style indeterminate slider while OAuth hands off. */}
+      {loginLoading && (
+        <div
+          className="fixed top-0 left-0 right-0 h-[2px] z-50 overflow-hidden bg-[#9147ff]/15"
+          role="progressbar"
+          aria-label="Connecting to Twitch"
+        >
+          <div className="h-full w-1/3 bg-gradient-to-r from-transparent via-[#9147ff] to-transparent animate-[loginProgressSlide_1.1s_ease-in-out_infinite]" />
+          {/* Global scope — Tailwind's arbitrary-value `animate-[loginProgressSlide_…]`
+              looks up the keyframe by its unscoped name, so styled-jsx can't hash it. */}
+          <style jsx global>{`
+            @keyframes loginProgressSlide {
+              0%   { transform: translateX(-100%); }
+              100% { transform: translateX(400%); }
+            }
+          `}</style>
+        </div>
+      )}
 
       {/* Nav */}
       <header className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto w-full">
@@ -110,10 +154,15 @@ export default function LoginPage() {
         </div>
         <button
           onClick={loginWithTwitch}
-          className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-200 transition-colors"
+          disabled={loginLoading}
+          className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-200 transition-colors disabled:opacity-60 disabled:cursor-wait"
         >
-          <TwitchIcon className="h-3.5 w-3.5" />
-          Sign in
+          {loginLoading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <TwitchIcon className="h-3.5 w-3.5" />
+          )}
+          {loginLoading ? "Connecting…" : "Sign in"}
         </button>
       </header>
 
@@ -151,13 +200,24 @@ export default function LoginPage() {
           <div className="flex flex-col items-center gap-2.5">
             <button
               onClick={loginWithTwitch}
-              className="inline-flex items-center gap-3 bg-[#9147ff] hover:bg-[#7d2ff7] active:scale-[0.98] text-white font-bold py-3.5 px-7 rounded-xl transition-all duration-150 shadow-[0_0_24px_rgba(145,71,255,0.22)] hover:shadow-[0_0_36px_rgba(145,71,255,0.32)] text-sm"
+              disabled={loginLoading}
+              aria-busy={loginLoading}
+              className="inline-flex items-center gap-3 bg-[#9147ff] hover:bg-[#7d2ff7] active:scale-[0.98] text-white font-bold py-3.5 px-7 rounded-xl transition-all duration-150 shadow-[0_0_24px_rgba(145,71,255,0.22)] hover:shadow-[0_0_36px_rgba(145,71,255,0.32)] text-sm disabled:cursor-wait disabled:hover:bg-[#9147ff] disabled:active:scale-100"
             >
-              <TwitchIcon className="h-4 w-4" />
-              Connect with Twitch — it&apos;s free
+              {loginLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Connecting to Twitch…
+                </>
+              ) : (
+                <>
+                  <TwitchIcon className="h-4 w-4" />
+                  Connect with Twitch — it&apos;s free
+                </>
+              )}
             </button>
             <p className="text-[11.5px] text-zinc-500">
-              just your twitch login · nothing to install
+              {loginLoading ? "redirecting you to twitch…" : "just your twitch login · nothing to install"}
             </p>
           </div>
         </div>
@@ -195,19 +255,32 @@ export default function LoginPage() {
             </div>
 
             <div className="px-4 py-3 space-y-3">
-              <DMLine who={dmFriend.name} initials={dmFriend.initials} color="#c4b5fd" time="Mon 8:42 PM">
-                :catHi: hey wanna plan a stream together soon?
+              <DMLine who={dmFriend.name} icon={dmFriend.icon} color="#c4b5fd" time="Mon 8:42 PM">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/emotes/hicat.png"
+                  alt="hiCat"
+                  className="inline-block h-[1.35em] w-[1.35em] align-[-0.35em] mr-0.5"
+                />
+                hey wanna plan a stream together soon?
               </DMLine>
-              <DMLine who="you" initials="ME" color="#5eead4" time="Mon 8:43 PM">
+              <DMLine who="you" icon={ME_ICON} color="#5eead4" time="Mon 8:43 PM">
                 sure when?
               </DMLine>
-              <DMLine who={dmFriend.name} initials={dmFriend.initials} color="#c4b5fd" time="Mon 8:43 PM">
+              <DMLine who={dmFriend.name} icon={dmFriend.icon} color="#c4b5fd" time="Mon 8:43 PM">
                 idk — when can you? and what game?
               </DMLine>
-              <DMLine who="you" initials="ME" color="#5eead4" time="Mon 8:44 PM">
-                idk :pain1: you don&apos;t post your schedule either
+              <DMLine who="you" icon={ME_ICON} color="#5eead4" time="Mon 8:44 PM">
+                idk{" "}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/emotes/pain1.png"
+                  alt="pain1"
+                  className="inline-block h-[1.35em] w-[1.35em] align-[-0.35em]"
+                />
+                {" "}you don&apos;t post your schedule either
               </DMLine>
-              <DMLine who={dmFriend.name} initials={dmFriend.initials} color="#c4b5fd" time="Mon 8:45 PM" muted>
+              <DMLine who={dmFriend.name} icon={dmFriend.icon} color="#c4b5fd" time="Mon 8:45 PM" muted>
                 lol let&apos;s figure it out later
               </DMLine>
             </div>
@@ -252,10 +325,10 @@ export default function LoginPage() {
                   className="flex items-center gap-1.5 pl-0.5 pr-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800"
                 >
                   <span
-                    className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold"
-                    style={{ backgroundColor: f.color + "30", color: f.color }}
+                    className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] leading-none"
+                    style={{ backgroundColor: f.color + "30" }}
                   >
-                    {f.initials}
+                    {f.icon}
                   </span>
                   <span className="text-[10.5px] font-medium text-zinc-400">{f.name}</span>
                 </div>
@@ -297,7 +370,7 @@ export default function LoginPage() {
                           key={f.handle}
                           className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[9.5px] text-zinc-500"
                         >
-                          {f.initials} {s.scores[fi]}%
+                          {f.icon} {s.scores[fi]}%
                         </span>
                       ))}
                     </div>
@@ -423,10 +496,10 @@ export default function LoginPage() {
                 {MOCK_FRIENDS.map((f) => (
                   <div
                     key={f.handle}
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-zinc-950"
-                    style={{ backgroundColor: f.color + "30", color: f.color }}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] leading-none border-2 border-zinc-950"
+                    style={{ backgroundColor: f.color + "30" }}
                   >
-                    {f.initials}
+                    {f.icon}
                   </div>
                 ))}
               </div>
@@ -457,10 +530,21 @@ export default function LoginPage() {
         </div>
         <button
           onClick={loginWithTwitch}
-          className="inline-flex items-center gap-3 bg-[#9147ff] hover:bg-[#7d2ff7] active:scale-[0.98] text-white font-bold py-3.5 px-7 rounded-xl transition-all duration-150 shadow-[0_0_24px_rgba(145,71,255,0.22)] text-sm"
+          disabled={loginLoading}
+          aria-busy={loginLoading}
+          className="inline-flex items-center gap-3 bg-[#9147ff] hover:bg-[#7d2ff7] active:scale-[0.98] text-white font-bold py-3.5 px-7 rounded-xl transition-all duration-150 shadow-[0_0_24px_rgba(145,71,255,0.22)] text-sm disabled:cursor-wait disabled:hover:bg-[#9147ff] disabled:active:scale-100"
         >
-          <TwitchIcon className="h-4 w-4" />
-          Get started free
+          {loginLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Connecting to Twitch…
+            </>
+          ) : (
+            <>
+              <TwitchIcon className="h-4 w-4" />
+              Get started free
+            </>
+          )}
         </button>
         <div className="flex items-center justify-center gap-4 text-[11px] text-zinc-600">
           <span className="flex items-center gap-1.5">

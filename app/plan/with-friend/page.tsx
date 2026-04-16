@@ -1,10 +1,14 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { AvailabilityMatrix } from "@/components/events/AvailabilityMatrix";
+import type { ScoredSlot } from "@/lib/scheduling/overlap";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -21,27 +25,78 @@ const FALLBACK_COLORS = [
   "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
 ];
 
+// Matches NewEventForm's default 3h window so the handoff lands clean.
+const DEFAULT_DURATION_MS = 3 * 60 * 60 * 1000;
+
 function friendColor(friend: Friend, index: number): string {
   return friend.channelColor || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
 }
 
+function toLocalDatetimeValue(date: Date): string {
+  const y = date.getFullYear();
+  const mo = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  const h = String(date.getHours()).padStart(2, "0");
+  const mi = String(date.getMinutes()).padStart(2, "0");
+  return `${y}-${mo}-${d}T${h}:${mi}`;
+}
+
 /**
- * "Plan with a friend" — person-first entry into the planning flow.
+ * "Plan with a friend" — person-first planning flow.
  *
- * Compact picker: click one person, land on /events/new?friendId=X with
- * that friend pre-selected. Intentionally minimal (no signals, no stream
- * pattern, no invite CTAs) — single job: pick and go.
+ * Pick one friend, then use the Workable Windows grid (AvailabilityMatrix —
+ * same component /events/new uses) to scan the next 7 days for blocks that
+ * fit both of you. Clicking a cell forwards the start time + friendId into
+ * /events/new so the user continues with title / game / description.
+ *
+ * The "find overlap" page handles group patterns; this one is deliberately
+ * singular — tighter grid, one-person signal, fast path to a session.
  */
 export default function PlanWithFriendPage() {
+  const router = useRouter();
   const { data: friends, isLoading } = useSWR<Friend[]>("/api/friends", fetcher);
+  const { data: profile } = useSWR("/api/profile/onboarding", fetcher);
+
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
   const nonMeFriends = (friends ?? []).filter((f) => !f.isMe);
+  const meFriend = (friends ?? []).find((f) => f.isMe);
+
+  // Matrix scores the full group, so "me" is implicit — the picker only
+  // lists others.
+  const matrixIds = useMemo(() => {
+    if (selectedId === null) return [];
+    const ids = [selectedId];
+    if (meFriend) ids.push(meFriend.id);
+    return ids;
+  }, [selectedId, meFriend]);
+
+  const timezone =
+    profile?.timezone ??
+    (typeof window !== "undefined"
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone
+      : "UTC");
+
+  const anchorStart = useMemo(() => {
+    const d = new Date();
+    d.setMinutes(0, 0, 0);
+    return toLocalDatetimeValue(d);
+  }, []);
+
+  function handleApplySlot(slot: ScoredSlot) {
+    if (selectedId === null) return;
+    const params = new URLSearchParams();
+    params.set("startTime", slot.start.toISOString());
+    params.set("friendId", String(selectedId));
+    router.push(`/events/new?${params.toString()}`);
+  }
 
   return (
     <div className="space-y-4">
       <div className="space-y-1">
         <h1 className="text-3xl font-bold">Plan with a friend</h1>
         <p className="text-sm text-muted-foreground">
-          Pick someone and we&apos;ll set up the session with them already added.
+          Pick someone, then click a block that works for both of you.
         </p>
       </div>
 
@@ -62,11 +117,17 @@ export default function PlanWithFriendPage() {
         <div className="grid gap-2 sm:grid-cols-2">
           {nonMeFriends.map((friend, i) => {
             const color = friendColor(friend, i);
+            const selected = selectedId === friend.id;
             return (
-              <Link
+              <button
                 key={friend.id}
-                href={`/events/new?friendId=${friend.id}`}
-                className="group flex items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-all hover:border-primary/60 hover:bg-accent"
+                type="button"
+                onClick={() => setSelectedId(selected ? null : friend.id)}
+                className={`group flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all ${
+                  selected
+                    ? "border-primary bg-primary/10"
+                    : "bg-card hover:border-primary/60 hover:bg-accent"
+                }`}
               >
                 <Avatar className="h-10 w-10 shrink-0" style={{ boxShadow: `0 0 0 2px ${color}40` }}>
                   <AvatarImage src={friend.avatarUrl ?? undefined} />
@@ -74,13 +135,26 @@ export default function PlanWithFriendPage() {
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{friend.displayName}</p>
-                  <p className="text-xs text-muted-foreground">Plan a session together</p>
+                  <p className="text-xs text-muted-foreground">
+                    {selected ? "Scanning workable windows below…" : "Click to see workable windows"}
+                  </p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-              </Link>
+              </button>
             );
           })}
         </div>
+      )}
+
+      {selectedId !== null && friends && (
+        <AvailabilityMatrix
+          friends={friends}
+          selectedFriendIds={matrixIds}
+          timezone={timezone}
+          anchorStart={anchorStart}
+          selectedStartTime=""
+          durationMs={DEFAULT_DURATION_MS}
+          onApplySlot={handleApplySlot}
+        />
       )}
     </div>
   );
