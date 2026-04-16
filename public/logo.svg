@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 12" shape-rendering="crispEdges">
+  <!--
+    Pixel-art Venn: two overlapping 10x10 rings, interlocked like chain links.
+    Left ring: Twitch purple #8956FB
+    Right ring: teal #14b8a6
+    Interlock: teal crosses over at the top, purple crosses over at the bottom,
+    giving the rings a threaded/infinity feel at the intersection.
+  -->
+
+  <!-- ── LEFT RING (purple) ──────────────────────────────────── -->
+  <g fill="#8956FB">
+    <!-- top arc -->
+    <rect x="4" y="1" width="4" height="1"/>
+    <rect x="2" y="2" width="2" height="1"/>
+    <rect x="2" y="3" width="1" height="1"/>
+    <!-- left side -->
+    <rect x="1" y="4" width="1" height="4"/>
+    <!-- right arc (passes through lens) -->
+    <rect x="9" y="3" width="1" height="1"/>
+    <rect x="10" y="4" width="1" height="4"/>
+    <rect x="9" y="8" width="1" height="1"/>
+    <!-- bottom arc -->
+    <rect x="2" y="8" width="1" height="1"/>
+    <rect x="2" y="9" width="2" height="1"/>
+    <rect x="4" y="10" width="4" height="1"/>
+    <!-- bottom interlock: purple sits on top of teal here -->
+    <rect x="8" y="9" width="2" height="1"/>
+  </g>
+
+  <!-- ── RIGHT RING (teal) ───────────────────────────────────── -->
+  <g fill="#14b8a6">
+    <!-- top arc -->
+    <rect x="10" y="1" width="4" height="1"/>
+    <rect x="14" y="2" width="2" height="1"/>
+    <rect x="15" y="3" width="1" height="1"/>
+    <!-- right side -->
+    <rect x="16" y="4" width="1" height="4"/>
+    <!-- left arc (passes through lens) -->
+    <rect x="8" y="3" width="1" height="1"/>
+    <rect x="7" y="4" width="1" height="4"/>
+    <rect x="8" y="8" width="1" height="1"/>
+    <!-- bottom arc -->
+    <rect x="15" y="8" width="1" height="1"/>
+    <rect x="14" y="9" width="2" height="1"/>
+    <rect x="10" y="10" width="4" height="1"/>
+    <!-- top interlock: teal sits on top of purple here -->
+    <rect x="8" y="2" width="2" height="1"/>
+  </g>
+</svg>
