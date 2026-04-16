@@ -196,7 +196,7 @@ export default function LoginPage() {
 
             <div className="px-4 py-3 space-y-3">
               <DMLine who={dmFriend.name} initials={dmFriend.initials} color="#c4b5fd" time="Mon 8:42 PM">
-                hey wanna plan a stream together soon?
+                :catHi: hey wanna plan a stream together soon?
               </DMLine>
               <DMLine who="you" initials="ME" color="#5eead4" time="Mon 8:43 PM">
                 sure when?
@@ -205,7 +205,7 @@ export default function LoginPage() {
                 idk — when can you? and what game?
               </DMLine>
               <DMLine who="you" initials="ME" color="#5eead4" time="Mon 8:44 PM">
-                idk 😅 you don&apos;t post your schedule either
+                idk :pain1: you don&apos;t post your schedule either
               </DMLine>
               <DMLine who={dmFriend.name} initials={dmFriend.initials} color="#c4b5fd" time="Mon 8:45 PM" muted>
                 lol let&apos;s figure it out later

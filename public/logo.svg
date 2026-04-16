@@ -29,15 +29,14 @@
     </filter>
   </defs>
 
-  <!-- Interlocking rings — stroke matches favicon (4 on r=8) for the same
-       crisp look at every render size. -->
-  <g fill="none" stroke-width="4">
+  <!-- Interlocking rings — thin delicate stroke (1.75 on r=8) matching the
+       original sleek aesthetic. Round linecaps on every stroke end so the
+       weave overlay blends seamlessly with the ring it sits on. -->
+  <g fill="none" stroke-width="1.75" stroke-linecap="round">
     <circle cx="10" cy="20" r="8" stroke="url(#lg-purple)"/>
     <circle cx="18" cy="20" r="8" stroke="url(#lg-teal)"/>
-    <!-- Weave overlay: 30° arc centered on top intersection (θ=-75° to -45°).
-         stroke-linecap=round so the arc ends blend seamlessly into the
-         underlying ring instead of leaving hard butt-cap seams. -->
-    <path d="M 12.07 12.27 A 8 8 0 0 1 15.66 14.34" stroke="url(#lg-purple)" stroke-linecap="round"/>
+    <!-- Weave overlay: 30° arc centered on top intersection (θ=-75° to -45°). -->
+    <path d="M 12.07 12.27 A 8 8 0 0 1 15.66 14.34" stroke="url(#lg-purple)"/>
   </g>
 
   <!-- Wordmark -->
