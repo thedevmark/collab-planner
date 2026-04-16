@@ -1,148 +1,147 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 40" shape-rendering="crispEdges">
   <!--
-    Rings-first composition. Venn is the hero — 3x-scaled and properly
-    centered. Text is secondary: 5x7 pixel letters with a single 1px
-    black drop-shadow so it reads without competing with the rings.
+    Rings 2x-scaled (smaller), text restored to chunky 7x9 with
+    3-layer bevel shadow, shifted left.
 
-    Canvas 72x40. Venn content spans x=12..60, y=5..35 (centered).
-    "COLLAB" (35w) at x=19, y=13. "PLANNER" (41w) at x=16, y=21.
-    Each line rendered shadow-first (+1,+1 black) then white fill.
+    Canvas 72x40.
+    Venn 2x: content spans x=20..52, y=10..30 — centered at (36,20).
+    Text left-shifted: COLLAB (47w) at x=6, PLANNER (55w) at x=3, both y=10/21.
+    Render order: black (+2,+2) → purple (+1,+1) → white (0,0).
   -->
 
-  <!-- ── LEFT RING (purple) ────────────────────────────────── -->
+  <!-- ── LEFT RING (purple, 2x) ─────────────────────────────── -->
   <g fill="#8956FB">
-    <rect x="21" y="5"  width="12" height="3"/>
-    <rect x="15" y="8"  width="6"  height="3"/>
-    <rect x="15" y="11" width="3"  height="3"/>
-    <rect x="12" y="14" width="3"  height="12"/>
-    <rect x="36" y="11" width="3"  height="3"/>
-    <rect x="39" y="14" width="3"  height="12"/>
-    <rect x="36" y="26" width="3"  height="3"/>
-    <rect x="15" y="26" width="3"  height="3"/>
-    <rect x="15" y="29" width="6"  height="3"/>
-    <rect x="21" y="32" width="12" height="3"/>
+    <rect x="26" y="10" width="8"  height="2"/>
+    <rect x="22" y="12" width="4"  height="2"/>
+    <rect x="22" y="14" width="2"  height="2"/>
+    <rect x="20" y="16" width="2"  height="8"/>
+    <rect x="36" y="14" width="2"  height="2"/>
+    <rect x="38" y="16" width="2"  height="8"/>
+    <rect x="36" y="24" width="2"  height="2"/>
+    <rect x="22" y="24" width="2"  height="2"/>
+    <rect x="22" y="26" width="4"  height="2"/>
+    <rect x="26" y="28" width="8"  height="2"/>
     <!-- bottom interlock: purple over teal -->
-    <rect x="33" y="29" width="6"  height="3"/>
+    <rect x="34" y="26" width="4"  height="2"/>
   </g>
 
-  <!-- ── RIGHT RING (teal) ─────────────────────────────────── -->
+  <!-- ── RIGHT RING (teal, 2x) ──────────────────────────────── -->
   <g fill="#14b8a6">
-    <rect x="39" y="5"  width="12" height="3"/>
-    <rect x="51" y="8"  width="6"  height="3"/>
-    <rect x="54" y="11" width="3"  height="3"/>
-    <rect x="57" y="14" width="3"  height="12"/>
-    <rect x="33" y="11" width="3"  height="3"/>
-    <rect x="30" y="14" width="3"  height="12"/>
-    <rect x="33" y="26" width="3"  height="3"/>
-    <rect x="54" y="26" width="3"  height="3"/>
-    <rect x="51" y="29" width="6"  height="3"/>
-    <rect x="39" y="32" width="12" height="3"/>
+    <rect x="38" y="10" width="8"  height="2"/>
+    <rect x="46" y="12" width="4"  height="2"/>
+    <rect x="48" y="14" width="2"  height="2"/>
+    <rect x="50" y="16" width="2"  height="8"/>
+    <rect x="34" y="14" width="2"  height="2"/>
+    <rect x="32" y="16" width="2"  height="8"/>
+    <rect x="34" y="24" width="2"  height="2"/>
+    <rect x="48" y="24" width="2"  height="2"/>
+    <rect x="46" y="26" width="4"  height="2"/>
+    <rect x="38" y="28" width="8"  height="2"/>
     <!-- top interlock: teal over purple -->
-    <rect x="33" y="8"  width="6"  height="3"/>
+    <rect x="34" y="12" width="4"  height="2"/>
   </g>
 
   <!--
-    5x7 pixel letters. Single 1px black drop-shadow (+1,+1).
-    Letter stride = 5w + 1px kerning = 6 per letter.
-
-    COLLAB  (35w) centered → x=19, y=13   shadow at x=20, y=14
-    PLANNER (41w) centered → x=16, y=21   shadow at x=17, y=22
+    7x9 chunky pixel glyphs — 2px strokes, rounded corners.
+    Stride 8 (7w + 1px kerning).
   -->
   <defs>
     <g id="C">
-      <rect x="1" y="0" width="4" height="1"/>
-      <rect x="0" y="1" width="1" height="5"/>
-      <rect x="4" y="1" width="1" height="1"/>
-      <rect x="4" y="5" width="1" height="1"/>
-      <rect x="1" y="6" width="4" height="1"/>
+      <rect x="1" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="7"/>
+      <rect x="5" y="1" width="2" height="1"/>
+      <rect x="5" y="7" width="2" height="1"/>
+      <rect x="1" y="8" width="5" height="1"/>
     </g>
     <g id="O">
-      <rect x="1" y="0" width="3" height="1"/>
-      <rect x="0" y="1" width="1" height="5"/>
-      <rect x="4" y="1" width="1" height="5"/>
-      <rect x="1" y="6" width="3" height="1"/>
+      <rect x="1" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="7"/>
+      <rect x="5" y="1" width="2" height="7"/>
+      <rect x="1" y="8" width="5" height="1"/>
     </g>
     <g id="L">
-      <rect x="0" y="0" width="1" height="7"/>
-      <rect x="1" y="6" width="4" height="1"/>
+      <rect x="0" y="0" width="2" height="8"/>
+      <rect x="0" y="8" width="7" height="1"/>
     </g>
     <g id="A">
-      <rect x="1" y="0" width="3" height="1"/>
-      <rect x="0" y="1" width="1" height="6"/>
-      <rect x="4" y="1" width="1" height="6"/>
-      <rect x="1" y="3" width="3" height="1"/>
+      <rect x="2" y="0" width="3" height="1"/>
+      <rect x="1" y="1" width="5" height="1"/>
+      <rect x="0" y="2" width="2" height="7"/>
+      <rect x="5" y="2" width="2" height="7"/>
+      <rect x="2" y="5" width="3" height="1"/>
     </g>
     <g id="B">
-      <rect x="0" y="0" width="1" height="7"/>
-      <rect x="1" y="0" width="3" height="1"/>
-      <rect x="4" y="1" width="1" height="2"/>
-      <rect x="1" y="3" width="3" height="1"/>
-      <rect x="4" y="4" width="1" height="2"/>
-      <rect x="1" y="6" width="3" height="1"/>
+      <rect x="0" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="7"/>
+      <rect x="5" y="1" width="2" height="3"/>
+      <rect x="2" y="4" width="3" height="1"/>
+      <rect x="5" y="5" width="2" height="3"/>
+      <rect x="0" y="8" width="5" height="1"/>
     </g>
     <g id="P">
-      <rect x="0" y="0" width="1" height="7"/>
-      <rect x="1" y="0" width="3" height="1"/>
-      <rect x="4" y="1" width="1" height="2"/>
-      <rect x="1" y="3" width="3" height="1"/>
+      <rect x="0" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="8"/>
+      <rect x="5" y="1" width="2" height="3"/>
+      <rect x="2" y="4" width="3" height="1"/>
     </g>
     <g id="N">
-      <rect x="0" y="0" width="1" height="7"/>
-      <rect x="4" y="0" width="1" height="7"/>
-      <rect x="1" y="1" width="1" height="1"/>
-      <rect x="2" y="2" width="1" height="3"/>
-      <rect x="3" y="5" width="1" height="1"/>
+      <rect x="0" y="0" width="2" height="9"/>
+      <rect x="5" y="0" width="2" height="9"/>
+      <rect x="2" y="1" width="1" height="2"/>
+      <rect x="3" y="3" width="1" height="2"/>
+      <rect x="4" y="5" width="1" height="2"/>
     </g>
     <g id="E">
-      <rect x="0" y="0" width="1" height="7"/>
-      <rect x="1" y="0" width="4" height="1"/>
-      <rect x="1" y="3" width="3" height="1"/>
-      <rect x="1" y="6" width="4" height="1"/>
+      <rect x="0" y="0" width="7" height="1"/>
+      <rect x="0" y="1" width="2" height="7"/>
+      <rect x="2" y="4" width="4" height="1"/>
+      <rect x="0" y="8" width="7" height="1"/>
     </g>
     <g id="R">
-      <rect x="0" y="0" width="1" height="7"/>
-      <rect x="1" y="0" width="3" height="1"/>
-      <rect x="4" y="1" width="1" height="2"/>
-      <rect x="1" y="3" width="3" height="1"/>
-      <rect x="2" y="4" width="1" height="1"/>
-      <rect x="3" y="5" width="1" height="1"/>
-      <rect x="4" y="6" width="1" height="1"/>
+      <rect x="0" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="8"/>
+      <rect x="5" y="1" width="2" height="3"/>
+      <rect x="2" y="4" width="3" height="1"/>
+      <rect x="2" y="5" width="1" height="1"/>
+      <rect x="3" y="6" width="1" height="1"/>
+      <rect x="4" y="7" width="1" height="1"/>
+      <rect x="5" y="8" width="2" height="1"/>
     </g>
   </defs>
 
-  <!-- Shadow pass (black +1,+1) -->
+  <!-- Deep shadow: black +2,+2 -->
   <g fill="#000000">
-    <use href="#C" x="20" y="14"/>
-    <use href="#O" x="26" y="14"/>
-    <use href="#L" x="32" y="14"/>
-    <use href="#L" x="38" y="14"/>
-    <use href="#A" x="44" y="14"/>
-    <use href="#B" x="50" y="14"/>
+    <use href="#C" x="8"  y="12"/><use href="#O" x="16" y="12"/>
+    <use href="#L" x="24" y="12"/><use href="#L" x="32" y="12"/>
+    <use href="#A" x="40" y="12"/><use href="#B" x="48" y="12"/>
 
-    <use href="#P" x="17" y="22"/>
-    <use href="#L" x="23" y="22"/>
-    <use href="#A" x="29" y="22"/>
-    <use href="#N" x="35" y="22"/>
-    <use href="#N" x="41" y="22"/>
-    <use href="#E" x="47" y="22"/>
-    <use href="#R" x="53" y="22"/>
+    <use href="#P" x="5"  y="23"/><use href="#L" x="13" y="23"/>
+    <use href="#A" x="21" y="23"/><use href="#N" x="29" y="23"/>
+    <use href="#N" x="37" y="23"/><use href="#E" x="45" y="23"/>
+    <use href="#R" x="53" y="23"/>
   </g>
 
-  <!-- Main fill (white) -->
-  <g fill="#ffffff">
-    <use href="#C" x="19" y="13"/>
-    <use href="#O" x="25" y="13"/>
-    <use href="#L" x="31" y="13"/>
-    <use href="#L" x="37" y="13"/>
-    <use href="#A" x="43" y="13"/>
-    <use href="#B" x="49" y="13"/>
+  <!-- Mid shadow: brand purple +1,+1 -->
+  <g fill="#8956FB">
+    <use href="#C" x="7"  y="11"/><use href="#O" x="15" y="11"/>
+    <use href="#L" x="23" y="11"/><use href="#L" x="31" y="11"/>
+    <use href="#A" x="39" y="11"/><use href="#B" x="47" y="11"/>
 
-    <use href="#P" x="16" y="21"/>
-    <use href="#L" x="22" y="21"/>
-    <use href="#A" x="28" y="21"/>
-    <use href="#N" x="34" y="21"/>
-    <use href="#N" x="40" y="21"/>
-    <use href="#E" x="46" y="21"/>
-    <use href="#R" x="52" y="21"/>
+    <use href="#P" x="4"  y="22"/><use href="#L" x="12" y="22"/>
+    <use href="#A" x="20" y="22"/><use href="#N" x="28" y="22"/>
+    <use href="#N" x="36" y="22"/><use href="#E" x="44" y="22"/>
+    <use href="#R" x="52" y="22"/>
+  </g>
+
+  <!-- Main fill: white -->
+  <g fill="#ffffff">
+    <use href="#C" x="6"  y="10"/><use href="#O" x="14" y="10"/>
+    <use href="#L" x="22" y="10"/><use href="#L" x="30" y="10"/>
+    <use href="#A" x="38" y="10"/><use href="#B" x="46" y="10"/>
+
+    <use href="#P" x="3"  y="21"/><use href="#L" x="11" y="21"/>
+    <use href="#A" x="19" y="21"/><use href="#N" x="27" y="21"/>
+    <use href="#N" x="35" y="21"/><use href="#E" x="43" y="21"/>
+    <use href="#R" x="51" y="21"/>
   </g>
 </svg>
