@@ -7,7 +7,6 @@ import {
   Calendar,
   LayoutDashboard,
   Users,
-  CalendarPlus,
   ListChecks,
   Settings,
   Twitch,
@@ -15,7 +14,12 @@ import {
   RotateCcw,
   Sun,
   Moon,
+  Zap,
+  UserPlus,
+  CalendarClock,
+  Link2,
 } from "lucide-react";
+import { InviteDialog } from "@/components/InviteDialog";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -31,13 +35,24 @@ import {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+// Top-level navigation (section 1). Planning actions live in their own
+// section below — kept separate because they're verbs, not views.
 const navItems = [
   { href: "/", label: "Home", icon: LayoutDashboard, exact: true },
   { href: "/friends", label: "People", icon: Users },
   { href: "/calendar", label: "Calendar", icon: Calendar },
-  { href: "/events/new", label: "New Session", icon: CalendarPlus, exact: true },
   { href: "/events", label: "History", icon: ListChecks, exact: true },
   { href: "/settings", label: "Settings", icon: Settings },
+];
+
+// "Plan" section (section 2). Four entry points, one per mental state
+// the user walks in with. Mirrors the 2×2 tile grid on the homepage.
+// "Share a link" is a button that triggers InviteDialog rather than a
+// route — the other three are Links.
+const planItems = [
+  { href: "/plan/overlap",     label: "Find overlap",   icon: Zap },
+  { href: "/plan/with-friend", label: "With a friend",  icon: UserPlus },
+  { href: "/calendar",         label: "From a date",    icon: CalendarClock },
 ];
 
 function DiscordIcon({ className }: { className?: string }) {
@@ -61,6 +76,11 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const [restartingOnboarding, setRestartingOnboarding] = useState(false);
 
   const { data: settings } = useSWR(user ? "/api/settings" : null, fetcher, {
+    revalidateOnFocus: false,
+  });
+  // Friends list is needed to power the "Share a link" InviteDialog trigger.
+  // useSWR de-dupes with other friend-consumers on the page, so this is ~free.
+  const { data: friends = [] } = useSWR(user ? "/api/friends" : null, fetcher, {
     revalidateOnFocus: false,
   });
 
@@ -112,7 +132,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           )}
         </div>
 
-        <nav className="flex-1 p-2 space-y-1">
+        <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
           {navItems.map(({ href, label, icon: Icon, exact }) => {
             const isActive = exact ? pathname === href : pathname.startsWith(href);
             return (
@@ -132,6 +152,46 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
               </Link>
             );
           })}
+
+          {/* Plan section — four entry points, one per mental state.
+              Non-collapsible: this is a persistent secondary section, not
+              a fold-out menu. Matches the 2×2 tile grid on the homepage. */}
+          <div className="pt-4 pb-1 px-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              Plan
+            </p>
+          </div>
+          {planItems.map(({ href, label, icon: Icon }) => {
+            // "From a date" → /calendar. Highlight only when we're on /calendar
+            // AND the referrer intent was the plan tile. Simpler for now:
+            // highlight whenever the path matches, same as any other nav item.
+            const isActive = pathname === href || pathname.startsWith(href + "/");
+            return (
+              <Link
+                key={`plan-${href}-${label}`}
+                href={href}
+                onClick={onClose}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-zinc-800/50 text-zinc-100 border-l-2 border-primary pl-[10px]"
+                    : "text-muted-foreground hover:bg-zinc-900 hover:text-zinc-200"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            );
+          })}
+          <InviteDialog friends={friends as any}>
+            <button
+              type="button"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-zinc-900 hover:text-zinc-200 transition-colors"
+            >
+              <Link2 className="h-4 w-4" />
+              Share a link
+            </button>
+          </InviteDialog>
         </nav>
 
         {user && (

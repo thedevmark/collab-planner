@@ -8,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar, CalendarPlus, Loader2, RefreshCw, Users } from "lucide-react";
+import { CalendarPlus, Loader2, RefreshCw, Users, Zap, UserPlus, CalendarClock, Link2 } from "lucide-react";
 import { useReminderPolling } from "@/hooks/useReminders";
 import OnboardingModal from "@/components/onboarding/OnboardingModal";
+import { InviteDialog } from "@/components/InviteDialog";
 
 const fetcher = <T,>(url: string): Promise<T> => fetch(url).then((r) => r.json());
 
@@ -205,15 +206,76 @@ export default function HomePage() {
                 People
               </Button>
             </Link>
-            <Link href="/events/new">
-              <Button size="sm">
-                <CalendarPlus className="h-4 w-4" />
-                New Session
-              </Button>
-            </Link>
           </div>
         </CardContent>
       </Card>
+
+      {/* Quick actions — four ways to start planning a collab. One mental
+          state per tile; each lands at /events/new with progressively less
+          prefill. Same four actions live in the sidebar under "Plan". */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link
+          href="/plan/overlap"
+          className="group flex items-start gap-3 rounded-xl border bg-card p-4 transition-all hover:border-primary/60 hover:bg-accent"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15">
+            <Zap className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold">When are we all free?</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Pick a crew, we&apos;ll rank the best overlap windows.
+            </p>
+          </div>
+        </Link>
+
+        <Link
+          href="/plan/with-friend"
+          className="group flex items-start gap-3 rounded-xl border bg-card p-4 transition-all hover:border-primary/60 hover:bg-accent"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15">
+            <UserPlus className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold">Plan with a friend</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Already know who you want? Pick them first.
+            </p>
+          </div>
+        </Link>
+
+        <Link
+          href="/calendar"
+          className="group flex items-start gap-3 rounded-xl border bg-card p-4 transition-all hover:border-primary/60 hover:bg-accent"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15">
+            <CalendarClock className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold">I know when I&apos;m free</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Start from a date on the calendar, see who overlaps.
+            </p>
+          </div>
+        </Link>
+
+        <InviteDialog friends={friends as any}>
+          <button
+            type="button"
+            className="group flex w-full items-start gap-3 rounded-xl border bg-card p-4 text-left transition-all hover:border-primary/60 hover:bg-accent"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15">
+              <Link2 className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold">Just share a link</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Drop a smart invite in Discord — let the crew claim it.
+              </p>
+            </div>
+          </button>
+        </InviteDialog>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
         <Card>
@@ -230,18 +292,7 @@ export default function HomePage() {
               <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
                 <CalendarPlus className="mx-auto mb-2 h-8 w-8 opacity-40" />
                 <p className="text-sm font-medium">No upcoming sessions</p>
-                <p className="mt-1 text-xs">Start a new one or use the calendar helper if you want a date first.</p>
-                <div className="mt-4 flex justify-center gap-2">
-                  <Link href="/events/new">
-                    <Button size="sm">New Session</Button>
-                  </Link>
-                  <Link href="/calendar">
-                    <Button size="sm" variant="outline">
-                      <Calendar className="h-4 w-4" />
-                      Calendar Helper
-                    </Button>
-                  </Link>
-                </div>
+                <p className="mt-1 text-xs">Pick one of the quick actions above to start planning.</p>
               </div>
             ) : (
               events.slice(0, 5).map((event) => (
@@ -328,22 +379,6 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Need A Date First?</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Start from a date instead. Pick a day, see who&apos;s free, then set up the session from there.
-              </p>
-              <Link href="/calendar">
-                <Button variant="outline" className="w-full justify-center">
-                  <Calendar className="h-4 w-4" />
-                  Open Calendar Helper
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
