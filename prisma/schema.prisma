@@ -101,6 +101,13 @@ model Event {
   status                String             @default("planned")
   googleCalendarEventId String             @default("")
   googleCalendarLink    String             @default("")
+  // Native Discord scheduled-event ID, if the user had permission to create one.
+  // Empty string = never tried or permission denied; populated = we own a live
+  // scheduled event on the server and must keep it in sync on edit/cancel.
+  discordEventId        String             @default("")
+  // Last sync error surfaced to the user. Common case: "missing_permission"
+  // when the user isn't a moderator in their connected guild.
+  discordSyncError      String             @default("")
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   collabHistory         CollabHistory[]

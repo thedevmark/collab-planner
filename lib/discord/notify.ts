@@ -7,8 +7,26 @@ import {
   buildCanceledEmbed,
   buildInviteEmbed,
   createGuildScheduledEvent,
+  updateGuildScheduledEvent,
+  deleteGuildScheduledEvent,
   getDiscordToken,
+  DiscordApiError,
 } from "./client";
+import { getDefaultDiscordCoverImage } from "./coverImage";
+
+/**
+ * Map a raw Discord API failure to a short, user-facing code. Kept intentionally
+ * coarse — the UI decides how to phrase each bucket, not this module.
+ */
+function classifyDiscordError(err: unknown): string {
+  if (err instanceof DiscordApiError) {
+    if (err.status === 403) return "missing_permission";
+    if (err.status === 401) return "auth_expired";
+    if (err.status === 404) return "not_found";
+    return `http_${err.status}`;
+  }
+  return "unknown";
+}
 
 interface EventData {
   id: number;
@@ -71,15 +89,19 @@ export async function notifyDiscord(
  * Create a native Discord Scheduled Event in the user's connected server.
  *
  * Shows up in the server's Events tab with the collab title, time, and a
- * "Twitch" external location. Fires once on event creation, fire-and-forget.
+ * "Twitch" external location. Fires once on event creation.
  *
- * No-ops if the user hasn't connected Discord OAuth or if their webhook URL
- * couldn't be resolved to a server (see `resolveWebhookMetadata`). Silently
- * swallows 403s — the user may not have "Manage Events" permission in the
- * target server, which is fine; the webhook post still fires.
+ * Returns the Discord event ID on success so the caller can persist it for
+ * later edit/delete sync. Records a short error code (e.g. "missing_permission")
+ * on the Event row when Discord rejects the request — the UI reads this to
+ * show the user a specific note instead of pretending everything worked.
+ *
+ * Still fire-and-forget for the API response path — we never throw out of
+ * this function.
  */
 export async function createDiscordScheduledEvent(
   userId: string,
+  eventId: number,
   event: {
     title: string;
     description: string;
@@ -97,16 +119,124 @@ export async function createDiscordScheduledEvent(
     const token = await getDiscordToken(userId);
     if (!token) return;
 
-    await createGuildScheduledEvent(profile.discordGuildId, token, {
+    const created = await createGuildScheduledEvent(profile.discordGuildId, token, {
       // Discord caps: name ≤100 chars, description ≤1000 chars
       name: event.title.slice(0, 100),
       description: event.description.slice(0, 1000),
       startTime: event.startTime.toISOString(),
       endTime: event.endTime.toISOString(),
+      // Brand cover image so the event looks like ours in the Events tab,
+      // not a plain colored header. Returns null if the logo file is
+      // missing — Discord simply omits the banner in that case.
+      image: getDefaultDiscordCoverImage() ?? undefined,
     });
+
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { discordEventId: created.id, discordSyncError: "" },
+    });
+  } catch (err) {
+    const code = classifyDiscordError(err);
+    // Record the failure so the event detail page can surface it. Don't
+    // re-throw — the webhook embed still posts, and the user's own row in
+    // the DB is already written.
+    try {
+      await prisma.event.update({
+        where: { id: eventId },
+        data: { discordSyncError: code },
+      });
+    } catch {
+      // If even the error write fails, swallow — telemetry will be elsewhere.
+    }
+  }
+}
+
+/**
+ * Patch the Discord scheduled event to match the current Event row. Called
+ * after a successful PATCH on our side. No-op if we never created a Discord
+ * event for this row (no stored ID).
+ */
+export async function updateDiscordScheduledEvent(
+  userId: string,
+  eventId: number,
+  discordEventId: string,
+  changes: {
+    title?: string;
+    description?: string;
+    startTime?: Date;
+    endTime?: Date;
+    status?: "planned" | "confirmed" | "completed" | "canceled";
+  },
+) {
+  if (!discordEventId) return;
+  try {
+    const profile = await prisma.profile.findUnique({
+      where: { id: userId },
+      select: { discordGuildId: true },
+    });
+    if (!profile?.discordGuildId) return;
+
+    const token = await getDiscordToken(userId);
+    if (!token) return;
+
+    // Map our app status vocabulary onto Discord's. "planned" = scheduled,
+    // "confirmed" stays scheduled (Discord has no "confirmed" — the event is
+    // just on the calendar), "completed" and "canceled" terminate it.
+    const discordStatus = changes.status === undefined
+      ? undefined
+      : changes.status === "completed"
+        ? "completed" as const
+        : changes.status === "canceled"
+          ? "canceled" as const
+          : undefined;
+
+    await updateGuildScheduledEvent(profile.discordGuildId, discordEventId, token, {
+      name: changes.title?.slice(0, 100),
+      description: changes.description?.slice(0, 1000),
+      startTime: changes.startTime?.toISOString(),
+      endTime: changes.endTime?.toISOString(),
+      status: discordStatus,
+    });
+
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { discordSyncError: "" },
+    });
+  } catch (err) {
+    const code = classifyDiscordError(err);
+    try {
+      await prisma.event.update({
+        where: { id: eventId },
+        data: { discordSyncError: code },
+      });
+    } catch {}
+  }
+}
+
+/**
+ * Delete the Discord scheduled event. Called when the app event is deleted
+ * outright. For cancellation we PATCH status=canceled instead (via
+ * updateDiscordScheduledEvent) so the event stays visible as "canceled" in
+ * the server's event tab rather than disappearing.
+ */
+export async function deleteDiscordScheduledEvent(
+  userId: string,
+  discordEventId: string,
+) {
+  if (!discordEventId) return;
+  try {
+    const profile = await prisma.profile.findUnique({
+      where: { id: userId },
+      select: { discordGuildId: true },
+    });
+    if (!profile?.discordGuildId) return;
+
+    const token = await getDiscordToken(userId);
+    if (!token) return;
+
+    await deleteGuildScheduledEvent(profile.discordGuildId, discordEventId, token);
   } catch {
-    // Fire-and-forget — permission errors, revoked tokens, etc. don't block
-    // the main event-creation response.
+    // Best-effort cleanup — if it fails the row is gone on our side anyway.
   }
 }
 

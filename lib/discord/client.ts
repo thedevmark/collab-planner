@@ -60,6 +60,21 @@ async function refreshDiscordToken(userId: string, refreshToken: string): Promis
 
 // ── Base fetch ───────────────────────────────────────────────────────────────
 
+// Error subclass so callers can do `err instanceof DiscordApiError` and branch
+// on `status` instead of parsing string messages. Useful for 403 (missing
+// permission) which we want to surface to the user as a specific note rather
+// than a generic failure.
+export class DiscordApiError extends Error {
+  status: number;
+  body: string;
+  constructor(status: number, body: string) {
+    super(`Discord ${status}: ${body}`);
+    this.name = "DiscordApiError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
 async function discordFetch(path: string, token: string, options: RequestInit = {}) {
   const res = await fetch(`${DISCORD_API}${path}`, {
     ...options,
@@ -72,7 +87,7 @@ async function discordFetch(path: string, token: string, options: RequestInit = 
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Discord ${res.status}: ${text}`);
+    throw new DiscordApiError(res.status, text);
   }
 
   return res.status === 204 ? null : res.json();
@@ -92,19 +107,65 @@ export async function getGuildChannels(guildId: string, token: string): Promise<
 export async function createGuildScheduledEvent(
   guildId: string,
   token: string,
-  data: { name: string; startTime: string; endTime: string; description?: string }
-) {
+  data: { name: string; startTime: string; endTime: string; description?: string; image?: string }
+): Promise<{ id: string }> {
+  const body: Record<string, unknown> = {
+    name: data.name,
+    scheduled_start_time: data.startTime,
+    scheduled_end_time: data.endTime,
+    privacy_level: 2, // GUILD_ONLY
+    entity_type: 3,   // EXTERNAL (Twitch stream, not a voice channel)
+    entity_metadata: { location: "Twitch" },
+    description: data.description ?? "",
+  };
+  // `image` must be a data URI like `data:image/png;base64,<…>`. Discord caps
+  // the file at ~10 MB; the encoded string inflates ~33 % so keep sources
+  // small. Omitted entirely if the caller didn't pass one so we don't send
+  // an empty field.
+  if (data.image) body.image = data.image;
   return discordFetch(`/guilds/${guildId}/scheduled-events`, token, {
     method: "POST",
-    body: JSON.stringify({
-      name: data.name,
-      scheduled_start_time: data.startTime,
-      scheduled_end_time: data.endTime,
-      privacy_level: 2, // GUILD_ONLY
-      entity_type: 3,   // EXTERNAL (Twitch stream, not a voice channel)
-      entity_metadata: { location: "Twitch" },
-      description: data.description ?? "",
-    }),
+    body: JSON.stringify(body),
+  });
+}
+
+/**
+ * Patch an existing guild scheduled event. Discord accepts partial updates, so
+ * only pass fields that actually changed — matching-value patches are still
+ * network traffic but don't cause errors.
+ *
+ * For EXTERNAL events (entity_type 3, our case) Discord requires
+ * scheduled_end_time any time scheduled_start_time moves, otherwise the
+ * validation fails. Callers pass both together.
+ */
+export async function updateGuildScheduledEvent(
+  guildId: string,
+  eventId: string,
+  token: string,
+  data: { name?: string; startTime?: string; endTime?: string; description?: string; status?: "scheduled" | "active" | "completed" | "canceled" },
+) {
+  const body: Record<string, unknown> = {};
+  if (data.name !== undefined) body.name = data.name;
+  if (data.description !== undefined) body.description = data.description;
+  if (data.startTime !== undefined) body.scheduled_start_time = data.startTime;
+  if (data.endTime !== undefined) body.scheduled_end_time = data.endTime;
+  if (data.status !== undefined) {
+    // Discord status enum: 1 scheduled, 2 active, 3 completed, 4 canceled
+    body.status = data.status === "scheduled" ? 1 : data.status === "active" ? 2 : data.status === "completed" ? 3 : 4;
+  }
+  return discordFetch(`/guilds/${guildId}/scheduled-events/${eventId}`, token, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteGuildScheduledEvent(
+  guildId: string,
+  eventId: string,
+  token: string,
+) {
+  return discordFetch(`/guilds/${guildId}/scheduled-events/${eventId}`, token, {
+    method: "DELETE",
   });
 }
 

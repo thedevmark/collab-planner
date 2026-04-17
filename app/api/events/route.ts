@@ -167,7 +167,7 @@ export async function POST(req: Request) {
 
     // Fire-and-forget Discord notifications
     notifyDiscord(userId, "created", event);
-    createDiscordScheduledEvent(userId, {
+    createDiscordScheduledEvent(userId, event.id, {
       title: event.title,
       description: event.description,
       startTime: event.startTime,

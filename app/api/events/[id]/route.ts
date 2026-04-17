@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser, unauthorized } from "@/lib/auth";
 import { z } from "zod";
-import { notifyDiscord } from "@/lib/discord/notify";
+import {
+  notifyDiscord,
+  updateDiscordScheduledEvent,
+  deleteDiscordScheduledEvent,
+} from "@/lib/discord/notify";
 import {
   normalizeParticipantsInviteStatus,
   normalizeParticipantResponseStatus,
@@ -103,6 +107,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (data.status === "confirmed") notifyDiscord(user.id, "confirmed", event);
     if (data.status === "canceled") notifyDiscord(user.id, "canceled", event);
 
+    // Sync the change to the native Discord scheduled event if we own one.
+    // Only forward the fields that actually moved, and pass start/end as a
+    // pair whenever either changed (Discord requires both on EXTERNAL events).
+    if (existing.discordEventId) {
+      const timeChanged = data.startTime !== undefined || data.endTime !== undefined;
+      updateDiscordScheduledEvent(user.id, eventId, existing.discordEventId, {
+        title: data.title,
+        description: data.description,
+        startTime: timeChanged ? event.startTime : undefined,
+        endTime: timeChanged ? event.endTime : undefined,
+        status: data.status,
+      });
+    }
+
     return NextResponse.json({
       ...event,
       participants: normalizeParticipantsInviteStatus(event.participants),
@@ -129,6 +147,19 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       where: { id: parseInt(id) },
       data: { status: "canceled" },
     });
+
+    // DELETE acts as a "cancel" on our side (soft-cancel: status flip, row
+    // stays). Mirror that on Discord by PATCHing to canceled, not outright
+    // deletion — keeps the scheduled event visible in the server's event
+    // tab so participants see the cancellation.
+    if (existing.discordEventId) {
+      updateDiscordScheduledEvent(user.id, existing.id, existing.discordEventId, {
+        status: "canceled",
+      });
+    }
+    // Keep deleteDiscordScheduledEvent imported for a future hard-delete path.
+    void deleteDiscordScheduledEvent;
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("[api/events/[id]] DELETE failed:", err);

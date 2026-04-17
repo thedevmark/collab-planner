@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
   ArrowLeft, Calendar, Clock, Gamepad2,
-  Bell, Trash2, Loader2, Edit2, Check, X, Link2,
+  Bell, Trash2, Loader2, Edit2, Check, X, Link2, AlertTriangle,
 } from "lucide-react";
 import { MessageBlock } from "@/components/events/MessageBlock";
 import { InviteDialog } from "@/components/InviteDialog";
@@ -61,10 +61,31 @@ type EventDetail = {
   endTime: string;
   gameName: string | null;
   status: string;
+  discordEventId: string;
+  discordSyncError: string;
   participants: EventParticipant[];
   reminders: EventReminder[];
   error?: string;
 };
+
+/**
+ * Human phrasing for the sync-error codes written by lib/discord/notify.ts.
+ * Codes we don't recognize fall through to a generic note rather than being
+ * hidden, so if the API evolves we still see something.
+ */
+function discordSyncErrorMessage(code: string): string | null {
+  if (!code) return null;
+  if (code === "missing_permission") {
+    return "Your Discord account doesn't have Manage Events in this server, so no native Discord event was created. The webhook embed still posted. Ask a moderator, or switch to a server you manage in Settings.";
+  }
+  if (code === "auth_expired") {
+    return "Your Discord connection expired. Reconnect in Settings to resume syncing.";
+  }
+  if (code === "not_found") {
+    return "The connected Discord server or event couldn't be found. It may have been deleted — reconnect in Settings.";
+  }
+  return "Couldn't sync this event to Discord. The webhook embed still posted.";
+}
 
 function toLocalDatetimeValue(date: Date): string {
   const y = date.getFullYear();
@@ -87,6 +108,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [editEndTime, setEditEndTime] = useState("");
   const [editGameName, setEditGameName] = useState("");
   const [saving, setSaving] = useState(false);
+  // Which status option is currently mid-flight, if any. Drives the spinner
+  // on the specific button so users see something is happening immediately
+  // instead of waiting on a silent network round-trip.
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -132,12 +157,26 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   async function updateStatus(status: string) {
-    await fetch(`/api/events/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    mutate();
+    if (status === currentEvent.status || pendingStatus) return;
+    setPendingStatus(status);
+    // Optimistic write — flip the badge + active button instantly, then
+    // reconcile with the server response. Rollback on failure so the UI
+    // doesn't silently lie about persisted state.
+    const previous = currentEvent;
+    mutate({ ...currentEvent, status }, { revalidate: false });
+    try {
+      const res = await fetch(`/api/events/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("update failed");
+      await mutate();
+    } catch {
+      mutate(previous, { revalidate: false });
+    } finally {
+      setPendingStatus(null);
+    }
   }
 
   async function cycleParticipantStatus(participantId: number, currentStatus: string) {
@@ -156,6 +195,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     router.push("/events");
   }
 
+  const discordSyncNote = discordSyncErrorMessage(currentEvent.discordSyncError);
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
@@ -166,6 +207,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           </Button>
         </Link>
       </div>
+
+      {discordSyncNote && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>{discordSyncNote}</span>
+        </div>
+      )}
 
       <Card>
         <CardContent className="pt-6 space-y-4">
@@ -270,17 +318,22 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               </div>
 
               <div className="flex gap-2 flex-wrap">
-                {STATUS_OPTIONS.map((s) => (
-                  <Button
-                    key={s}
-                    variant={currentEvent.status === s ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => updateStatus(s)}
-                    className="capitalize"
-                  >
-                    {s}
-                  </Button>
-                ))}
+                {STATUS_OPTIONS.map((s) => {
+                  const isPending = pendingStatus === s;
+                  return (
+                    <Button
+                      key={s}
+                      variant={currentEvent.status === s ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => updateStatus(s)}
+                      disabled={pendingStatus !== null}
+                      className="capitalize"
+                    >
+                      {isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+                      {s}
+                    </Button>
+                  );
+                })}
               </div>
             </>
           )}
