@@ -31,16 +31,16 @@ function DiscordIcon({ className }: { className?: string }) {
 // avatar instance for that friend reads from the same const. System emoji fonts render
 // these as full-color glyphs on every modern OS.
 const ROTATING_DM_FRIENDS = [
-  { name: "thedeutschmark", handle: "thedeutschmark", icon: "🎤" },
-  { name: "a1exzandra",     handle: "a1exzandra",     icon: "🌙" },
-  { name: "OOKVOID",        handle: "ookvoid",        icon: "👾" },
-  { name: "DANGERDORK",     handle: "dangerdork",     icon: "⚡" },
-  { name: "Koryzma",        handle: "koryzma",        icon: "🔥" },
-  { name: "aerisoncam",     handle: "aerisoncam",     icon: "🎨" },
+  { name: "thedeutschmark", handle: "thedeutschmark", icon: "♪" },
+  { name: "a1exzandra",     handle: "a1exzandra",     icon: "☽" },
+  { name: "OOKVOID",        handle: "ookvoid",        icon: "❖" },
+  { name: "DANGERDORK",     handle: "dangerdork",     icon: "✦" },
+  { name: "Koryzma",        handle: "koryzma",        icon: "✺" },
+  { name: "aerisoncam",     handle: "aerisoncam",     icon: "✎" },
 ];
 
 // Your own avatar on the "you" side of the DM loop. Fixed — it's Mark's side of the chat.
-const ME_ICON = "🐉";
+const ME_ICON = "♞";
 
 // Mock "Best windows" data — mirrors the real FindTimeView output shape
 const MOCK_SLOTS = [
@@ -62,7 +62,11 @@ function DMLine({ who, icon, color, time, muted, children }: {
     <div className="flex gap-2.5">
       <div
         className="w-7 h-7 rounded-full flex items-center justify-center text-[14px] leading-none shrink-0"
-        style={{ backgroundColor: color + "25" }}
+        style={{
+          backgroundColor: color + "25",
+          fontFamily: '"Segoe UI Symbol", "Segoe UI", sans-serif',
+          color,
+        }}
       >
         {icon}
       </div>
@@ -93,8 +97,8 @@ export default function LoginPage() {
   // so every visible reference to the DM partner stays in sync.
   const MOCK_FRIENDS = [
     { ...dmFriend, color: "#9147ff", window: "Tue 8 PM", live: true },
-    { icon: "🎮", color: "#5865F2", name: "NexusPlays", handle: "nexusplays", window: "Tue 9 PM", live: false },
-    { icon: "🏹", color: "#e0af68", name: "SilverArc", handle: "silverarc_tv", window: "Wed 7 PM", live: false },
+    { icon: "◆", color: "#5865F2", name: "NexusPlays", handle: "nexusplays", window: "Tue 9 PM", live: false },
+    { icon: "➳", color: "#e0af68", name: "SilverArc", handle: "silverarc_tv", window: "Wed 7 PM", live: false },
   ];
 
   // OAuth handoff can feel instant-but-stuck: the user clicks, Supabase builds the redirect URL,
@@ -187,8 +191,7 @@ export default function LoginPage() {
           {/* Headline */}
           <div className="space-y-4">
             <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight leading-[1.05] text-white">
-              Stop scheduling<br />
-              <span className="bg-gradient-to-r from-[#a78bfa] to-[#5eead4] bg-clip-text text-transparent">collabs over DMs.</span>
+              <span className="bg-gradient-to-r from-[#a78bfa] to-[#5eead4] bg-clip-text text-transparent">Collab Planner</span>
             </h1>
             <p className="text-base text-zinc-400 leading-relaxed max-w-md mx-auto">
               It looks at when everyone actually streams, finds the overlap,
@@ -262,13 +265,13 @@ export default function LoginPage() {
                   alt="hiCat"
                   className="inline-block h-[1.35em] w-[1.35em] align-[-0.35em] mr-0.5"
                 />
-                hey wanna plan a stream together soon?
+                hey wanna plan to play a game on stream together?
               </DMLine>
               <DMLine who="you" icon={ME_ICON} color="#5eead4" time="Mon 8:43 PM">
                 sure when?
               </DMLine>
               <DMLine who={dmFriend.name} icon={dmFriend.icon} color="#c4b5fd" time="Mon 8:43 PM">
-                idk — when can you? and what game?
+                idk - when can you? and what game?
               </DMLine>
               <DMLine who="you" icon={ME_ICON} color="#5eead4" time="Mon 8:44 PM">
                 idk{" "}
@@ -280,7 +283,7 @@ export default function LoginPage() {
                 />
                 {" "}you don&apos;t post your schedule either
               </DMLine>
-              <DMLine who={dmFriend.name} icon={dmFriend.icon} color="#c4b5fd" time="Mon 8:45 PM" muted>
+              <DMLine who={dmFriend.name} icon={dmFriend.icon} color="#c4b5fd" time="Mon 8:45 PM">
                 lol let&apos;s figure it out later
               </DMLine>
             </div>

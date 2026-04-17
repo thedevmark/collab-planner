@@ -118,25 +118,48 @@ export function Logo({
       </svg>
 
       <style jsx>{`
-        /* Bloom is invisible until hover. Transition handles both the
-           entrance (hover-in) and the exit (hover-out) smoothly. */
-        .logo-root :global(.logo-bloom) {
-          opacity: 0;
-          transition: opacity 420ms cubic-bezier(0.4, 0, 0.2, 1);
+        /* Asymmetric transitions — the defaults here govern the HOVER-OUT
+           path (longer, standard ease-out) so the glow + bounce release
+           gently. The :hover rules below override with faster, spring-eased
+           values for a snappier, tactile entrance. */
+        .logo-root {
+          display: inline-block;
+          transform: translateZ(0); /* promote to own layer — smoother scale */
+          transition: transform 620ms cubic-bezier(0.4, 0, 0.2, 1);
+          will-change: transform;
         }
 
-        /* On hover, fade in and hand off to the breathing keyframe. The
-           animation-delay matches the transition so the pulse begins only
-           after the glow has fully materialized — prevents the "pop to
-           mid-opacity" artifact a naive 0%-to-X keyframe would produce. */
+        .logo-root :global(.logo-bloom) {
+          opacity: 0;
+          transition: opacity 620ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Hover IN — spring easing on scale gives a subtle overshoot bounce
+           (~1.5% scale). Bloom fades in a touch faster so the halo is
+           already present as the bounce settles. animation-delay matches
+           the fade-in so the breathing pulse begins only once the glow has
+           fully materialized. */
+        .logo-root:hover,
+        .logo-root:focus-visible {
+          transform: scale(1.018);
+          transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
         .logo-root:hover :global(.logo-bloom),
         .logo-root:focus-visible :global(.logo-bloom) {
           opacity: 1;
-          animation: logoBloom 2.6s ease-in-out 420ms infinite;
+          transition: opacity 380ms cubic-bezier(0.4, 0, 0.2, 1);
+          animation: logoBloom 2.6s ease-in-out 380ms infinite;
         }
 
-        /* Users with reduced-motion get the static halo, no breathing. */
+        /* Users with reduced-motion get the static halo and no scale. */
         @media (prefers-reduced-motion: reduce) {
+          .logo-root,
+          .logo-root:hover,
+          .logo-root:focus-visible {
+            transform: none;
+            transition: none;
+          }
           .logo-root:hover :global(.logo-bloom),
           .logo-root:focus-visible :global(.logo-bloom) {
             animation: none;
