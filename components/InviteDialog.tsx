@@ -204,7 +204,7 @@ export function InviteDialog({ friends, defaultFriendIds = [], children }: Invit
                         onClick={() => toggleFriend(f.id)}
                         className={`flex items-center gap-2 p-2 rounded-md border text-left transition-colors text-sm ${
                           selected
-                            ? "border-zinc-600 bg-zinc-800/40"
+                            ? "border-primary/40 bg-primary/10"
                             : "hover:bg-accent border-border"
                         }`}
                       >
@@ -216,7 +216,7 @@ export function InviteDialog({ friends, defaultFriendIds = [], children }: Invit
                         </Avatar>
                         <span className="truncate flex-1">{f.displayName}</span>
                         {selected && (
-                          <Check className="h-3 w-3 shrink-0 text-zinc-300" />
+                          <Check className="h-3 w-3 shrink-0 text-primary" />
                         )}
                       </button>
                     );

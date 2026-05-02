@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -22,7 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="lg:ml-56 flex flex-col min-h-screen">
         {/* Mobile top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 px-4 h-12 border-b bg-background lg:hidden">
+        <header className="sticky top-0 z-30 flex items-center gap-3 px-4 h-12 border-b bg-background/95 backdrop-blur lg:hidden">
           <button
             onClick={() => setMobileOpen(true)}
             className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors"
@@ -33,6 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center">
             <Logo width={72} height={40} />
           </div>
+          <ThemeToggle compact className="ml-auto" />
         </header>
 
         <main className="flex-1 p-4 lg:p-6">

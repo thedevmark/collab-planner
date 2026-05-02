@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;
   --card: 240 6% 6%;
@@ -24,24 +25,25 @@
 }
 
 .light {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 4%;
-  --card: 0 0% 98%;
-  --card-foreground: 240 10% 4%;
+  color-scheme: light;
+  --background: 240 20% 97%;
+  --foreground: 240 6% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 6% 12%;
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 4%;
+  --popover-foreground: 240 6% 12%;
   --primary: 221 83% 53%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 240 5% 93%;
-  --secondary-foreground: 240 10% 4%;
-  --muted: 240 5% 93%;
-  --muted-foreground: 240 4% 46%;
-  --accent: 240 5% 90%;
-  --accent-foreground: 240 10% 4%;
+  --secondary: 240 14% 94%;
+  --secondary-foreground: 240 6% 12%;
+  --muted: 240 14% 94%;
+  --muted-foreground: 240 4% 42%;
+  --accent: 240 12% 91%;
+  --accent-foreground: 240 6% 12%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --border: 240 6% 90%;
-  --input: 240 6% 90%;
+  --border: 240 8% 84%;
+  --input: 240 8% 84%;
   --ring: 221 83% 53%;
 }
 
@@ -77,6 +79,10 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: hsl(var(--primary) / 0.22);
 }
 
 @keyframes fade-in-up {
@@ -302,6 +308,31 @@ body {
 }
 .fc .fc-daygrid-day:hover {
   background-color: hsl(240 4% 11%) !important;
+}
+
+.light .fc {
+  --fc-button-hover-bg-color: hsl(240 12% 91%);
+  --fc-button-active-bg-color: hsl(240 12% 88%);
+  --fc-button-active-border-color: hsl(var(--border));
+  --fc-today-bg-color: hsl(221 83% 53% / 0.08);
+}
+
+.light .fc .fc-daygrid-day.calendar-my-stream-day {
+  background: hsl(221 83% 53% / 0.06) !important;
+}
+
+.light .fc .fc-event.calendar-planned-event {
+  background: hsl(0 0% 100%) !important;
+  border-color: hsl(var(--border)) !important;
+  box-shadow: 0 1px 5px hsl(240 8% 30% / 0.16);
+}
+
+.light .fc .fc-event.calendar-friend-event {
+  box-shadow: 0 1px 3px hsl(240 8% 30% / 0.16);
+}
+
+.light .fc .fc-daygrid-day:hover {
+  background-color: hsl(240 14% 94%) !important;
 }
 
 @keyframes ob-float-1 {

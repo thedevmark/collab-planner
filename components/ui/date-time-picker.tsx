@@ -144,7 +144,7 @@ export function DateTimePicker({ value, onChange }: Props) {
                   className={cn(
                     "h-7 w-7 mx-auto flex items-center justify-center rounded-md text-xs font-medium transition-colors",
                     sel && "bg-primary text-primary-foreground",
-                    !sel && today && "bg-zinc-800 text-zinc-100",
+                    !sel && today && "bg-primary/10 text-primary",
                     !sel && !today && "hover:bg-accent text-foreground"
                   )}
                 >
@@ -187,7 +187,7 @@ export function DateTimePicker({ value, onChange }: Props) {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="ml-auto text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-50 px-3 py-1 rounded transition-colors"
+              className="ml-auto rounded bg-primary px-3 py-1 text-xs text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Done
             </button>

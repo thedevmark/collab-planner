@@ -12,15 +12,13 @@ import {
   Twitch,
   LogOut,
   RotateCcw,
-  Sun,
-  Moon,
   Plus,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { useTheme } from "next-themes";
 import Image from "next/image";
 import useSWR from "swr";
 import {
@@ -62,7 +60,6 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useUser();
-  const { resolvedTheme, setTheme } = useTheme();
   const [restartingOnboarding, setRestartingOnboarding] = useState(false);
 
   const { data: settings } = useSWR(user ? "/api/settings" : null, fetcher, {
@@ -130,10 +127,10 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-zinc-800/50 text-zinc-100 border-l-2 border-primary pl-[10px]"
+                    ? "bg-primary/10 text-foreground border-l-2 border-primary pl-[10px]"
                     : primary
-                      ? "text-zinc-200 hover:bg-primary/10 hover:text-primary"
-                      : "text-muted-foreground hover:bg-zinc-900 hover:text-zinc-200"
+                      ? "text-foreground hover:bg-primary/10 hover:text-primary"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
                 <Icon className={cn("h-4 w-4", !isActive && primary && "text-primary")} />
@@ -156,11 +153,11 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                   className="rounded-full shrink-0"
                 />
               ) : (
-                <div className="w-[30px] h-[30px] rounded-full bg-zinc-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                <div className="w-[30px] h-[30px] rounded-full bg-muted flex items-center justify-center text-xs font-bold text-foreground shrink-0">
                   {displayName[0]?.toUpperCase() ?? "?"}
                 </div>
               )}
-              <span className="text-xs font-medium text-zinc-300 truncate">{displayName}</span>
+              <span className="text-xs font-medium text-foreground truncate">{displayName}</span>
             </div>
 
             {/* Platform connection badges */}
@@ -193,11 +190,11 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                     <Link
                       href="/settings"
                       onClick={onClose}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-dashed border-zinc-600 hover:border-[#5865F2]/40 hover:bg-[#5865F2]/5 transition-colors group"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-dashed border-border hover:border-[#5865F2]/40 hover:bg-[#5865F2]/5 transition-colors group"
                     >
-                      <DiscordIcon className="h-3 w-3 text-zinc-500 group-hover:text-[#5865F2]/70 transition-colors" />
-                      <span className="text-[10px] font-semibold tracking-wide text-zinc-500 group-hover:text-[#5865F2]/70 transition-colors">Discord</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 ml-0.5" />
+                      <DiscordIcon className="h-3 w-3 text-muted-foreground group-hover:text-[#5865F2]/70 transition-colors" />
+                      <span className="text-[10px] font-semibold tracking-wide text-muted-foreground group-hover:text-[#5865F2]/70 transition-colors">Discord</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground ml-0.5" />
                     </Link>
                   )}
                 </TooltipTrigger>
@@ -231,14 +228,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
               <RotateCcw className="h-3.5 w-3.5 shrink-0" />
               {restartingOnboarding ? "Restarting..." : "Restart onboarding"}
             </button>
-            <button
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-              aria-label="Toggle theme"
-            >
-              {resolvedTheme === "dark" ? <Sun className="h-3.5 w-3.5 shrink-0" /> : <Moon className="h-3.5 w-3.5 shrink-0" />}
-              {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
-            </button>
+            <ThemeToggle />
             <button
               onClick={handleSignOut}
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"

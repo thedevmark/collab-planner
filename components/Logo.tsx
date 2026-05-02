@@ -105,7 +105,7 @@ export function Logo({
         {/* Wordmark */}
         <g
           fontFamily="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-          fill="#ffffff"
+          fill="currentColor"
           filter={`url(#text-shadow-${uid})`}
         >
           <text x="33" y="19" fontSize="10.5" fontWeight="600" letterSpacing="0.35">

@@ -497,7 +497,7 @@ function NewEventForm() {
                     key={f.id}
                     onClick={() => toggleFriend(f.id)}
                     className={`flex items-center gap-2 p-2 rounded-md border text-left transition-colors ${
-                      selected ? "border-zinc-600 bg-zinc-800/40" : "hover:bg-accent"
+                      selected ? "border-primary/40 bg-primary/10" : "hover:bg-accent"
                     }`}
                   >
                     <Avatar className="h-7 w-7">
@@ -511,7 +511,7 @@ function NewEventForm() {
                           Favorite
                         </Badge>
                       )}
-                      {selected && <Check className="h-3.5 w-3.5 text-zinc-300" />}
+                      {selected && <Check className="h-3.5 w-3.5 text-primary" />}
                     </div>
                   </button>
                 );

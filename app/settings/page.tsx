@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Check, ExternalLink, Hash, Link2, Loader2, MessageSquare, Twitch, Unlink } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import Image from "next/image";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const TIMEZONES = [
   "UTC",
@@ -152,7 +153,7 @@ function SettingsForm() {
             {avatarUrl ? (
               <Image src={avatarUrl} alt={displayName} width={48} height={48} className="rounded-full" />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center text-lg font-bold text-white">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-lg font-bold text-foreground">
                 {displayName[0]?.toUpperCase() ?? "?"}
               </div>
             )}
@@ -169,6 +170,17 @@ function SettingsForm() {
         </CardContent>
       </Card>
 
+      {/* Appearance */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Appearance</CardTitle>
+          <CardDescription>Switch between dark and light mode. Your choice is saved on this device.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ThemeToggle className="max-w-48" />
+        </CardContent>
+      </Card>
+
       {/* Timezone */}
       <Card>
         <CardHeader>
@@ -182,7 +194,6 @@ function SettingsForm() {
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
             className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            style={{ colorScheme: "dark" }}
           >
             {TIMEZONES.map((tz) => (
               <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>
@@ -219,7 +230,7 @@ function SettingsForm() {
               aria-checked={publicApiEnabled}
               aria-label="Toggle public API"
               className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
-                publicApiEnabled ? "bg-primary" : "bg-zinc-700"
+                publicApiEnabled ? "bg-primary" : "bg-muted"
               } ${savingPublicApi ? "opacity-60" : ""}`}
               disabled={savingPublicApi}
               onClick={() => { void togglePublicApi(!publicApiEnabled); }}
