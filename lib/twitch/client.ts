@@ -1,5 +1,13 @@
 import { getTwitchToken } from "./auth";
-import type { TwitchUser, TwitchSchedule, TwitchGame, TwitchVideo, TwitchChannel, TwitchFollower } from "./types";
+import type {
+  TwitchUser,
+  TwitchSchedule,
+  TwitchGame,
+  TwitchVideo,
+  TwitchChannel,
+  TwitchFollower,
+  TwitchFollowedChannel,
+} from "./types";
 
 const TWITCH_API = "https://api.twitch.tv/helix";
 
@@ -155,6 +163,40 @@ export async function getChannelFollowers(
 
   return {
     followers: followers.slice(0, maxFollowers),
+    total,
+    capped: Boolean(cursor),
+  };
+}
+
+export async function getFollowedChannels(
+  userId: string,
+  userToken: string,
+  maxChannels = 500
+): Promise<{ channels: TwitchFollowedChannel[]; total: number; capped: boolean }> {
+  const channels: TwitchFollowedChannel[] = [];
+  let cursor = "";
+  let total = 0;
+
+  do {
+    const params = new URLSearchParams({
+      user_id: userId,
+      first: "100",
+    });
+    if (cursor) params.set("after", cursor);
+
+    const data = await twitchUserFetch<{
+      total?: number;
+      data?: TwitchFollowedChannel[];
+      pagination?: { cursor?: string };
+    }>(`/channels/followed?${params.toString()}`, userToken);
+
+    total = data.total ?? total;
+    channels.push(...(data.data ?? []));
+    cursor = data.pagination?.cursor ?? "";
+  } while (cursor && channels.length < maxChannels);
+
+  return {
+    channels: channels.slice(0, maxChannels),
     total,
     capped: Boolean(cursor),
   };

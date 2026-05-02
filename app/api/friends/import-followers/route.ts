@@ -4,11 +4,13 @@ import { getAuthUser, unauthorized } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createOrConfirmFriendFromTwitchUser } from "@/lib/friends/createFriend";
 import { refreshTwitchUserToken } from "@/lib/twitch/auth";
-import { getChannelFollowers, getUsersByIds, getUsersByLogins } from "@/lib/twitch/client";
+import { getChannelFollowers, getFollowedChannels, getUsersByIds, getUsersByLogins } from "@/lib/twitch/client";
 
 const importFollowersSchema = z.object({
   usernames: z.array(z.string().min(1)).min(1).max(50),
 });
+
+const importSourceSchema = z.enum(["followers", "following"]).default("followers");
 
 function normalizeLogin(login: string) {
   return login.trim().replace(/^@/, "").toLowerCase();
@@ -17,11 +19,65 @@ function normalizeLogin(login: string) {
 function followerPermissionError() {
   return NextResponse.json(
     {
-      error: "Reconnect Twitch to allow follower import.",
+      error: "Reconnect Twitch to import Twitch accounts.",
       code: "twitch_followers_permission_required",
     },
     { status: 409 }
   );
+}
+
+type ImportCandidate = {
+  twitchId: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string;
+  followedAt: string;
+};
+
+async function fetchImportCandidates(
+  source: z.infer<typeof importSourceSchema>,
+  twitchId: string,
+  userToken: string
+): Promise<{ followers: ImportCandidate[]; total: number; capped: boolean }> {
+  if (source === "following") {
+    const { channels, total, capped } = await getFollowedChannels(twitchId, userToken);
+    const users = await getUsersByIds(channels.map((channel) => channel.broadcaster_id));
+    const usersById = new Map(users.map((twitchUser) => [twitchUser.id, twitchUser]));
+
+    return {
+      total,
+      capped,
+      followers: channels.map((channel) => {
+        const twitchUser = usersById.get(channel.broadcaster_id);
+        return {
+          twitchId: channel.broadcaster_id,
+          username: twitchUser?.login ?? channel.broadcaster_login,
+          displayName: twitchUser?.display_name ?? channel.broadcaster_name,
+          avatarUrl: twitchUser?.profile_image_url ?? "",
+          followedAt: channel.followed_at,
+        };
+      }),
+    };
+  }
+
+  const { followers, total, capped } = await getChannelFollowers(twitchId, userToken);
+  const users = await getUsersByIds(followers.map((follower) => follower.user_id));
+  const usersById = new Map(users.map((twitchUser) => [twitchUser.id, twitchUser]));
+
+  return {
+    total,
+    capped,
+    followers: followers.map((follower) => {
+      const twitchUser = usersById.get(follower.user_id);
+      return {
+        twitchId: follower.user_id,
+        username: twitchUser?.login ?? follower.user_login,
+        displayName: twitchUser?.display_name ?? follower.user_name,
+        avatarUrl: twitchUser?.profile_image_url ?? "",
+        followedAt: follower.followed_at,
+      };
+    }),
+  };
 }
 
 function isFollowerPermissionError(err: unknown) {
@@ -33,11 +89,12 @@ function isFollowerPermissionError(err: unknown) {
   );
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const user = await getAuthUser();
   if (!user) return unauthorized();
 
   try {
+    const source = importSourceSchema.parse(new URL(req.url).searchParams.get("source") ?? "followers");
     const profile = await prisma.profile.findUnique({
       where: { id: user.id },
       select: { twitchId: true, twitchAccessToken: true, twitchRefreshToken: true },
@@ -47,10 +104,10 @@ export async function GET() {
       return followerPermissionError();
     }
 
-    let followerData: Awaited<ReturnType<typeof getChannelFollowers>>;
+    let followerData: Awaited<ReturnType<typeof fetchImportCandidates>>;
     try {
       if (!profile.twitchAccessToken) throw new Error("missing access token");
-      followerData = await getChannelFollowers(profile.twitchId, profile.twitchAccessToken);
+      followerData = await fetchImportCandidates(source, profile.twitchId, profile.twitchAccessToken);
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
       if (!profile.twitchRefreshToken || (!message.includes("401") && !message.includes("missing access token"))) {
@@ -75,7 +132,7 @@ export async function GET() {
         },
         select: { id: true },
       });
-      followerData = await getChannelFollowers(profile.twitchId, refreshed.access_token);
+      followerData = await fetchImportCandidates(source, profile.twitchId, refreshed.access_token);
     }
 
     const existingFriends = await prisma.friend.findMany({
@@ -88,35 +145,27 @@ export async function GET() {
     const existingLogins = new Set(existingFriends.map((friend) => normalizeLogin(friend.username)));
     const importableFollowers = followers.filter(
       (follower) =>
-        !existingTwitchIds.has(follower.user_id) &&
-        !existingLogins.has(normalizeLogin(follower.user_login))
+        !existingTwitchIds.has(follower.twitchId) &&
+        !existingLogins.has(normalizeLogin(follower.username))
     );
-
-    const users = await getUsersByIds(importableFollowers.map((follower) => follower.user_id));
-    const usersById = new Map(users.map((twitchUser) => [twitchUser.id, twitchUser]));
 
     return NextResponse.json({
       total,
       capped,
       existingCount: followers.length - importableFollowers.length,
-      followers: importableFollowers.map((follower) => {
-        const twitchUser = usersById.get(follower.user_id);
-        return {
-          twitchId: follower.user_id,
-          username: twitchUser?.login ?? follower.user_login,
-          displayName: twitchUser?.display_name ?? follower.user_name,
-          avatarUrl: twitchUser?.profile_image_url ?? "",
-          followedAt: follower.followed_at,
-        };
-      }),
+      followers: importableFollowers,
     });
   } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({ error: "Choose a valid Twitch import source." }, { status: 400 });
+    }
+
     if (isFollowerPermissionError(err)) {
       return followerPermissionError();
     }
 
     console.error("[api/friends/import-followers] GET failed:", err);
-    return NextResponse.json({ error: "Failed to fetch Twitch followers" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch Twitch accounts" }, { status: 500 });
   }
 }
 
@@ -162,6 +211,6 @@ export async function POST(req: Request) {
     }
 
     console.error("[api/friends/import-followers] POST failed:", err);
-    return NextResponse.json({ error: "Failed to import Twitch followers" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to import Twitch accounts" }, { status: 500 });
   }
 }

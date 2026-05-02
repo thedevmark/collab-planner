@@ -30,6 +30,32 @@ type ImportFollower = {
   followedAt: string;
 };
 
+type ImportSource = "followers" | "following";
+
+const IMPORT_SOURCE_COPY: Record<
+  ImportSource,
+  { label: string; title: string; description: string; loading: string; found: string; preview: string; empty: string }
+> = {
+  followers: {
+    label: "Followers of my channel",
+    title: "Import followers",
+    description: "Import Twitch accounts that follow your channel.",
+    loading: "Loading followers...",
+    found: "followers found",
+    preview: "Follower preview",
+    empty: "No new followers to import.",
+  },
+  following: {
+    label: "Channels I follow",
+    title: "Import followed channels",
+    description: "Import streamers from the channels you follow on Twitch.",
+    loading: "Loading followed channels...",
+    found: "channels found",
+    preview: "Following preview",
+    empty: "No new followed channels to import.",
+  },
+};
+
 const FALLBACK_COLORS = [
   "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
   "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
@@ -159,6 +185,7 @@ export default function FriendsPage() {
   const [importLoading, setImportLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
+  const [importSource, setImportSource] = useState<ImportSource | null>(null);
   const [importFollowers, setImportFollowers] = useState<ImportFollower[]>([]);
   const [selectedImportLogins, setSelectedImportLogins] = useState<string[]>([]);
   const [manualImportUsername, setManualImportUsername] = useState("");
@@ -229,17 +256,18 @@ export default function FriendsPage() {
     }
   }
 
-  async function loadFollowerImport() {
+  async function loadFollowerImport(source: ImportSource) {
+    setImportSource(source);
     setImportLoading(true);
     setImportError("");
     setImportFollowers([]);
     setSelectedImportLogins([]);
     setImportMeta({ total: 0, existingCount: 0, capped: false });
     try {
-      const res = await fetch("/api/friends/import-followers");
+      const res = await fetch(`/api/friends/import-followers?source=${source}`);
       const data = await res.json();
       if (!res.ok) {
-        setImportError(data.error ?? "Failed to load Twitch followers");
+        setImportError(data.error ?? "Failed to load Twitch accounts");
         return;
       }
       const followers = data.followers ?? [];
@@ -251,7 +279,7 @@ export default function FriendsPage() {
         capped: Boolean(data.capped),
       });
     } catch {
-      setImportError("Failed to load Twitch followers");
+      setImportError("Failed to load Twitch accounts");
     } finally {
       setImportLoading(false);
     }
@@ -284,13 +312,13 @@ export default function FriendsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setImportError(data.error ?? "Failed to import Twitch followers");
+        setImportError(data.error ?? "Failed to import Twitch accounts");
         return;
       }
       setImportDialogOpen(false);
       mutate();
     } catch {
-      setImportError("Failed to import Twitch followers");
+      setImportError("Failed to import Twitch accounts");
     } finally {
       setImporting(false);
     }
@@ -356,6 +384,7 @@ export default function FriendsPage() {
     avatarUrl: "",
     followedAt: "",
   });
+  const importCopy = importSource ? IMPORT_SOURCE_COPY[importSource] : null;
 
   return (
     <div className="space-y-6">
@@ -370,11 +399,13 @@ export default function FriendsPage() {
             open={importDialogOpen}
             onOpenChange={(open) => {
               setImportDialogOpen(open);
-              if (open) {
-                void loadFollowerImport();
-              } else {
+              if (!open) {
+                setImportSource(null);
+                setImportFollowers([]);
+                setSelectedImportLogins([]);
                 setImportError("");
                 setManualImportUsername("");
+                setImportMeta({ total: 0, existingCount: 0, capped: false });
               }
             }}
           >
@@ -386,16 +417,38 @@ export default function FriendsPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Import Twitch Followers</DialogTitle>
+                <DialogTitle>{importCopy?.title ?? "Choose Twitch Import"}</DialogTitle>
                 <DialogDescription>
-                  Review the follower list, remove anyone you do not want, or add more Twitch usernames before importing.
+                  {importSource
+                    ? "Review the list, remove anyone you do not want, or add more Twitch usernames before importing."
+                    : "Pick which Twitch relationship should seed your people list."}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-2">
-                {importLoading ? (
+                {!importSource ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {(Object.keys(IMPORT_SOURCE_COPY) as ImportSource[]).map((source) => {
+                      const copy = IMPORT_SOURCE_COPY[source];
+                      return (
+                        <button
+                          key={source}
+                          type="button"
+                          className="rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary/50 hover:bg-accent"
+                          onClick={() => void loadFollowerImport(source)}
+                        >
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <span className="font-medium">{copy.label}</span>
+                            <Users2 className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">{copy.description}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : importLoading ? (
                   <div className="flex items-center justify-center gap-2 rounded-lg border py-10 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading followers...
+                    {importCopy?.loading}
                   </div>
                 ) : importError && importFollowers.length === 0 ? (
                   <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -405,9 +458,24 @@ export default function FriendsPage() {
                   <>
                     <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                       <Badge variant="secondary">{selectedImportLogins.length} selected</Badge>
-                      <span>{importMeta.total} followers found</span>
+                      <span>{importMeta.total} {importCopy?.found}</span>
                       {importMeta.existingCount > 0 && <span>{importMeta.existingCount} already in People</span>}
                       {importMeta.capped && <span>Showing the first {importFollowers.length}</span>}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          setImportSource(null);
+                          setImportError("");
+                          setImportFollowers([]);
+                          setSelectedImportLogins([]);
+                          setImportMeta({ total: 0, existingCount: 0, capped: false });
+                        }}
+                      >
+                        Change source
+                      </Button>
                     </div>
 
                     <div className="space-y-2">
@@ -444,7 +512,7 @@ export default function FriendsPage() {
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label>Follower preview</Label>
+                          <Label>{importCopy?.preview}</Label>
                           {importFollowers.length > 0 && (
                             <Button
                               type="button"
@@ -458,7 +526,7 @@ export default function FriendsPage() {
                         </div>
                         <div className="max-h-72 overflow-y-auto rounded-lg border">
                           {importFollowers.length === 0 ? (
-                            <p className="p-4 text-sm text-muted-foreground">No new followers to import.</p>
+                            <p className="p-4 text-sm text-muted-foreground">{importCopy?.empty}</p>
                           ) : (
                             importFollowers.map((follower) => {
                               const checked = selectedImportLogins.includes(follower.username.toLowerCase());
@@ -522,16 +590,18 @@ export default function FriendsPage() {
                   </>
                 )}
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setImportDialogOpen(false)}>Cancel</Button>
-                <Button
-                  onClick={importSelectedFollowers}
-                  disabled={importing || importLoading || selectedImportLogins.length === 0 || selectedImportLogins.length > 50}
-                >
-                  {importing && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Import as Friends
-                </Button>
-              </DialogFooter>
+              {importSource && (
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setImportDialogOpen(false)}>Cancel</Button>
+                  <Button
+                    onClick={importSelectedFollowers}
+                    disabled={importing || importLoading || selectedImportLogins.length === 0 || selectedImportLogins.length > 50}
+                  >
+                    {importing && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Import as Friends
+                  </Button>
+                </DialogFooter>
+              )}
             </DialogContent>
           </Dialog>
           <InviteDialog friends={friends}>
