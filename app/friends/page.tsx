@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -386,6 +387,9 @@ export default function FriendsPage() {
             <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Import Twitch Followers</DialogTitle>
+                <DialogDescription>
+                  Review the follower list, remove anyone you do not want, or add more Twitch usernames before importing.
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-2">
                 {importLoading ? (
@@ -546,6 +550,9 @@ export default function FriendsPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add Twitch Friend</DialogTitle>
+              <DialogDescription>
+                Search Twitch and add a streamer to your people list.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">

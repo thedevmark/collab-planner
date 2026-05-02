@@ -24,6 +24,15 @@ function followerPermissionError() {
   );
 }
 
+function isFollowerPermissionError(err: unknown) {
+  if (!(err instanceof Error)) return false;
+  return (
+    err.message.includes("401") ||
+    err.message.includes("403") ||
+    err.message.includes("Twitch user token refresh failed")
+  );
+}
+
 export async function GET() {
   const user = await getAuthUser();
   if (!user) return unauthorized();
@@ -48,7 +57,15 @@ export async function GET() {
         throw err;
       }
 
-      const refreshed = await refreshTwitchUserToken(profile.twitchRefreshToken);
+      let refreshed: Awaited<ReturnType<typeof refreshTwitchUserToken>>;
+      try {
+        refreshed = await refreshTwitchUserToken(profile.twitchRefreshToken);
+      } catch (refreshErr) {
+        if (isFollowerPermissionError(refreshErr)) {
+          return followerPermissionError();
+        }
+        throw refreshErr;
+      }
       await prisma.profile.update({
         where: { id: user.id },
         data: {
@@ -94,8 +111,7 @@ export async function GET() {
       }),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "";
-    if (message.includes("401") || message.includes("403")) {
+    if (isFollowerPermissionError(err)) {
       return followerPermissionError();
     }
 

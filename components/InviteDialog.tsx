@@ -5,6 +5,7 @@ import useSWR from "swr";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -132,6 +133,9 @@ export function InviteDialog({ friends, defaultFriendIds = [], children }: Invit
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Collab Invite Link</DialogTitle>
+          <DialogDescription>
+            Choose participants and generate a shareable collab invite.
+          </DialogDescription>
         </DialogHeader>
 
         {!created ? (
