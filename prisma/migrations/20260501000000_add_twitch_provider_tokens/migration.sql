@@ -1,0 +1,3 @@
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "twitchAccessToken" TEXT;
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "twitchRefreshToken" TEXT;
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "twitchTokenExpiry" TIMESTAMP(3);

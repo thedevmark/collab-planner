@@ -13,6 +13,9 @@ model Profile {
   username              String
   displayName           String
   avatarUrl             String   @default("")
+  twitchAccessToken     String?
+  twitchRefreshToken    String?
+  twitchTokenExpiry     DateTime?
   channelColor          String   @default("")
   timezone              String   @default("UTC")
   hasCompletedOnboarding Boolean   @default(false)

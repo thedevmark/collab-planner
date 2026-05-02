@@ -21,6 +21,14 @@ import { Label } from "@/components/ui/label";
 import { UserPlus, Search, Loader2, TrendingUp, Users2, CalendarClock, Gamepad2, Link2, Sparkles, RefreshCw, Check, X, Star, Trash2 } from "lucide-react";
 import { InviteDialog } from "@/components/InviteDialog";
 
+type ImportFollower = {
+  twitchId: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string;
+  followedAt: string;
+};
+
 const FALLBACK_COLORS = [
   "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
   "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
@@ -146,6 +154,14 @@ export default function FriendsPage() {
   const [dismissingId, setDismissingId] = useState<number | null>(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
+  const [importFollowers, setImportFollowers] = useState<ImportFollower[]>([]);
+  const [selectedImportLogins, setSelectedImportLogins] = useState<string[]>([]);
+  const [manualImportUsername, setManualImportUsername] = useState("");
+  const [importMeta, setImportMeta] = useState({ total: 0, existingCount: 0, capped: false });
 
   const { data: channelResults = [] } = useSWR(
     channelQuery.length >= 2 ? `/api/twitch/channels?q=${encodeURIComponent(channelQuery)}` : null,
@@ -212,6 +228,73 @@ export default function FriendsPage() {
     }
   }
 
+  async function loadFollowerImport() {
+    setImportLoading(true);
+    setImportError("");
+    setImportFollowers([]);
+    setSelectedImportLogins([]);
+    setImportMeta({ total: 0, existingCount: 0, capped: false });
+    try {
+      const res = await fetch("/api/friends/import-followers");
+      const data = await res.json();
+      if (!res.ok) {
+        setImportError(data.error ?? "Failed to load Twitch followers");
+        return;
+      }
+      const followers = data.followers ?? [];
+      setImportFollowers(followers);
+      setSelectedImportLogins(followers.slice(0, 50).map((f: ImportFollower) => f.username.toLowerCase()));
+      setImportMeta({
+        total: data.total ?? followers.length,
+        existingCount: data.existingCount ?? 0,
+        capped: Boolean(data.capped),
+      });
+    } catch {
+      setImportError("Failed to load Twitch followers");
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
+  function toggleImportLogin(username: string) {
+    const login = username.toLowerCase();
+    setSelectedImportLogins((current) =>
+      current.includes(login) ? current.filter((item) => item !== login) : [...current, login]
+    );
+  }
+
+  function addManualImportUsername() {
+    const login = manualImportUsername.trim().replace(/^@/, "").toLowerCase();
+    if (!login) return;
+    setSelectedImportLogins((current) => current.includes(login) ? current : [...current, login]);
+    setManualImportUsername("");
+    setImportError("");
+  }
+
+  async function importSelectedFollowers() {
+    if (selectedImportLogins.length === 0 || selectedImportLogins.length > 50) return;
+    setImporting(true);
+    setImportError("");
+    try {
+      const res = await fetch("/api/friends/import-followers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usernames: selectedImportLogins }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setImportError(data.error ?? "Failed to import Twitch followers");
+        return;
+      }
+      setImportDialogOpen(false);
+      mutate();
+    } catch {
+      setImportError("Failed to import Twitch followers");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function confirmSuggestion(id: number) {
     setConfirmingId(id);
     try {
@@ -262,6 +345,16 @@ export default function FriendsPage() {
   }
 
   const meColor = meFriend?.channelColor || "#7aa2f7";
+  const importFollowersByLogin = new Map(
+    importFollowers.map((follower) => [follower.username.toLowerCase(), follower])
+  );
+  const selectedImportPeople = selectedImportLogins.map((login) => importFollowersByLogin.get(login) ?? {
+    twitchId: login,
+    username: login,
+    displayName: login,
+    avatarUrl: "",
+    followedAt: "",
+  });
 
   return (
     <div className="space-y-6">
@@ -272,6 +365,171 @@ export default function FriendsPage() {
             {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Sync Suggestions
           </Button>
+          <Dialog
+            open={importDialogOpen}
+            onOpenChange={(open) => {
+              setImportDialogOpen(open);
+              if (open) {
+                void loadFollowerImport();
+              } else {
+                setImportError("");
+                setManualImportUsername("");
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Users2 className="h-4 w-4" />
+                Import Followers
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Import Twitch Followers</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                {importLoading ? (
+                  <div className="flex items-center justify-center gap-2 rounded-lg border py-10 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading followers...
+                  </div>
+                ) : importError && importFollowers.length === 0 ? (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {importError}
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                      <Badge variant="secondary">{selectedImportLogins.length} selected</Badge>
+                      <span>{importMeta.total} followers found</span>
+                      {importMeta.existingCount > 0 && <span>{importMeta.existingCount} already in People</span>}
+                      {importMeta.capped && <span>Showing the first {importFollowers.length}</span>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="manual-import">Add more Twitch usernames</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="manual-import"
+                          placeholder="username"
+                          value={manualImportUsername}
+                          onChange={(e) => setManualImportUsername(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addManualImportUsername();
+                            }
+                          }}
+                        />
+                        <Button type="button" variant="outline" onClick={addManualImportUsername}>
+                          Add
+                        </Button>
+                      </div>
+                    </div>
+
+                    {selectedImportLogins.length > 50 && (
+                      <p className="text-sm text-destructive">Import up to 50 people at a time.</p>
+                    )}
+
+                    {importError && (
+                      <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                        {importError}
+                      </div>
+                    )}
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Follower preview</Label>
+                          {importFollowers.length > 0 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedImportLogins(importFollowers.slice(0, 50).map((f) => f.username.toLowerCase()))}
+                            >
+                              Select first 50
+                            </Button>
+                          )}
+                        </div>
+                        <div className="max-h-72 overflow-y-auto rounded-lg border">
+                          {importFollowers.length === 0 ? (
+                            <p className="p-4 text-sm text-muted-foreground">No new followers to import.</p>
+                          ) : (
+                            importFollowers.map((follower) => {
+                              const checked = selectedImportLogins.includes(follower.username.toLowerCase());
+                              return (
+                                <button
+                                  key={follower.twitchId}
+                                  type="button"
+                                  className="flex w-full items-center gap-3 border-b px-3 py-2 text-left last:border-b-0 hover:bg-accent"
+                                  onClick={() => toggleImportLogin(follower.username)}
+                                >
+                                  <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
+                                    {checked && <Check className="h-3 w-3" />}
+                                  </span>
+                                  <Avatar className="h-8 w-8 shrink-0">
+                                    <AvatarImage src={follower.avatarUrl} />
+                                    <AvatarFallback className="text-xs">{follower.displayName[0]?.toUpperCase()}</AvatarFallback>
+                                  </Avatar>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium">{follower.displayName}</p>
+                                    <p className="truncate text-xs text-muted-foreground">@{follower.username}</p>
+                                  </div>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Will import</Label>
+                        <div className="max-h-72 overflow-y-auto rounded-lg border">
+                          {selectedImportPeople.length === 0 ? (
+                            <p className="p-4 text-sm text-muted-foreground">Remove or add people before importing.</p>
+                          ) : (
+                            selectedImportPeople.map((person) => (
+                              <div key={person.username} className="flex items-center gap-3 border-b px-3 py-2 last:border-b-0">
+                                <Avatar className="h-8 w-8 shrink-0">
+                                  <AvatarImage src={person.avatarUrl} />
+                                  <AvatarFallback className="text-xs">{person.displayName[0]?.toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium">{person.displayName}</p>
+                                  <p className="truncate text-xs text-muted-foreground">@{person.username}</p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-muted-foreground"
+                                  onClick={() => setSelectedImportLogins((current) => current.filter((login) => login !== person.username.toLowerCase()))}
+                                  title={`Remove ${person.displayName}`}
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setImportDialogOpen(false)}>Cancel</Button>
+                <Button
+                  onClick={importSelectedFollowers}
+                  disabled={importing || importLoading || selectedImportLogins.length === 0 || selectedImportLogins.length > 50}
+                >
+                  {importing && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Import as Friends
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <InviteDialog friends={friends}>
             <Button variant="outline">
               <Link2 className="h-4 w-4" />

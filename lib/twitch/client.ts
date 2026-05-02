@@ -1,5 +1,5 @@
 import { getTwitchToken } from "./auth";
-import type { TwitchUser, TwitchSchedule, TwitchGame, TwitchVideo, TwitchChannel } from "./types";
+import type { TwitchUser, TwitchSchedule, TwitchGame, TwitchVideo, TwitchChannel, TwitchFollower } from "./types";
 
 const TWITCH_API = "https://api.twitch.tv/helix";
 
@@ -22,6 +22,24 @@ async function twitchFetch<T>(path: string): Promise<T> {
   return res.json();
 }
 
+async function twitchUserFetch<T>(path: string, userToken: string): Promise<T> {
+  const clientId = process.env.TWITCH_CLIENT_ID!;
+
+  const res = await fetch(`${TWITCH_API}${path}`, {
+    headers: {
+      Authorization: `Bearer ${userToken}`,
+      "Client-Id": clientId,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Twitch API error ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
 export async function getUserByUsername(username: string): Promise<TwitchUser | null> {
   const data = await twitchFetch<{ data: TwitchUser[] }>(`/users?login=${encodeURIComponent(username)}`);
   return data.data[0] ?? null;
@@ -30,6 +48,34 @@ export async function getUserByUsername(username: string): Promise<TwitchUser | 
 export async function getUserById(id: string): Promise<TwitchUser | null> {
   const data = await twitchFetch<{ data: TwitchUser[] }>(`/users?id=${id}`);
   return data.data[0] ?? null;
+}
+
+export async function getUsersByIds(ids: string[]): Promise<TwitchUser[]> {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  const users: TwitchUser[] = [];
+
+  for (let i = 0; i < uniqueIds.length; i += 100) {
+    const chunk = uniqueIds.slice(i, i + 100);
+    const query = chunk.map((id) => `id=${encodeURIComponent(id)}`).join("&");
+    const data = await twitchFetch<{ data: TwitchUser[] }>(`/users?${query}`);
+    users.push(...(data.data ?? []));
+  }
+
+  return users;
+}
+
+export async function getUsersByLogins(logins: string[]): Promise<TwitchUser[]> {
+  const uniqueLogins = [...new Set(logins.map((login) => login.trim().toLowerCase()).filter(Boolean))];
+  const users: TwitchUser[] = [];
+
+  for (let i = 0; i < uniqueLogins.length; i += 100) {
+    const chunk = uniqueLogins.slice(i, i + 100);
+    const query = chunk.map((login) => `login=${encodeURIComponent(login)}`).join("&");
+    const data = await twitchFetch<{ data: TwitchUser[] }>(`/users?${query}`);
+    users.push(...(data.data ?? []));
+  }
+
+  return users;
 }
 
 export async function getBroadcasterSchedule(broadcasterId: string): Promise<TwitchSchedule | null> {
@@ -78,6 +124,40 @@ export async function getGamesByIds(gameIds: string[]): Promise<Map<string, stri
   }
 
   return new Map(games.map((game) => [game.id, game.name]));
+}
+
+export async function getChannelFollowers(
+  broadcasterId: string,
+  userToken: string,
+  maxFollowers = 500
+): Promise<{ followers: TwitchFollower[]; total: number; capped: boolean }> {
+  const followers: TwitchFollower[] = [];
+  let cursor = "";
+  let total = 0;
+
+  do {
+    const params = new URLSearchParams({
+      broadcaster_id: broadcasterId,
+      first: "100",
+    });
+    if (cursor) params.set("after", cursor);
+
+    const data = await twitchUserFetch<{
+      total?: number;
+      data?: TwitchFollower[];
+      pagination?: { cursor?: string };
+    }>(`/channels/followers?${params.toString()}`, userToken);
+
+    total = data.total ?? total;
+    followers.push(...(data.data ?? []));
+    cursor = data.pagination?.cursor ?? "";
+  } while (cursor && followers.length < maxFollowers);
+
+  return {
+    followers: followers.slice(0, maxFollowers),
+    total,
+    capped: Boolean(cursor),
+  };
 }
 
 /** Parse Twitch duration string like "3h12m45s" into total seconds */

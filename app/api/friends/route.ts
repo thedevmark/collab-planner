@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser, unauthorized } from "@/lib/auth";
-import { getUserByUsername, getBroadcasterSchedule, getChatColor } from "@/lib/twitch/client";
-import { backfillStoredStreamHistoryGameNames, fetchAndStoreStreamHistory } from "@/lib/twitch/fetchStreamHistory";
+import { getUserByUsername, getChatColor } from "@/lib/twitch/client";
+import { backfillStoredStreamHistoryGameNames } from "@/lib/twitch/fetchStreamHistory";
+import { createOrConfirmFriendFromTwitchUser } from "@/lib/friends/createFriend";
 import { z } from "zod";
 
 /** Fire-and-forget: backfill channelColor for any friend missing it */
@@ -135,53 +136,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Twitch user not found" }, { status: 404 });
     }
 
-    const existing = await prisma.friend.findFirst({ where: { userId, twitchId: twitchUser.id } });
-    if (existing) {
-      if (!existing.isActive) {
-        const updated = await prisma.friend.update({
-          where: { id: existing.id },
-          data: { isActive: true },
-        });
-        return NextResponse.json(updated);
-      }
+    const { friend, result } = await createOrConfirmFriendFromTwitchUser(userId, twitchUser, {
+      isSuggested: isSuggested ?? false,
+    });
+    if (result === "existing") {
       return NextResponse.json({ error: "Friend already added" }, { status: 409 });
     }
-
-    const channelColor = await getChatColor(twitchUser.login);
-
-    const friend = await prisma.friend.create({
-      data: {
-        userId,
-        twitchId: twitchUser.id,
-        username: twitchUser.login,
-        displayName: twitchUser.display_name,
-        avatarUrl: twitchUser.profile_image_url,
-        channelColor,
-        isSuggested: isSuggested ?? false,
-      },
-    });
-
-    await Promise.allSettled([
-      fetchAndStoreStreamHistory(friend.id, twitchUser.id, 100),
-      getBroadcasterSchedule(twitchUser.id).then(async (schedule) => {
-        if (schedule?.segments) {
-          await prisma.scheduleSegment.createMany({
-            data: schedule.segments
-              .filter((s) => !s.canceled_until)
-              .map((s) => ({
-                friendId: friend.id,
-                segmentId: s.id,
-                title: s.title,
-                startTime: new Date(s.start_time),
-                endTime: new Date(s.end_time),
-                gameName: s.category?.name ?? "",
-                gameId: s.category?.id ?? "",
-                isRecurring: s.is_recurring,
-              })),
-          });
-        }
-      }),
-    ]);
 
     return NextResponse.json(friend, { status: 201 });
   } catch (err) {

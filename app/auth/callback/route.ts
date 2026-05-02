@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { getUserByUsername, getChatColor } from "@/lib/twitch/client";
+import { getChatColor } from "@/lib/twitch/client";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -20,11 +20,16 @@ export async function GET(request: Request) {
         const username: string = meta.preferred_username ?? meta.user_name ?? "";
         const displayName: string = meta.full_name ?? meta.name ?? username;
         const avatarUrl: string = meta.avatar_url ?? meta.picture ?? "";
+        const twitchAccessToken = data.session?.provider_token ?? null;
+        const twitchRefreshToken = data.session?.provider_refresh_token ?? null;
+        const twitchTokenExpiry = data.session?.expires_at
+          ? new Date(data.session.expires_at * 1000)
+          : null;
 
         await prisma.profile.upsert({
           where: { id: userId },
-          create: { id: userId, twitchId, username, displayName, avatarUrl },
-          update: { displayName, avatarUrl },
+          create: { id: userId, twitchId, username, displayName, avatarUrl, twitchAccessToken, twitchRefreshToken, twitchTokenExpiry },
+          update: { displayName, avatarUrl, twitchAccessToken, twitchRefreshToken, twitchTokenExpiry },
           select: { id: true },
         });
 

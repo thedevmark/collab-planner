@@ -115,7 +115,7 @@ export default function LoginPage() {
         provider: "twitch",
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
-          scopes: "user:read:email",
+          scopes: "user:read:email moderator:read:followers",
         },
       });
       if (error) {
@@ -220,7 +220,7 @@ export default function LoginPage() {
               )}
             </button>
             <p className="text-[11.5px] text-zinc-500">
-              {loginLoading ? "redirecting you to twitch…" : "just your twitch login · nothing to install"}
+              {loginLoading ? "redirecting you to twitch…" : "twitch login + optional follower import · nothing to install"}
             </p>
           </div>
         </div>

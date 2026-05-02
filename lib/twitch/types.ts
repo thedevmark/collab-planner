@@ -60,8 +60,16 @@ export interface TwitchChannel {
   title: string;
 }
 
+export interface TwitchFollower {
+  user_id: string;
+  user_login: string;
+  user_name: string;
+  followed_at: string;
+}
+
 export interface TwitchTokenResponse {
   access_token: string;
+  refresh_token?: string;
   expires_in: number;
   token_type: string;
 }
