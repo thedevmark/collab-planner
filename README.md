@@ -1,4 +1,4 @@
-# Twitch Friends Organizer
+# Twitch Collab Planner
 
 A single-user web app for planning collab streams with your Twitch friends. It uses stream history, schedules, and deterministic ranking logic to suggest times, surface likely games, and provide copyable session facts.
 
@@ -22,8 +22,8 @@ A single-user web app for planning collab streams with your Twitch friends. It u
 ### Install
 
 ```bash
-git clone https://github.com/yourusername/TwitchFriendsOrganizer.git
-cd TwitchFriendsOrganizer
+git clone https://github.com/thedeutschmark/collab-planner.git
+cd collab-planner
 npm install
 npx prisma generate
 npx prisma migrate dev
