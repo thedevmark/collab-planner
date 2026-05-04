@@ -129,16 +129,19 @@ export function Logo({
           will-change: transform;
         }
 
+        /* Ambient breath — the bloom is always faintly present at idle,
+           breathing slowly so the rings read as alive rather than static.
+           Hover lifts the bloom to full strength with a faster pulse. */
         .logo-root :global(.logo-bloom) {
-          opacity: 0;
-          transition: opacity 620ms cubic-bezier(0.4, 0, 0.2, 1);
+          opacity: 0.35;
+          animation: logoBloomIdle 5.6s ease-in-out infinite;
+          transition: opacity 620ms cubic-bezier(0.4, 0, 0.2, 1),
+                      animation-duration 380ms ease;
         }
 
         /* Hover IN — spring easing on scale gives a subtle overshoot bounce
-           (~1.5% scale). Bloom fades in a touch faster so the halo is
-           already present as the bounce settles. animation-delay matches
-           the fade-in so the breathing pulse begins only once the glow has
-           fully materialized. */
+           (~1.5% scale). Bloom fades up faster on hover so the halo is
+           already present as the bounce settles. */
         .logo-root:hover,
         .logo-root:focus-visible {
           transform: scale(1.018);
@@ -149,7 +152,7 @@ export function Logo({
         .logo-root:focus-visible :global(.logo-bloom) {
           opacity: 1;
           transition: opacity 380ms cubic-bezier(0.4, 0, 0.2, 1);
-          animation: logoBloom 2.6s ease-in-out 380ms infinite;
+          animation: logoBloomActive 2.6s ease-in-out infinite;
         }
 
         /* Users with reduced-motion get the static halo and no scale. */
@@ -160,19 +163,25 @@ export function Logo({
             transform: none;
             transition: none;
           }
+          .logo-root :global(.logo-bloom),
           .logo-root:hover :global(.logo-bloom),
           .logo-root:focus-visible :global(.logo-bloom) {
             animation: none;
-            opacity: 0.85;
+            opacity: 0.55;
           }
         }
       `}</style>
 
       <style jsx global>{`
-        /* Single shared rhythm — both rings + weave pulse as one object.
-           Peaks at 1 (matches the hover-in fade target) and dips to ~0.45
-           so the glow stays present but softens rather than disappearing. */
-        @keyframes logoBloom {
+        /* Idle — slow, low-amplitude breath. Reads as ambient presence,
+           not as a distracting pulse. */
+        @keyframes logoBloomIdle {
+          0%, 100% { opacity: 0.35; }
+          50% { opacity: 0.55; }
+        }
+        /* Active (hover) — same single shared rhythm as before. Both rings
+           + weave pulse as one object, peaks at 1, dips to ~0.45. */
+        @keyframes logoBloomActive {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.45; }
         }
