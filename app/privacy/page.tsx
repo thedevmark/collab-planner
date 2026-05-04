@@ -3,26 +3,26 @@ import { Logo } from "@/components/Logo";
 
 export const metadata = {
   title: "Privacy Policy — Collab Planner",
-  description: "How Collab Planner collects, uses, and protects your data.",
+  description: "How Collab Planner collects, uses, and protects your data — Twitch + Discord OAuth scopes, retention, your rights.",
 };
 
-const LAST_UPDATED = "March 25, 2026";
-const CONTACT_EMAIL = "privacy@deutschmark.online";
+const LAST_UPDATED = "May 4, 2026";
+const CONTACT_EMAIL = "deutschmarkonline@gmail.com";
 const APP_URL = "https://collab.deutschmark.online";
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-[#09030f] text-zinc-200">
+    <div className="min-h-screen bg-background text-foreground">
 
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-zinc-800/60 bg-[#09030f]/90 backdrop-blur-sm">
+      <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href={APP_URL} className="flex items-center text-zinc-400 hover:text-zinc-100 transition-colors">
+          <Link href={APP_URL} className="flex items-center text-muted-foreground hover:text-foreground transition-colors">
             <Logo width={108} height={60} />
           </Link>
-          <nav className="flex items-center gap-4 text-xs text-zinc-500">
-            <span className="text-zinc-300 font-medium">Privacy Policy</span>
-            <Link href="/terms" className="hover:text-zinc-300 transition-colors">Terms of Service</Link>
+          <nav className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span className="text-foreground font-medium">Privacy Policy</span>
+            <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
           </nav>
         </div>
       </header>
@@ -32,49 +32,83 @@ export default function PrivacyPage() {
 
         {/* Hero */}
         <div className="mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#9147ff]/10 border border-[#9147ff]/20 text-[#9147ff] text-xs font-medium mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#9147ff]/10 border border-[#9147ff]/30 text-[#9147ff] text-xs font-medium mb-4">
             Legal
           </div>
-          <h1 className="text-4xl font-bold text-white mb-3">Privacy Policy</h1>
-          <p className="text-zinc-400 text-sm">Last updated: {LAST_UPDATED}</p>
-          <p className="mt-4 text-zinc-300 leading-relaxed">
+          <h1 className="text-4xl font-bold mb-3">Privacy Policy</h1>
+          <p className="text-muted-foreground text-sm">Last updated: {LAST_UPDATED}</p>
+          <p className="mt-4 leading-relaxed">
             Collab Planner is built for Twitch streamers who want to plan and coordinate
             collaborations with friends. This policy explains what data we collect, why we
-            collect it, and how you can control it.
+            collect it, how it&apos;s stored, and how you can control it.
+          </p>
+          <p className="mt-3 leading-relaxed text-muted-foreground text-sm">
+            Collab Planner is operated globally for Twitch creators. Application infrastructure is
+            hosted by Vercel and the database by Supabase, both in US regions. By using the service
+            you consent to the cross-border processing described below, where applicable to your
+            jurisdiction.
           </p>
         </div>
 
         <div className="space-y-10">
 
           <Section id="data-collected" title="1. Data We Collect">
-            <p>We collect only what is necessary to provide the service.</p>
-            <SubSection title="From Twitch OAuth">
+            <p>We collect only what is needed to operate the service.</p>
+
+            <SubSection title="From Twitch OAuth (required to sign in)">
+              <p className="text-muted-foreground mb-2">
+                Sign-in goes through Supabase Auth using Twitch as the identity provider. The
+                following scopes are requested:
+              </p>
+              <Table rows={[
+                ["user:read:email", "Read your Twitch email so we can identify your account uniquely."],
+                ["user:read:follows", "Read who you follow on Twitch — used to suggest friends and detect co-stream signals."],
+                ["moderator:read:followers", "Read your follower list when you import friends from your audience."],
+              ]} />
+              <p className="mt-3 text-muted-foreground text-sm">
+                We never request scopes that allow posting to chat, modifying your channel, or
+                managing your account beyond reading the data above.
+              </p>
+            </SubSection>
+
+            <SubSection title="From the Twitch Helix API (refreshed via your token)">
               <ul>
-                <li>Display name, username, and profile picture</li>
-                <li>Twitch user ID (used to identify your account)</li>
-                <li>Your stream history (video titles, dates, durations, games) — fetched via the Twitch API to power scheduling predictions</li>
-                <li>Your Twitch channel color and scheduled stream segments</li>
+                <li>Display name, login (handle), profile image URL, channel ID, broadcaster type</li>
+                <li>Your stream history — VOD titles, dates, durations, game IDs — used to estimate your typical streaming windows and infer co-streams from VOD metadata</li>
+                <li>Your scheduled stream segments where Twitch publishes them, used to anchor calendar predictions</li>
+                <li>Your channel color (hex), used in calendar UI</li>
               </ul>
             </SubSection>
+
             <SubSection title="From Discord OAuth (optional)">
-              <ul>
-                <li>Discord username and user ID</li>
-                <li>Access and refresh tokens — stored securely to post notifications on your behalf</li>
-                <li>Your selected Discord server and channel IDs</li>
-              </ul>
+              <p className="text-muted-foreground mb-2">
+                Discord is optional. If you connect it, the following scopes are requested:
+              </p>
+              <Table rows={[
+                ["identify", "Read your Discord user ID and username so we know which account is connected."],
+                ["guilds", "List the servers you belong to so you can pick one to send notifications to."],
+                ["webhook.incoming", "Create and use an incoming webhook in the channel you authorize, to post collab event notifications."],
+              ]} />
+              <p className="mt-3 text-muted-foreground text-sm">
+                Discord access and refresh tokens are stored encrypted at rest in the database and
+                are never exposed in client responses or server logs.
+              </p>
             </SubSection>
-            <SubSection title="Data you create">
+
+            <SubSection title="Data you create in the app">
               <ul>
-                <li>Collab events (title, date, participants, game)</li>
-                <li>Friend lists (Twitch usernames you choose to track)</li>
-                <li>Personal notes you write on friend profiles</li>
+                <li>Collab events — title, date, time, participants, game, notes</li>
+                <li>Friend list — Twitch handles you choose to track, plus optional notes you write on friend profiles</li>
                 <li>Timezone preference</li>
+                <li>Theme preference (light, dark, or match-system) stored in your browser&apos;s localStorage</li>
               </ul>
             </SubSection>
+
             <SubSection title="Automatically collected">
               <ul>
-                <li>Standard server logs (IP address, user agent) retained for up to 30 days for security purposes</li>
-                <li>We do not use analytics trackers, fingerprinting, or advertising cookies</li>
+                <li>Standard server access logs — IP address, user agent, request path — retained for up to 30 days for security and abuse investigation</li>
+                <li>Supabase auth session metadata — last sign-in time, refresh token rotation</li>
+                <li>No analytics trackers, no fingerprinting, no advertising cookies</li>
               </ul>
             </SubSection>
           </Section>
@@ -83,109 +117,151 @@ export default function PrivacyPage() {
 
           <Section id="how-used" title="2. How We Use Your Data">
             <Table rows={[
-              ["Display name, avatar", "Show your profile in the app UI"],
-              ["Stream history", "Calculate your typical streaming patterns and predict scheduling overlaps with friends"],
-              ["Discord tokens", "Post collab event notifications and create Discord Scheduled Events in your server"],
-              ["Friend list", "Track your collaborator network and detect co-streaming signals from VOD titles"],
+              ["Display name, avatar", "Render your profile in the app UI and on shared event pages"],
+              ["Email", "Account identity within Supabase Auth and out-of-band contact for security or legal matters"],
+              ["Stream history (VODs)", "Estimate your typical streaming windows and surface co-streams from VOD metadata"],
+              ["Schedule segments", "Anchor calendar predictions to your published stream schedule"],
+              ["Follow list / followers", "Power friend suggestions and import flows"],
+              ["Discord tokens", "Post collab event notifications to the channel you chose"],
+              ["Friend list + notes", "Track your collaborator network and personal context"],
               ["Collab events", "Calendar display, Discord notifications, reminder scheduling"],
               ["Timezone", "Format all displayed times in your local time"],
             ]} />
             <p className="mt-4">
               We do not sell your data, share it with advertisers, or use it to train machine
-              learning models. Data is used solely to operate the Collab Planner service.
+              learning models. Data is used solely to operate the Collab Planner service for you.
             </p>
           </Section>
 
           <Divider />
 
-          <Section id="storage" title="3. Data Storage &amp; Security">
+          <Section id="storage" title="3. Data Storage & Security">
             <p>
-              Your data is stored in a PostgreSQL database hosted by{" "}
-              <ExternalLink href="https://supabase.com">Supabase</ExternalLink> (US region).
               The application is hosted on{" "}
-              <ExternalLink href="https://vercel.com">Vercel</ExternalLink>.
-              Both services maintain SOC 2 compliance and encrypt data at rest and in transit.
+              <ExternalLink href="https://vercel.com">Vercel</ExternalLink> (US region). The
+              database is{" "}
+              <ExternalLink href="https://supabase.com">Supabase</ExternalLink> Postgres, also in a
+              US region. Both vendors maintain SOC 2 Type II controls and encrypt data at rest and
+              in transit.
             </p>
             <p className="mt-3">
-              OAuth tokens (Twitch, Discord) are stored encrypted in the database and are never
-              exposed in client-side responses or logs.
+              Discord OAuth tokens are encrypted at the application layer before being written to
+              the database. The encryption key is held in the application&apos;s environment and is
+              never exposed to clients or logs.
+            </p>
+            <p className="mt-3">
+              We use HTTPS exclusively. Session cookies are httpOnly and SameSite=Lax. Server-side
+              checks gate every API endpoint that returns or mutates user data.
             </p>
           </Section>
 
           <Divider />
 
           <Section id="third-party" title="4. Third-Party Services">
-            <p>Collab Planner integrates with the following external services:</p>
+            <p>Collab Planner integrates with the services below. Each has its own privacy policy.</p>
             <Table rows={[
-              ["Twitch", "Authentication, stream data, schedule data", "https://www.twitch.tv/p/legal/privacy-policy"],
-              ["Discord", "Optional notifications and scheduled events", "https://discord.com/privacy"],
-              ["Supabase", "Database and authentication infrastructure", "https://supabase.com/privacy"],
+              ["Twitch", "Authentication, stream data, schedule data, follow graph", "https://www.twitch.tv/p/legal/privacy-policy"],
+              ["Discord", "Optional notifications via incoming webhooks", "https://discord.com/privacy"],
+              ["Supabase", "Authentication, encrypted Postgres database", "https://supabase.com/privacy"],
               ["Vercel", "Application hosting and edge delivery", "https://vercel.com/legal/privacy-policy"],
             ]} hasLinks />
-            <p className="mt-4">
-              Each of these services has its own privacy policy governing the data they process.
-              We encourage you to review them.
+            <p className="mt-4 text-muted-foreground text-sm">
+              We encourage you to review each policy. Your use of those platforms within the
+              Collab Planner experience is also governed by their terms.
             </p>
           </Section>
 
           <Divider />
 
           <Section id="retention" title="5. Data Retention">
-            <p>
-              Your data is retained for as long as you maintain an account. Specifically:
-            </p>
+            <p>Concrete retention windows:</p>
             <ul>
               <li>Stream history older than 12 months may be pruned to manage storage</li>
-              <li>Reminder records are marked as sent and retained for 90 days</li>
-              <li>Server access logs are deleted after 30 days</li>
-              <li>When you delete your account, all personal data is permanently deleted within 30 days</li>
+              <li>Reminder records: marked sent and retained for 90 days, then deleted</li>
+              <li>Server access logs: deleted after 30 days</li>
+              <li>Discord OAuth tokens: deleted immediately when you disconnect Discord, or within 7 days of the last refresh failure</li>
+              <li>When you request account deletion: all personal data is purged within 30 days, plus a 7-day buffer for backup rotation</li>
             </ul>
           </Section>
 
           <Divider />
 
           <Section id="rights" title="6. Your Rights">
-            <p>You have the right to:</p>
+            <p>Depending on your jurisdiction, you may have one or more of the following rights:</p>
             <ul>
-              <li><strong className="text-white">Access</strong> — request a copy of all data we hold about you</li>
-              <li><strong className="text-white">Correction</strong> — update inaccurate data via the app settings</li>
-              <li><strong className="text-white">Deletion</strong> — request complete account and data deletion</li>
-              <li><strong className="text-white">Portability</strong> — request your data in a machine-readable format</li>
-              <li><strong className="text-white">Disconnect</strong> — revoke Discord access at any time from Settings; revoke Twitch access via your Twitch account connections page</li>
+              <li><strong className="text-foreground">Access</strong> — request a copy of all data we hold about you</li>
+              <li><strong className="text-foreground">Correction</strong> — update inaccurate data via the app settings or email request</li>
+              <li><strong className="text-foreground">Deletion</strong> — request complete account and data deletion</li>
+              <li><strong className="text-foreground">Portability</strong> — request your data in a machine-readable JSON export</li>
+              <li><strong className="text-foreground">Disconnect</strong> — revoke Discord access from in-app Settings; revoke Twitch access via your Twitch account&apos;s connected applications page</li>
+              <li><strong className="text-foreground">Objection / opt-out of certain processing</strong> — under GDPR, CCPA, and similar regimes</li>
             </ul>
             <p className="mt-4">
-              To exercise any of these rights, email{" "}
+              We honor the Global Privacy Control (GPC) signal where applicable. To exercise any of
+              these rights, email{" "}
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#9147ff] hover:underline">{CONTACT_EMAIL}</a>.
-              We will respond within 14 days.
+              We respond within 14 days, or sooner where required by law.
+            </p>
+            <p className="mt-3 text-muted-foreground text-sm">
+              EU/UK residents have the right to lodge a complaint with their local data protection
+              authority. California residents have rights under the CCPA/CPRA, including the right
+              to know, delete, correct, and limit use of sensitive personal information. We do not
+              sell or share personal data as those terms are defined under the CCPA.
             </p>
           </Section>
 
           <Divider />
 
-          <Section id="children" title="7. Children's Privacy">
+          <Section id="international" title="7. International Transfers">
             <p>
-              Collab Planner requires a Twitch account to use. Twitch requires users to be at
-              least 13 years old. We do not knowingly collect data from children under 13. If you
-              believe a child has provided us with personal information, please contact us and we
-              will delete it promptly.
+              If you access Collab Planner from outside the United States, your data is transferred
+              to and processed in the US by Supabase and Vercel. We rely on the Standard
+              Contractual Clauses (SCCs) and equivalent transfer mechanisms maintained by those
+              vendors for cross-border transfers from the EEA, UK, and Switzerland.
             </p>
           </Section>
 
           <Divider />
 
-          <Section id="changes" title="8. Changes to This Policy">
+          <Section id="breach" title="8. Security Incidents">
             <p>
-              We may update this policy to reflect changes in the service or legal requirements.
-              Material changes will be communicated by updating the "Last updated" date above.
-              Continued use of the service after changes constitutes acceptance of the revised policy.
+              In the unlikely event of a security incident affecting your data, we will notify
+              affected users by email within 72 hours of confirmation, where practicable, and
+              comply with applicable breach-notification laws (including GDPR Article 33, CCPA
+              §1798.82, and equivalents). Notifications will describe the nature of the incident,
+              the data categories involved, and remediation steps you may need to take.
             </p>
           </Section>
 
           <Divider />
 
-          <Section id="contact" title="9. Contact">
+          <Section id="children" title="9. Children's Privacy">
             <p>
-              Questions or requests about this policy:{" "}
+              Collab Planner requires a Twitch account, and Twitch requires its users to be at
+              least 13. We do not knowingly collect personal information from anyone under 13. If
+              you believe a child has provided us data, contact{" "}
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#9147ff] hover:underline">{CONTACT_EMAIL}</a>{" "}
+              and we will delete it promptly.
+            </p>
+          </Section>
+
+          <Divider />
+
+          <Section id="changes" title="10. Changes to This Policy">
+            <p>
+              We may update this policy to reflect changes in the service, the law, or operational
+              practices. Material changes will be communicated by updating the &ldquo;Last
+              updated&rdquo; date above; significant changes that affect how your data is used
+              will also be highlighted in-app where reasonable. Continued use of the service after
+              the effective date of a change constitutes acceptance.
+            </p>
+          </Section>
+
+          <Divider />
+
+          <Section id="contact" title="11. Contact">
+            <p>
+              Questions, requests, or complaints about this policy:{" "}
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#9147ff] hover:underline">
                 {CONTACT_EMAIL}
               </a>
@@ -196,17 +272,17 @@ export default function PrivacyPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-800/60 mt-16">
+      <footer className="border-t border-border mt-16">
         <div className="max-w-3xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-zinc-500 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <Logo width={72} height={40} />
-            <span className="text-zinc-700">·</span>
+            <span className="text-muted-foreground/60">·</span>
             <span>{new Date().getFullYear()}</span>
           </div>
-          <div className="flex items-center gap-5 text-xs text-zinc-500">
-            <span className="text-zinc-400">Privacy Policy</span>
-            <Link href="/terms" className="hover:text-zinc-300 transition-colors">Terms of Service</Link>
-            <Link href="/" className="hover:text-zinc-300 transition-colors">Back to App</Link>
+          <div className="flex items-center gap-5 text-xs text-muted-foreground">
+            <span className="text-foreground">Privacy Policy</span>
+            <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+            <Link href="/" className="hover:text-foreground transition-colors">Back to App</Link>
           </div>
         </div>
       </footer>
@@ -220,8 +296,8 @@ export default function PrivacyPage() {
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="scroll-mt-20">
-      <h2 className="text-xl font-semibold text-white mb-4">{title}</h2>
-      <div className="space-y-3 text-zinc-300 leading-relaxed text-sm [&_ul]:space-y-2 [&_ul]:list-none [&_ul>li]:flex [&_ul>li]:gap-2 [&_ul>li]:before:content-['—'] [&_ul>li]:before:text-zinc-600 [&_ul>li]:before:shrink-0">
+      <h2 className="text-xl font-semibold mb-4">{title}</h2>
+      <div className="space-y-3 leading-relaxed text-sm [&_ul]:space-y-2 [&_ul]:list-none [&_ul>li]:flex [&_ul>li]:gap-2 [&_ul>li]:before:content-['—'] [&_ul>li]:before:text-muted-foreground [&_ul>li]:before:shrink-0">
         {children}
       </div>
     </section>
@@ -231,14 +307,14 @@ function Section({ id, title, children }: { id: string; title: string; children:
 function SubSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mt-4">
-      <h3 className="text-sm font-semibold text-zinc-200 mb-2">{title}</h3>
+      <h3 className="text-sm font-semibold mb-2">{title}</h3>
       {children}
     </div>
   );
 }
 
 function Divider() {
-  return <hr className="border-zinc-800/70" />;
+  return <hr className="border-border" />;
 }
 
 function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
@@ -251,17 +327,17 @@ function ExternalLink({ href, children }: { href: string; children: React.ReactN
 
 function Table({ rows, hasLinks }: { rows: string[][]; hasLinks?: boolean }) {
   return (
-    <div className="mt-3 rounded-lg border border-zinc-800 overflow-hidden">
+    <div className="mt-3 rounded-lg border border-border overflow-hidden">
       <table className="w-full text-sm">
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className="border-b border-zinc-800/60 last:border-0">
-              <td className="px-4 py-3 font-medium text-white w-1/4 align-top">{row[0]}</td>
-              <td className="px-4 py-3 text-zinc-400 align-top">{row[1]}</td>
+            <tr key={i} className="border-b border-border last:border-0">
+              <td className="px-4 py-3 font-medium w-1/4 align-top">{row[0]}</td>
+              <td className="px-4 py-3 text-muted-foreground align-top">{row[1]}</td>
               {hasLinks && row[2] && (
                 <td className="px-4 py-3 text-right align-top">
                   <a href={row[2]} target="_blank" rel="noopener noreferrer"
-                    className="text-xs text-zinc-500 hover:text-[#9147ff] transition-colors">
+                    className="text-xs text-muted-foreground hover:text-[#9147ff] transition-colors">
                     Policy ↗
                   </a>
                 </td>

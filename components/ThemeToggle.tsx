@@ -1,47 +1,73 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Moon, Sun } from "lucide-react";
+import { Monitor, Moon, Sun } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
+type ThemeOption = "system" | "light" | "dark";
+
+interface OptionDef {
+  value: ThemeOption;
+  label: string;
+  short: string;
+  Icon: LucideIcon;
+}
+
+const OPTIONS: OptionDef[] = [
+  { value: "system", label: "Match system", short: "Auto", Icon: Monitor },
+  { value: "light", label: "Light mode", short: "Light", Icon: Sun },
+  { value: "dark", label: "Dark mode", short: "Dark", Icon: Moon },
+];
+
 export function ThemeToggle({ className, compact = false }: { className?: string; compact?: boolean }) {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const isLight = mounted && resolvedTheme === "light";
-  const nextTheme = isLight ? "dark" : "light";
+  // Until next-themes hydrates we don't know the active option, so we
+  // render the segmented track without a highlighted pip — keeps the
+  // markup stable for hydration and avoids flashing the wrong option.
+  const active: ThemeOption = mounted ? ((theme as ThemeOption | undefined) ?? "system") : "system";
 
   return (
-    <button
-      aria-label={`Switch to ${nextTheme} mode`}
-      aria-checked={isLight}
+    <div
+      role="radiogroup"
+      aria-label="Theme"
       className={cn(
-        "group inline-flex shrink-0 items-center rounded-full border border-border bg-muted/80 p-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-        compact ? "h-8 w-14" : "h-9 w-full gap-2 px-2",
-        className
+        "inline-flex shrink-0 items-center rounded-full border border-border bg-muted/80 p-0.5 text-xs font-medium text-muted-foreground",
+        compact ? "h-8" : "h-9",
+        className,
       )}
-      onClick={() => setTheme(nextTheme)}
-      role="switch"
-      type="button"
     >
-      <span
-        className={cn(
-          "flex h-6 w-6 items-center justify-center rounded-full bg-background text-foreground shadow-sm transition-transform",
-          compact && isLight && "translate-x-6"
-        )}
-      >
-        {isLight ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-      </span>
-      {!compact && (
-        <span className="min-w-0 truncate">
-          {isLight ? "Light mode" : "Dark mode"}
-        </span>
-      )}
-    </button>
+      {OPTIONS.map(({ value, label, short, Icon }) => {
+        const isActive = mounted && active === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={isActive}
+            aria-label={label}
+            title={label}
+            onClick={() => setTheme(value)}
+            className={cn(
+              "inline-flex items-center justify-center gap-1.5 rounded-full transition-colors",
+              compact ? "h-7 px-2" : "h-8 px-3",
+              isActive
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Icon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+            {!compact ? <span>{short}</span> : null}
+          </button>
+        );
+      })}
+    </div>
   );
 }
