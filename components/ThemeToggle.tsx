@@ -39,8 +39,8 @@ export function ThemeToggle({ className, compact = false }: { className?: string
       role="radiogroup"
       aria-label="Theme"
       className={cn(
-        "inline-flex shrink-0 items-center rounded-full border border-border bg-muted/80 p-0.5 text-xs font-medium text-muted-foreground",
-        compact ? "h-8" : "h-9",
+        "inline-flex shrink-0 items-center rounded-full border border-border bg-muted/60 text-[11px] font-medium text-muted-foreground",
+        compact ? "h-6 p-[2px]" : "h-8 p-0.5",
         className,
       )}
     >
@@ -56,14 +56,14 @@ export function ThemeToggle({ className, compact = false }: { className?: string
             title={label}
             onClick={() => setTheme(value)}
             className={cn(
-              "inline-flex items-center justify-center gap-1.5 rounded-full transition-colors",
-              compact ? "h-7 px-2" : "h-8 px-3",
+              "inline-flex items-center justify-center gap-1 rounded-full transition-colors",
+              compact ? "h-5 w-6" : "h-7 px-2",
               isActive
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <Icon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+            <Icon className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
             {!compact ? <span>{short}</span> : null}
           </button>
         );
