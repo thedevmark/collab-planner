@@ -1,15 +1,30 @@
-# Twitch Collab Planner
+<p align="center"><img src="app/icon.svg" alt="Collab Planner" width="128"></p>
 
-A single-user web app for planning collab streams with your Twitch friends. It uses stream history, schedules, and deterministic ranking logic to suggest times, surface likely games, and provide copyable session facts.
+<h1 align="center">Collab Planner</h1>
+
+<p align="center"><strong>Scheduling tool for video-streaming crews. Reads each member's broadcast history and auto-detects overlap windows so cross-channel collabs skip the calendar-tetris.</strong></p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-black?logo=next.js">
+  <img src="https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white">
+  <img src="https://img.shields.io/badge/Twitch-Helix-9146FF?logo=twitch&logoColor=white">
+  <img src="https://img.shields.io/badge/license-MIT-blue">
+  <a href="https://collab.deutschmark.online"><img src="https://img.shields.io/badge/live-collab.deutschmark.online-33aa77"></a>
+</p>
+
+---
 
 ## What it does
 
-- **Friends system** — Add Twitch streamers by username. The app pulls their real VOD history (past broadcasts) to learn when they typically stream and what they play.
-- **Smart scheduling** — Pattern analysis ranks likely overlap windows based on real stream history and Twitch schedules.
-- **Game suggestions** — Shared play history surfaces games your selected group is most likely to enjoy together.
-- **Session facts** — Copy straightforward session details into Discord and write the actual message yourself.
-- **Calendar** — Visual calendar showing your events alongside estimated stream times for all your friends.
-- **Reminders** — Set browser notification reminders for upcoming collabs.
+- **Broadcast-history overlap detection** — adds each friend's real VOD history to learn when they stream, then ranks time slots where the whole group is likely to be live at once.
+- **Smart scheduling** — pattern analysis considers days, times, durations, and posted Twitch schedules to surface the best overlap windows.
+- **Game suggestions** — shared play history surfaces games the selected group is most likely to enjoy together.
+- **Friends system** — add Twitch streamers by username; their VOD history is fetched automatically via Twitch Helix.
+- **Calendar** — visual calendar showing your own events alongside estimated stream times for all your friends.
+- **Session facts & Discord drafts** — build a ready-to-paste Discord message and copy it with one click.
+- **Reminders** — set browser notification reminders for upcoming collabs.
+
+---
 
 ## Setup
 
@@ -32,42 +47,43 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) and sign in with Twitch.
 
-### API Keys
+### Environment variables
 
-You configure everything in-app on the **Settings** page — no `.env` file needed.
+Configure everything on the in-app **Settings** page — no `.env` file required. Alternatively, set them in `.env.local` (see `.env.example`). Keys saved in Settings take priority over env vars.
 
-| Key | Where to get it | What it does |
-|-----|----------------|--------------|
+| Variable | Where to get it | Purpose |
+|---|---|---|
 | `DATABASE_URL` / `DIRECT_URL` | Supabase project settings | Postgres connection for app data |
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase project settings | Authentication and session handling |
-| `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | [Twitch Developer Console](https://dev.twitch.tv/console/apps) | Search for streamers, pull VOD history and schedules |
+| `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | [Twitch Developer Console](https://dev.twitch.tv/console/apps) | Streamer search, VOD history, schedules, game categories |
 
-Alternatively, you can set them as environment variables in a `.env.local` file (see `.env.example`). Keys saved in Settings take priority over env vars.
-
-## Tech Stack
-
-- **Next.js 16** (App Router) + TypeScript
-- **Postgres** via Prisma ORM
-- **Tailwind CSS v4** + shadcn/ui components
-- **Supabase Auth** — Twitch login and session handling
-- **Twitch Helix API** — user search, VOD history, schedules, game categories
-- **FullCalendar** — interactive calendar view
-- **SWR** — client-side data fetching
+---
 
 ## How it works
 
-1. **Add your Twitch username** in Settings — the app pulls your past broadcasts to learn your streaming patterns
-2. **Add friends** by their Twitch username — their VOD history is fetched automatically
-3. **Plan a collab** — select friends, click "Suggest Times" for ranked time slots that fit the group
-4. **Pick a game** — click "Suggest" for game recommendations based on shared play history
-5. **Send invites** — build a Discord message draft and copy it with one click
+1. **Add your Twitch username** in Settings — the app pulls your past broadcasts to learn your streaming patterns.
+2. **Add friends** by username — their VOD history is fetched automatically via Helix.
+3. **Plan a collab** — select friends, click "Suggest Times" for ranked overlap windows.
+4. **Pick a game** — click "Suggest" for game recommendations based on shared play history.
+5. **Send invites** — build a Discord message draft and copy it with one click.
 
-The ranking considers:
-- Actual stream history (days, times, duration, games played)
-- Posted Twitch schedules (if available, used as supplementary data)
-- Your own streaming patterns (you're always included in suggestions)
+The ranking considers actual stream history (days, times, durations, games played) and posted Twitch schedules where available; your own patterns are always included.
 
-## Project Structure
+---
+
+## Architecture
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) + TypeScript |
+| Database | Postgres via Prisma ORM |
+| Auth | Supabase Auth (Twitch OAuth) |
+| Styling | Tailwind CSS v4 + shadcn/ui |
+| Twitch data | Twitch Helix API (search, VOD history, schedules, games) |
+| Calendar | FullCalendar |
+| Data fetching | SWR |
+
+### Project structure
 
 ```
 app/                    # Next.js pages and API routes
@@ -86,6 +102,21 @@ components/             # UI components (shadcn/ui)
 hooks/                  # React hooks (reminders, clipboard)
 prisma/                 # Database schema and migrations
 ```
+
+---
+
+## You might also like
+
+Part of the [deutschmark](https://github.com/thedeutschmark) stream toolset — tools built to work together:
+
+| Tool | What it is |
+| --- | --- |
+| **[The Stream Toolset](https://toolset.deutschmark.online)** | OBS overlays + companion apps. One login, no subscriptions. |
+| **[Clipline](https://github.com/thedeutschmark/clipline)** | Turn livestream VODs into shortform clips with auto-captions. |
+
+<sub>See everything → [github.com/thedeutschmark](https://github.com/thedeutschmark)</sub>
+
+---
 
 ## License
 
