@@ -1,0 +1,88 @@
+:root {
+  color-scheme: dark;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+}
+body {
+  margin: 0;
+  background: #18181b;
+  color: #efeff1;
+}
+#root {
+  padding: 12px;
+}
+h1 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+h2 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 16px 0 4px;
+  color: #adadb8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.predictions, .collabs ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.prediction {
+  display: grid;
+  grid-template-columns: 32px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid #2a2a2e;
+}
+.prediction:last-child { border-bottom: none; }
+.day { color: #adadb8; font-weight: 600; }
+.dur { color: #adadb8; font-size: 12px; }
+.stars { color: #9147ff; }
+.stars-dim { color: #3a3a3d; }
+.badge {
+  background: #00c8af;
+  color: #0e0e10;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+.collab {
+  padding: 6px 0;
+  border-bottom: 1px solid #2a2a2e;
+}
+.collab:last-child { border-bottom: none; }
+.partners { font-size: 12px; color: #adadb8; }
+.game { font-size: 12px; color: #efeff1; margin-top: 2px; }
+.powered-by {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #2a2a2e;
+  text-align: center;
+  font-size: 11px;
+}
+.powered-by a {
+  color: #9147ff;
+  text-decoration: none;
+}
+.powered-by a:hover { text-decoration: underline; }
+.empty, .loading, .error {
+  color: #adadb8;
+  font-size: 13px;
+  text-align: center;
+  padding: 24px 0;
+}
+.cta {
+  display: inline-block;
+  background: #9147ff;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.cta:hover { background: #7a3fd9; }

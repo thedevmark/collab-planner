@@ -1,15 +1,22 @@
 {
-  "name": "Collab Planner",
-  "version": "0.0.1",
-  "description": "Plan stream collaborations — see schedules, upcoming collabs, and connect with streamers.",
+  "name": "Schedule Forecast by Collab Planner",
+  "version": "0.1.0",
+  "description": "Surfaces this streamer's most likely upcoming live times based on broadcast history, plus any scheduled collabs they've planned.",
   "views": {
     "panel": {
       "viewerUrl": "panel.html",
       "height": 300,
       "canLinkExternalContent": true
+    },
+    "config": {
+      "viewerUrl": "config.html",
+      "canLinkExternalContent": true
     }
   },
   "allowlistedConfigUrls": [],
-  "allowlistedPanelUrls": ["https://collab.deutschmark.online/api/extension/*"],
+  "allowlistedPanelUrls": [
+    "https://collab.deutschmark.online/api/extension/channel/*",
+    "https://collab.deutschmark.online/"
+  ],
   "ebs": "https://collab.deutschmark.online"
 }

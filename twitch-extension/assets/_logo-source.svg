@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <!--
+    Schedule Forecast — extension icon, v2.
+    One shape, one confident gesture.
+
+    The calendar IS the icon (no separate badge container, no corner sub-icon).
+    A single teal forecast curve sweeps from a highlighted day inside the
+    calendar UP and OUT through the top-right edge — the same "two elements
+    weaving through each other" gesture as the Collab Planner rings, scaled
+    down to this mark.
+
+    Brand purple body, brand teal forecast layer. No white panel, no drop
+    shadows, no inset borders, no decorative dotted projection.
+  -->
+  <defs>
+    <linearGradient id="cal-purple" x1="0" y1="14" x2="0" y2="86" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#5b21b6"/>
+    </linearGradient>
+    <linearGradient id="cal-header" x1="0" y1="14" x2="0" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#a875ff"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="forecast" x1="0" y1="14" x2="0" y2="86" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5eead4"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Binder rings — small, dark, balanced. -->
+  <rect x="33" y="14" width="4" height="11" rx="2" fill="#2e1a52"/>
+  <rect x="63" y="14" width="4" height="11" rx="2" fill="#2e1a52"/>
+
+  <!-- Calendar body — one rounded rect in brand purple. This IS the icon shape. -->
+  <rect x="14" y="20" width="72" height="66" rx="10" fill="url(#cal-purple)"/>
+
+  <!-- Header band — same shape clipped to a strip across the top. -->
+  <path d="M 14 30 a 10 10 0 0 1 10 -10 h 52 a 10 10 0 0 1 10 10 v 8 h -72 z"
+        fill="url(#cal-header)"/>
+
+  <!-- Date dots — 4 cols × 3 rows, set in the calendar body. Subtle so the
+       forecast curve stays the hero. -->
+  <g fill="#c4b5fd" fill-opacity="0.55">
+    <circle cx="26" cy="52" r="2.2"/>
+    <circle cx="42" cy="52" r="2.2"/>
+    <circle cx="58" cy="52" r="2.2"/>
+    <circle cx="74" cy="52" r="2.2"/>
+    <circle cx="26" cy="64" r="2.2"/>
+    <circle cx="42" cy="64" r="2.2"/>
+    <circle cx="74" cy="64" r="2.2"/>
+    <circle cx="26" cy="76" r="2.2"/>
+    <circle cx="42" cy="76" r="2.2"/>
+    <circle cx="58" cy="76" r="2.2"/>
+    <circle cx="74" cy="76" r="2.2"/>
+  </g>
+
+  <!-- Highlighted "predicted" date — solid teal, the curve's anchor point. -->
+  <circle cx="58" cy="64" r="4.5" fill="url(#forecast)"/>
+
+  <!-- Forecast curve — rises from the predicted date, breaks the calendar's
+       top-right corner (echoes the rings' weave). Same stroke weight as the
+       binder rings so the two purple verticals + teal curve read as one
+       balanced composition. -->
+  <path d="M 58 64 Q 72 50, 96 14"
+        fill="none" stroke="url(#forecast)" stroke-width="4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

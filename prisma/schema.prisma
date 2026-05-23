@@ -227,3 +227,12 @@ model CollabInviteRecipient {
 
   @@unique([inviteId, username])
 }
+
+model ExtensionPredictionCache {
+  twitchId    String   @id
+  payload     Json?
+  computedAt  DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}

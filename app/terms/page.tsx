@@ -6,7 +6,7 @@ export const metadata = {
   description: "Terms of Service for Collab Planner: who can use it, acceptable use, third-party platform compliance, disclaimers, and dispute resolution.",
 };
 
-const LAST_UPDATED = "May 4, 2026";
+const LAST_UPDATED = "May 23, 2026";
 const CONTACT_EMAIL = "deutschmarkonline@gmail.com";
 const APP_URL = "https://collab.deutschmark.online";
 
@@ -68,7 +68,10 @@ export default function TermsPage() {
               Collab Planner is a web application that helps Twitch streamers schedule, coordinate,
               and plan collaborative livestream events with other streamers. Features include
               schedule analysis, friend lists, collab event planning, optional Discord
-              notifications via incoming webhooks, and a public Twitch panel extension.
+              notifications via incoming webhooks, and a public Twitch Panel Extension
+              (&ldquo;Schedule Forecast by Collab Planner&rdquo;) that surfaces a channel&apos;s
+              likely upcoming live times to viewers. The extension is covered in more detail in
+              Section 7.
             </p>
             <p>
               The Service is operated independently and is not affiliated with, endorsed by, or
@@ -156,7 +159,73 @@ export default function TermsPage() {
 
           <Divider />
 
-          <Section id="availability" title="7. Service Availability">
+          <Section id="extension" title="7. Twitch Panel Extension">
+            <p>
+              The Service publishes a Twitch Panel Extension (&ldquo;Schedule Forecast by Collab
+              Planner&rdquo;) distributed through the Twitch Extension directory. The following
+              terms apply to anyone interacting with that extension, in addition to the rest of
+              these Terms and the{" "}
+              <Link href="/privacy" className="text-[#9147ff] hover:underline">Privacy Policy</Link>.
+            </p>
+
+            <SubSection title="7.1 What the panel shows">
+              <p className="text-sm leading-relaxed">
+                The panel surfaces a blended list of predicted streaming times (computed from the
+                broadcaster&apos;s public Twitch VOD history) and any posted Twitch schedule
+                entries that match those windows. Channels whose broadcaster has a Collab Planner
+                account also see upcoming scheduled collabs with co-streamer names and avatars.
+                Predictions are heuristic estimates, not commitments — the broadcaster may go live
+                outside predicted windows or skip them entirely.
+              </p>
+            </SubSection>
+
+            <SubSection title="7.2 Viewers">
+              <p className="text-sm leading-relaxed">
+                Viewing the panel does not require a Collab Planner account and does not collect or
+                transmit your Twitch identity (only an opaque per-channel viewer ID supplied by
+                Twitch, which the Service does not store). Use of the panel is governed by the
+                Twitch Terms of Service, the Twitch Extension policies, and these Terms. The
+                footer link opens collab.deutschmark.online in a new tab — at that point the
+                Privacy Policy and these Terms apply.
+              </p>
+            </SubSection>
+
+            <SubSection title="7.3 Broadcasters who install the extension">
+              <p className="text-sm leading-relaxed">
+                By installing and activating the extension on your channel you authorize the
+                Service to display the data described in Section 7.1 to your viewers, and you
+                represent that doing so is consistent with the Twitch Terms of Service, Community
+                Guidelines, and Extension policies. You may deactivate or uninstall the extension
+                from your Twitch dashboard at any time.
+              </p>
+            </SubSection>
+
+            <SubSection title="7.4 Streamers who have not signed up">
+              <p className="text-sm leading-relaxed">
+                When a viewer loads the panel on a channel whose broadcaster does not have a Collab
+                Planner account, the Service fetches the channel&apos;s public Twitch VOD history
+                via the Twitch Helix API, computes predicted streaming windows, and caches the
+                result for up to 24 hours. Only data Twitch already exposes publicly is read; no
+                account is created. Streamers can opt out of this processing at any time by
+                emailing <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#9147ff] hover:underline">{CONTACT_EMAIL}</a> —
+                we delete the cached entry and add the channel to a no-fetch list within 7 days.
+              </p>
+            </SubSection>
+
+            <SubSection title="7.5 Reporting violations">
+              <p className="text-sm leading-relaxed">
+                If you believe the extension is being used in a way that violates Twitch&apos;s
+                policies or these Terms (for example, displayed in a misleading way, used to harass,
+                or installed on a channel that is impersonating someone else), contact{" "}
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#9147ff] hover:underline">{CONTACT_EMAIL}</a>{" "}
+                and we will investigate within 7 days.
+              </p>
+            </SubSection>
+          </Section>
+
+          <Divider />
+
+          <Section id="availability" title="8. Service Availability">
             <p>
               We aim to keep the Service available and reliable, but we do not guarantee
               uninterrupted access. The Service may be unavailable due to maintenance, third-party
@@ -170,7 +239,7 @@ export default function TermsPage() {
 
           <Divider />
 
-          <Section id="disclaimers" title="8. Disclaimers">
+          <Section id="disclaimers" title="9. Disclaimers">
             <p>
               The Service is provided &ldquo;as is&rdquo; and &ldquo;as available&rdquo; without
               warranty of any kind, express or implied, including but not limited to warranties of
@@ -189,7 +258,7 @@ export default function TermsPage() {
 
           <Divider />
 
-          <Section id="liability" title="9. Limitation of Liability">
+          <Section id="liability" title="10. Limitation of Liability">
             <p>
               To the maximum extent permitted by applicable law, Collab Planner and its operator
               are not liable for any indirect, incidental, special, consequential, or punitive
@@ -210,7 +279,7 @@ export default function TermsPage() {
 
           <Divider />
 
-          <Section id="indemnification" title="10. Indemnification">
+          <Section id="indemnification" title="11. Indemnification">
             <p>
               You agree to indemnify and hold harmless Collab Planner and its operator from any
               claim, demand, loss, liability, or expense (including reasonable attorneys&rsquo;
@@ -226,7 +295,7 @@ export default function TermsPage() {
 
           <Divider />
 
-          <Section id="termination" title="11. Termination">
+          <Section id="termination" title="12. Termination">
             <p>
               You may terminate your use of the Service at any time by signing out, disconnecting
               third-party services from Settings, and emailing the contact address below to
@@ -248,7 +317,7 @@ export default function TermsPage() {
 
           <Divider />
 
-          <Section id="modifications" title="12. Modifications to the Service">
+          <Section id="modifications" title="13. Modifications to the Service">
             <p>
               The Service is actively developed. Features may be added, changed, deprecated, or
               removed over time. These Terms may be updated to reflect changes to the Service, the
@@ -260,7 +329,7 @@ export default function TermsPage() {
 
           <Divider />
 
-          <Section id="governing-law" title="13. Governing Law and Disputes">
+          <Section id="governing-law" title="14. Governing Law and Disputes">
             <p>
               These Terms are governed by the laws of the State of New York, United States,
               without regard to its conflict-of-laws principles. The United Nations Convention on
@@ -277,15 +346,15 @@ export default function TermsPage() {
 
           <Divider />
 
-          <Section id="misc" title="14. Miscellaneous">
-            <SubSection title="14.1 Severability">
+          <Section id="misc" title="15. Miscellaneous">
+            <SubSection title="15.1 Severability">
               <p className="text-sm leading-relaxed">
                 If any provision of these Terms is held unenforceable, that provision will be
                 modified only to the minimum extent necessary, and the remaining provisions remain
                 in full force.
               </p>
             </SubSection>
-            <SubSection title="14.2 Entire agreement">
+            <SubSection title="15.2 Entire agreement">
               <p className="text-sm leading-relaxed">
                 These Terms, together with the{" "}
                 <Link className="text-[#9147ff] hover:underline" href="/privacy">Privacy Policy</Link>,
@@ -293,12 +362,12 @@ export default function TermsPage() {
                 Service and supersede any prior agreements on the same subject.
               </p>
             </SubSection>
-            <SubSection title="14.3 No waiver">
+            <SubSection title="15.3 No waiver">
               <p className="text-sm leading-relaxed">
                 Failure to enforce any provision is not a waiver of the right to enforce it later.
               </p>
             </SubSection>
-            <SubSection title="14.4 Assignment">
+            <SubSection title="15.4 Assignment">
               <p className="text-sm leading-relaxed">
                 You may not assign these Terms without prior written consent. We may assign these
                 Terms in connection with a merger, acquisition, or sale of substantially all
@@ -309,7 +378,7 @@ export default function TermsPage() {
 
           <Divider />
 
-          <Section id="contact" title="15. Contact">
+          <Section id="contact" title="16. Contact">
             <p>
               Questions about these Terms, account suspensions, or other legal matters:{" "}
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#9147ff] hover:underline">

@@ -6,7 +6,7 @@ export const metadata = {
   description: "How Collab Planner collects, uses, and protects your data — Twitch + Discord OAuth scopes, retention, your rights.",
 };
 
-const LAST_UPDATED = "May 4, 2026";
+const LAST_UPDATED = "May 23, 2026";
 const CONTACT_EMAIL = "deutschmarkonline@gmail.com";
 const APP_URL = "https://collab.deutschmark.online";
 
@@ -157,7 +157,44 @@ export default function PrivacyPage() {
 
           <Divider />
 
-          <Section id="third-party" title="4. Third-Party Services">
+          <Section id="extension" title="4. The Twitch Panel Extension">
+            <p>
+              Collab Planner publishes a Twitch Panel Extension called &ldquo;Schedule Forecast by
+              Collab Planner.&rdquo; Broadcasters install it on their Twitch channel page from the
+              Twitch Extension directory. The data handling for the extension differs from the rest
+              of the Service and is detailed below.
+            </p>
+
+            <SubSection title="Viewers of the panel">
+              <ul>
+                <li>No Twitch identity is requested. Twitch supplies only an opaque per-channel viewer ID, which we never store and never associate with any account.</li>
+                <li>No cookies are set by the panel; no analytics, fingerprinting, or advertising trackers are loaded.</li>
+                <li>Each request the panel makes carries a short-lived JWT signed by Twitch that identifies only the channel the panel is rendering on. We verify that signature before returning data.</li>
+                <li>Standard server access logs (IP, user agent, request path) apply per Section 1 — retained up to 30 days for security/abuse investigation.</li>
+                <li>The footer contains a single off-site link to <ExternalLink href="https://collab.deutschmark.online">collab.deutschmark.online</ExternalLink>, tagged with UTM parameters so we can measure how many viewers click through. No personal data is sent in that link.</li>
+              </ul>
+            </SubSection>
+
+            <SubSection title="The broadcaster the panel is rendering on">
+              <ul>
+                <li>If the broadcaster already has a Collab Planner account, the panel surfaces the data described in Sections 1 and 2 (predicted streaming windows, posted Twitch schedule, upcoming planned collabs with co-streamer names and avatars).</li>
+                <li>If the broadcaster does <strong>not</strong> have a Collab Planner account, the panel still works: we fetch their public Twitch VOD history on demand via the Twitch Helix API, compute predicted streaming windows, and cache the result for up to 24 hours in our database (the <code>ExtensionPredictionCache</code> table). No other personal data is collected, no account is created on their behalf, and only data Twitch already exposes publicly via Helix is read.</li>
+                <li>Broadcasters can opt out at any time by emailing <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#9147ff] hover:underline">{CONTACT_EMAIL}</a>. We delete the cache entry and add the channel to a no-fetch list within 7 days.</li>
+              </ul>
+            </SubSection>
+
+            <SubSection title="Broadcaster config view">
+              <p className="text-muted-foreground text-sm">
+                The Twitch dashboard config view is broadcaster-only and read-only. It tells the
+                broadcaster whether their Collab Planner account is detected and links to their
+                dashboard. No data is collected from this view beyond the standard JWT verification.
+              </p>
+            </SubSection>
+          </Section>
+
+          <Divider />
+
+          <Section id="third-party" title="5. Third-Party Services">
             <p>Collab Planner integrates with the services below. Each has its own privacy policy.</p>
             <Table rows={[
               ["Twitch", "Authentication, stream data, schedule data, follow graph", "https://www.twitch.tv/p/legal/privacy-policy"],
@@ -173,20 +210,21 @@ export default function PrivacyPage() {
 
           <Divider />
 
-          <Section id="retention" title="5. Data Retention">
+          <Section id="retention" title="6. Data Retention">
             <p>Concrete retention windows:</p>
             <ul>
               <li>Stream history older than 12 months may be pruned to manage storage</li>
               <li>Reminder records: marked sent and retained for 90 days, then deleted</li>
               <li>Server access logs: deleted after 30 days</li>
               <li>Discord OAuth tokens: deleted immediately when you disconnect Discord, or within 7 days of the last refresh failure</li>
+              <li>Extension prediction cache entries (for channels without a Collab Planner account): 24 hours by default; deleted within 7 days on opt-out request</li>
               <li>When you request account deletion: all personal data is purged within 30 days, plus a 7-day buffer for backup rotation</li>
             </ul>
           </Section>
 
           <Divider />
 
-          <Section id="rights" title="6. Your Rights">
+          <Section id="rights" title="7. Your Rights">
             <p>Depending on your jurisdiction, you may have one or more of the following rights:</p>
             <ul>
               <li><strong className="text-foreground">Access</strong> — request a copy of all data we hold about you</li>
@@ -212,7 +250,7 @@ export default function PrivacyPage() {
 
           <Divider />
 
-          <Section id="international" title="7. International Transfers">
+          <Section id="international" title="8. International Transfers">
             <p>
               If you access Collab Planner from outside the United States, your data is transferred
               to and processed in the US by Supabase and Vercel. We rely on the Standard
@@ -223,7 +261,7 @@ export default function PrivacyPage() {
 
           <Divider />
 
-          <Section id="breach" title="8. Security Incidents">
+          <Section id="breach" title="9. Security Incidents">
             <p>
               In the unlikely event of a security incident affecting your data, we will notify
               affected users by email within 72 hours of confirmation, where practicable, and
@@ -235,7 +273,7 @@ export default function PrivacyPage() {
 
           <Divider />
 
-          <Section id="children" title="9. Children's Privacy">
+          <Section id="children" title="10. Children's Privacy">
             <p>
               Collab Planner requires a Twitch account, and Twitch requires its users to be at
               least 13. We do not knowingly collect personal information from anyone under 13. If
@@ -247,7 +285,7 @@ export default function PrivacyPage() {
 
           <Divider />
 
-          <Section id="changes" title="10. Changes to This Policy">
+          <Section id="changes" title="11. Changes to This Policy">
             <p>
               We may update this policy to reflect changes in the service, the law, or operational
               practices. Material changes will be communicated by updating the &ldquo;Last
@@ -259,7 +297,7 @@ export default function PrivacyPage() {
 
           <Divider />
 
-          <Section id="contact" title="11. Contact">
+          <Section id="contact" title="12. Contact">
             <p>
               Questions, requests, or complaints about this policy:{" "}
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#9147ff] hover:underline">
