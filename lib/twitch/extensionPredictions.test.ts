@@ -8,14 +8,10 @@ const basePattern: StreamingPattern = {
   typicalDays: ["Tuesday", "Thursday", "Saturday"],
   startHours: { earliest: 19, latest: 22, median: 20 },
   avgDurationHours: 3,
-  topGames: ["Apex Legends"],
+  topGames: ["Apex Legends", "Helldivers 2"],
   confidence: "strong",
   summary: "",
-  inferredWindows: [
-    { start: new Date("2026-05-26T20:00:00Z"), end: new Date("2026-05-26T23:00:00Z") },
-    { start: new Date("2026-05-28T20:00:00Z"), end: new Date("2026-05-28T23:00:00Z") },
-    { start: new Date("2026-05-30T20:00:00Z"), end: new Date("2026-05-30T23:00:00Z") },
-  ],
+  inferredWindows: [],
   dayFrequency: [0, 0, 1, 0, 1, 0, 1],
   hourDistribution: new Array(24).fill(0.3),
   consistency: 1,
@@ -23,7 +19,7 @@ const basePattern: StreamingPattern = {
 };
 
 describe("shapeConnectedPanelResponse", () => {
-  it("returns predictions sorted by start time with confidence stars", () => {
+  it("returns summary with shortened top days and median hour", () => {
     const resp = shapeConnectedPanelResponse({
       pattern: basePattern,
       postedSchedule: [],
@@ -32,25 +28,45 @@ describe("shapeConnectedPanelResponse", () => {
 
     expect(resp.status).toBe("ok");
     if (resp.status !== "ok") return;
-    expect(resp.predictions).toHaveLength(3);
-    expect(resp.predictions[0].startsAt).toBe("2026-05-26T20:00:00.000Z");
-    expect(resp.predictions[0].confidence).toBe(3); // "strong" → 3
-    expect(resp.predictions[0].isPosted).toBe(false);
+    expect(resp.summary.topDays).toEqual(["Tue", "Thu", "Sat"]);
+    expect(resp.summary.medianHourUtc).toBe(20);
+    expect(resp.summary.topGame).toBe("Apex Legends");
+    expect(resp.summary.isEstimate).toBe(false);
+    expect(resp.summary.hasPostedSchedule).toBe(false);
   });
 
-  it("marks slots as isPosted=true when posted schedule matches within 1h", () => {
+  it("marks hasPostedSchedule when posted slots are present", () => {
     const resp = shapeConnectedPanelResponse({
       pattern: basePattern,
       postedSchedule: [
-        { start: new Date("2026-05-26T20:30:00Z"), end: new Date("2026-05-26T23:30:00Z") },
+        { start: new Date("2026-05-26T20:00:00Z"), end: new Date("2026-05-26T23:00:00Z") },
       ],
       upcomingCollabs: [],
     });
+    if (resp.status !== "ok") throw new Error("expected ok");
+    expect(resp.summary.hasPostedSchedule).toBe(true);
+  });
 
-    expect(resp.status).toBe("ok");
-    if (resp.status !== "ok") return;
-    expect(resp.predictions[0].isPosted).toBe(true);
-    expect(resp.predictions[1].isPosted).toBe(false);
+  it("flags isEstimate when sample size is small", () => {
+    const small: StreamingPattern = { ...basePattern, sampleSize: 2, confidence: "weak" };
+    const resp = shapeConnectedPanelResponse({
+      pattern: small,
+      postedSchedule: [],
+      upcomingCollabs: [],
+    });
+    if (resp.status !== "ok") throw new Error("expected ok");
+    expect(resp.summary.isEstimate).toBe(true);
+  });
+
+  it("flags isEstimate when confidence is 'estimated'", () => {
+    const est: StreamingPattern = { ...basePattern, confidence: "estimated" };
+    const resp = shapeConnectedPanelResponse({
+      pattern: est,
+      postedSchedule: [],
+      upcomingCollabs: [],
+    });
+    if (resp.status !== "ok") throw new Error("expected ok");
+    expect(resp.summary.isEstimate).toBe(true);
   });
 
   it("includes collabs in the response", () => {
@@ -65,9 +81,7 @@ describe("shapeConnectedPanelResponse", () => {
         },
       ],
     });
-
-    expect(resp.status).toBe("ok");
-    if (resp.status !== "ok") return;
+    if (resp.status !== "ok") throw new Error("expected ok");
     expect(resp.collabs).toHaveLength(1);
     expect(resp.collabs[0].partners[0].username).toBe("alice");
   });
@@ -82,22 +96,14 @@ describe("shapeConnectedPanelResponse", () => {
     expect(resp.status).toBe("no_data");
   });
 
-  it("maps confidence tiers correctly: estimated→1, weak/moderate→2, strong/schedule→3", () => {
-    for (const [tier, expected] of [
-      ["estimated", 1],
-      ["weak", 2],
-      ["moderate", 2],
-      ["strong", 3],
-      ["schedule", 3],
-    ] as const) {
-      const p = { ...basePattern, confidence: tier };
-      const resp = shapeConnectedPanelResponse({
-        pattern: p,
-        postedSchedule: [],
-        upcomingCollabs: [],
-      });
-      if (resp.status !== "ok") throw new Error("expected ok");
-      expect(resp.predictions[0].confidence).toBe(expected);
-    }
+  it("returns null topGame when topGames is empty", () => {
+    const noGames: StreamingPattern = { ...basePattern, topGames: [] };
+    const resp = shapeConnectedPanelResponse({
+      pattern: noGames,
+      postedSchedule: [],
+      upcomingCollabs: [],
+    });
+    if (resp.status !== "ok") throw new Error("expected ok");
+    expect(resp.summary.topGame).toBeNull();
   });
 });

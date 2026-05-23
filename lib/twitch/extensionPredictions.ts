@@ -1,15 +1,25 @@
 import type { StreamingPattern } from "@/lib/scheduling/patterns";
 
+/**
+ * Shape of the payload the panel SPA renders. Designed to mirror the visual
+ * model used by Collab Planner's in-app friend cards: one summary line plus
+ * a 7-day chip row, with collabs surfaced separately when present.
+ */
 export type PanelResponse =
   | {
       status: "ok";
-      predictions: Array<{
-        day: string;
-        startsAt: string;
-        durationHours: number;
-        confidence: 1 | 2 | 3;
-        isPosted: boolean;
-      }>;
+      summary: {
+        /** Days the streamer typically goes live, e.g. ["Sun", "Tue", "Mon"]. */
+        topDays: string[];
+        /** Median start hour in UTC (0-23). SPA renders it in the viewer's local timezone. */
+        medianHourUtc: number;
+        /** Top game by frequency, or null if unknown. */
+        topGame: string | null;
+        /** True when sample size is too small for confident prediction. */
+        isEstimate: boolean;
+        /** True when one or more posted Twitch schedule slots exist within the next 14 days. */
+        hasPostedSchedule: boolean;
+      };
       collabs: Array<{
         startsAt: string;
         gameName: string | null;
@@ -37,13 +47,18 @@ interface Inputs {
   upcomingCollabs: CollabInput[];
 }
 
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const POSTED_MATCH_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-
-function confidenceTier(c: StreamingPattern["confidence"]): 1 | 2 | 3 {
-  if (c === "estimated") return 1;
-  if (c === "weak" || c === "moderate") return 2;
-  return 3; // strong, schedule
+/** Convert StreamingPattern's full day names (e.g. "Sunday") to short ones (e.g. "Sun"). */
+function shortenDays(longDays: string[]): string[] {
+  const SHORT_BY_LONG: Record<string, string> = {
+    Sunday: "Sun",
+    Monday: "Mon",
+    Tuesday: "Tue",
+    Wednesday: "Wed",
+    Thursday: "Thu",
+    Friday: "Fri",
+    Saturday: "Sat",
+  };
+  return longDays.map((d) => SHORT_BY_LONG[d] ?? d).filter(Boolean);
 }
 
 export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
@@ -53,29 +68,15 @@ export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
     return { status: "no_data" };
   }
 
-  const confidence = confidenceTier(pattern.confidence);
-  const durationHours = pattern.avgDurationHours;
-
-  const predictions = pattern.inferredWindows
-    .slice()
-    .sort((a, b) => a.start.getTime() - b.start.getTime())
-    .slice(0, 5)
-    .map((w) => {
-      const isPosted = postedSchedule.some(
-        (p) => Math.abs(p.start.getTime() - w.start.getTime()) <= POSTED_MATCH_WINDOW_MS
-      );
-      return {
-        day: DAY_NAMES[w.start.getUTCDay()],
-        startsAt: w.start.toISOString(),
-        durationHours,
-        confidence,
-        isPosted,
-      };
-    });
+  const topDays = shortenDays(pattern.typicalDays).slice(0, 3);
+  const medianHourUtc = pattern.startHours.median;
+  const topGame = pattern.topGames[0] ?? null;
+  const isEstimate = pattern.confidence === "estimated" || pattern.sampleSize < 3;
+  const hasPostedSchedule = postedSchedule.length > 0;
 
   return {
     status: "ok",
-    predictions,
+    summary: { topDays, medianHourUtc, topGame, isEstimate, hasPostedSchedule },
     collabs: upcomingCollabs,
     generatedAt: new Date().toISOString(),
   };

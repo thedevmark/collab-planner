@@ -3,13 +3,13 @@
 export type PanelResponse =
   | {
       status: "ok";
-      predictions: Array<{
-        day: string;
-        startsAt: string;
-        durationHours: number;
-        confidence: 1 | 2 | 3;
-        isPosted: boolean;
-      }>;
+      summary: {
+        topDays: string[];
+        medianHourUtc: number;
+        topGame: string | null;
+        isEstimate: boolean;
+        hasPostedSchedule: boolean;
+      };
       collabs: Array<{
         startsAt: string;
         gameName: string | null;

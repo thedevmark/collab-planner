@@ -4,7 +4,7 @@ import { awaitAuthorized, type TwitchAuth } from "./lib/twitchExt";
 import { fetchPanel } from "./lib/api";
 import type { PanelResponse } from "./lib/types";
 import { resolveViewerLocale, resolveViewerTimeZone, type FormatOptions } from "./lib/format";
-import { PredictionsList } from "./components/PredictionsList";
+import { ScheduleSummary } from "./components/ScheduleSummary";
 import { CollabsList } from "./components/CollabsList";
 import { PoweredByFooter } from "./components/PoweredByFooter";
 
@@ -22,6 +22,50 @@ function Panel() {
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+
+    // Preview mode: ?preview=ok|warming|no_data|empty bypasses the Twitch JWT
+    // dance and renders the panel against fixed mock data.
+    const previewMode = new URLSearchParams(window.location.search).get("preview");
+    if (previewMode) {
+      const fmt: FormatOptions = {
+        locale: resolveViewerLocale(undefined),
+        timeZone: resolveViewerTimeZone(),
+      };
+      if (previewMode === "warming") {
+        setState({ kind: "warming", fmt });
+      } else if (previewMode === "no_data") {
+        setState({ kind: "no_data", fmt });
+      } else {
+        const mock: Extract<PanelResponse, { status: "ok" }> = {
+          status: "ok",
+          summary: {
+            topDays: ["Sun", "Tue", "Mon"],
+            medianHourUtc: 23, // ~7PM ET
+            topGame: "Apex Legends",
+            isEstimate: false,
+            hasPostedSchedule: true,
+          },
+          collabs:
+            previewMode === "empty"
+              ? []
+              : [
+                  {
+                    startsAt: nextDayAt(6, 18, 0),
+                    gameName: "Apex Legends",
+                    partners: [
+                      { username: "alice", displayName: "Alice", avatarUrl: "" },
+                      { username: "bob", displayName: "Bob", avatarUrl: "" },
+                    ],
+                  },
+                ],
+          generatedAt: new Date().toISOString(),
+        };
+        setState({ kind: "ok", data: mock, fmt });
+      }
+      return () => {
+        cancelled = true;
+      };
+    }
 
     async function load(auth: TwitchAuth, fmt: FormatOptions) {
       try {
@@ -63,20 +107,27 @@ function Panel() {
   if (state.kind === "no_data")
     return (
       <>
-        <h1>Likely upcoming streams</h1>
-        <p className="empty">No recent broadcast data to analyze yet.</p>
+        <p className="empty">No stream data yet.</p>
         <PoweredByFooter campaign="panel_empty" />
       </>
     );
 
   return (
     <>
-      <h1>Likely upcoming streams</h1>
-      <PredictionsList predictions={state.data.predictions} format={state.fmt} />
+      <ScheduleSummary summary={state.data.summary} />
       <CollabsList collabs={state.data.collabs} format={state.fmt} />
       <PoweredByFooter campaign="panel_footer" />
     </>
   );
+}
+
+// Preview-mode helper: ISO timestamp for the next given weekday at H:MM local.
+function nextDayAt(targetDow: number, hour: number, minute: number): string {
+  const d = new Date();
+  const diff = (targetDow - d.getDay() + 7) % 7 || 7;
+  d.setDate(d.getDate() + diff);
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString();
 }
 
 const root = document.getElementById("root");

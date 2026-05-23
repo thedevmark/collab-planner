@@ -6,7 +6,7 @@ import type { PanelResponse } from "./lib/types";
 
 type State =
   | { kind: "loading" }
-  | { kind: "connected"; predictions: number; collabs: number }
+  | { kind: "connected"; topDays: string[]; collabs: number }
   | { kind: "warming" }
   | { kind: "no_data" }
   | { kind: "not_in_cp" }
@@ -27,7 +27,7 @@ function Config() {
           if (data.status === "ok") {
             setState({
               kind: "connected",
-              predictions: data.predictions.length,
+              topDays: data.summary.topDays,
               collabs: data.collabs.length,
             });
           } else if (data.status === "warming") {
@@ -79,7 +79,7 @@ function Config() {
     <>
       <h1>Collab Planner ✓</h1>
       <p>
-        Account detected. {state.predictions} predicted slot{state.predictions === 1 ? "" : "s"},{" "}
+        Account detected. Streams {state.topDays.join(", ") || "various days"},{" "}
         {state.collabs} upcoming collab{state.collabs === 1 ? "" : "s"}.
       </p>
       <p>
