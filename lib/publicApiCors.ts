@@ -43,9 +43,10 @@ export function publicApiJson<T>(
   req: Request,
   body: T,
   status = 200,
+  extraHeaders: Record<string, string> = {},
 ): NextResponse {
   return NextResponse.json(body, {
     status,
-    headers: corsHeaders(req.headers.get("origin")),
+    headers: { ...corsHeaders(req.headers.get("origin")), ...extraHeaders },
   });
 }

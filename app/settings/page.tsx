@@ -223,7 +223,7 @@ function SettingsForm() {
             <div className="space-y-1">
               <p className="text-sm font-medium">Enable public API</p>
               <p className="text-xs leading-5 text-muted-foreground">
-                Turning this on lets <em>anyone</em> fetch your upcoming confirmed events by your Twitch login — no authentication required. Only titles, times, game names, and participant display names are exposed. Descriptions, notes, and canceled events stay private.
+                Turning this on lets <em>anyone</em> fetch your upcoming confirmed events <em>and</em> your posted Twitch schedule by your Twitch login — no authentication required. Only titles, times, game names, and participant display names are exposed. Descriptions, notes, and canceled events stay private. Used by overlay tools like the Stream Toolset&apos;s VSO shoutout card.
               </p>
             </div>
             <button
