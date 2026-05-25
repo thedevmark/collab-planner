@@ -125,7 +125,7 @@ function Panel() {
     <>
       <ScheduleSummary summary={state.data.summary} showGame={config.showGame} />
       {config.showCollabs && <CollabsList collabs={state.data.collabs} format={state.fmt} />}
-      <PoweredByFooter campaign="panel_footer" cta={config.cta} />
+      <PoweredByFooter campaign="panel_footer" />
     </>
   );
 }

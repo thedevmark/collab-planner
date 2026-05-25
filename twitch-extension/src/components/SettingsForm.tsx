@@ -27,8 +27,6 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
   const [showCollabs, setShowCollabs] = useState(initial.showCollabs);
   const [showGame, setShowGame] = useState(initial.showGame);
   const [accentColor, setAccentColor] = useState(initial.accentColor);
-  const [ctaLabel, setCtaLabel] = useState(initial.cta?.label ?? "");
-  const [ctaUrl, setCtaUrl] = useState(initial.cta?.url ?? "");
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [colorFetchStatus, setColorFetchStatus] = useState<"idle" | "loading" | "none">("idle");
 
@@ -58,17 +56,12 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
   }
 
   function buildConfig(): ExtConfigV1 {
-    const trimmedLabel = ctaLabel.trim().slice(0, 40);
-    const cta = trimmedLabel && ctaUrl.startsWith("https://")
-      ? { label: trimmedLabel, url: ctaUrl }
-      : null;
     return {
       v: 1,
       tz,
       showCollabs,
       showGame,
       accentColor,
-      cta,
     };
   }
 
@@ -125,23 +118,6 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
           {colorFetchStatus === "none" && <small>No Twitch chat color set on your account.</small>}
         </span>
       </label>
-
-      <fieldset>
-        <legend>Custom button (optional)</legend>
-        <label>
-          <span>Label</span>
-          <input value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} maxLength={40} />
-        </label>
-        <label>
-          <span>URL</span>
-          <input
-            type="url"
-            value={ctaUrl}
-            onChange={(e) => setCtaUrl(e.target.value)}
-            placeholder="https://discord.gg/..."
-          />
-        </label>
-      </fieldset>
 
       <button type="submit" className="cta" disabled={status === "saving"}>
         {status === "saving" ? "Saving…" : "Save"}
