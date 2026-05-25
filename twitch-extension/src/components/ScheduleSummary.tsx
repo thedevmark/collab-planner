@@ -9,42 +9,43 @@ interface Props {
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function formatHourInTz(hour: number, tz: string): string {
+function clockParts(hour: number): { h: number; ampm: "AM" | "PM" } {
   // The hour value is already in the broadcaster's timezone (server-computed).
-  // Compute AM/PM and 12-hour clock from the hour directly — do NOT use Intl
-  // for AM/PM, because the UTC-to-tz conversion would shift the time and
-  // cross the AM/PM boundary in many cases.
-  const ampm = hour >= 12 ? "PM" : "AM";
-  const h12 = hour % 12 || 12;
+  // AM/PM is derived directly from the local hour — do NOT use Intl for it,
+  // because UTC→tz shift can flip the period in many cases.
+  return { h: hour % 12 || 12, ampm: hour >= 12 ? "PM" : "AM" };
+}
 
-  // Use Intl only to extract the short TZ name for the broadcaster's zone.
-  // Reference any in-zone date; the value just needs to be inside the zone.
-  let tzShort = "";
+function tzShortName(tz: string): string {
   try {
-    const ref = new Date();
     const fmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "short" });
-    const parts = fmt.formatToParts(ref);
-    tzShort = parts.find((p) => p.type === "timeZoneName")?.value ?? "";
+    const parts = fmt.formatToParts(new Date());
+    return parts.find((p) => p.type === "timeZoneName")?.value ?? "";
   } catch {
-    // Invalid TZ — omit the label.
+    return "";
   }
-
-  return tzShort ? `~${h12}${ampm} ${tzShort}` : `~${h12}${ampm}`;
 }
 
 export function ScheduleSummary({ summary, showGame }: Props) {
   const { topDays, medianHour, tz, topGame, isEstimate, hasPostedSchedule } = summary;
-  const timeLabel = formatHourInTz(medianHour, tz);
-  const lead = isEstimate ? "Est." : "Streams";
-  const daysJoined = topDays.length > 0 ? topDays.join(", ") : "various days";
+  const { h, ampm } = clockParts(medianHour);
+  const tzShort = tzShortName(tz);
+  const caption = isEstimate ? "Estimated start time" : "Typical start time";
 
   return (
     <div className="schedule">
-      <div className="schedule-line">
-        <span className="trend-arrow" aria-hidden="true">↗</span>
-        <span>{lead} {daysJoined} {timeLabel}</span>
-        {hasPostedSchedule && <span className="posted-dot" title="Has posted Twitch schedule" />}
+      <div className="schedule-hero">
+        <span className="schedule-time">
+          <span className="schedule-time-tilde">~</span>
+          <span className="schedule-time-h">{h}</span>
+          <span className="schedule-time-ampm">{ampm}</span>
+        </span>
+        {tzShort && <span className="schedule-time-tz">{tzShort}</span>}
+        {hasPostedSchedule && (
+          <span className="posted-dot" title="Has posted Twitch schedule" />
+        )}
       </div>
+      <div className="schedule-caption">{caption}</div>
 
       <div className="day-chips">
         {DAYS.map((d) => (
