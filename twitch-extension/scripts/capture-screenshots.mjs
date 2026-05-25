@@ -33,6 +33,36 @@ function renderSvgPng(svg) {
   }).render().asPng();
 }
 
+// ── Orby chill background — matches the slideshow visual language ────
+const ORBY_DEFS = `
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#0d0518"/>
+    <stop offset="100%" stop-color="#1a0a2e"/>
+  </linearGradient>
+  <radialGradient id="orb-purple" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0%" stop-color="#9147ff" stop-opacity="0.22"/>
+    <stop offset="60%" stop-color="#9147ff" stop-opacity="0.05"/>
+    <stop offset="100%" stop-color="#9147ff" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="orb-teal" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0%" stop-color="#00c8af" stop-opacity="0.16"/>
+    <stop offset="60%" stop-color="#00c8af" stop-opacity="0.04"/>
+    <stop offset="100%" stop-color="#00c8af" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="orb-blue" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0%" stop-color="#3a7bff" stop-opacity="0.12"/>
+    <stop offset="60%" stop-color="#3a7bff" stop-opacity="0.03"/>
+    <stop offset="100%" stop-color="#3a7bff" stop-opacity="0"/>
+  </radialGradient>
+`;
+// Orbs sized for a 1024×768 canvas
+const ORBY_BG_1024 = `
+  <rect width="1024" height="768" fill="url(#bg)"/>
+  <ellipse cx="130" cy="660" rx="320" ry="260" fill="url(#orb-purple)"/>
+  <ellipse cx="900" cy="130" rx="280" ry="230" fill="url(#orb-teal)"/>
+  <ellipse cx="600" cy="720" rx="340" ry="200" fill="url(#orb-blue)"/>
+`;
+
 // ── Launch headless Chrome and capture the panel in each preview state ─
 console.log("launching headless Chrome…");
 const browser = await puppeteer.launch({
@@ -113,16 +143,18 @@ function captionSvg(title, subtitleLines, bullets) {
 async function compose(captureBuf, captionSvgStr, outPath) {
   const captionPng = renderSvgPng(captionSvg(captionSvgStr.title, captionSvgStr.subtitle, captionSvgStr.bullets));
 
-  // Fit the panel to the right column of the 1024×768 frame without
-  // exceeding the canvas height. Panel column ~400px wide × ~520px tall.
   const scaledPanel = await sharp(captureBuf)
     .resize({ width: 400, height: 520, fit: "inside", withoutEnlargement: true })
     .png()
     .toBuffer();
 
-  const bg = await sharp({
-    create: { width: 1024, height: 768, channels: 4, background: PAGE_BG },
-  }).png().toBuffer();
+  // Background = orby gradient (matches slideshow aesthetic), not flat color
+  const bgSvg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
+  <defs>${ORBY_DEFS}</defs>
+  ${ORBY_BG_1024}
+</svg>`;
+  const bg = renderSvgPng(bgSvg);
 
   await sharp(bg)
     .composite([
@@ -157,7 +189,22 @@ await compose(
 // ── 2. Anatomy: oversized panel with callouts pointing to each piece ──
 const anatomySvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
-  <rect width="1024" height="768" fill="#0d0518"/>
+  <defs>
+    ${ORBY_DEFS}
+    <linearGradient id="art-grad-1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9147ff"/>
+      <stop offset="100%" stop-color="#5a2cb0"/>
+    </linearGradient>
+    <linearGradient id="art-grad-2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00c8af"/>
+      <stop offset="100%" stop-color="#0a7a6b"/>
+    </linearGradient>
+    <linearGradient id="art-grad-3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a7bff"/>
+      <stop offset="100%" stop-color="#1e4ba6"/>
+    </linearGradient>
+  </defs>
+  ${ORBY_BG_1024}
   <text x="60" y="80" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="700" fill="#efeff1" letter-spacing="-1.2">Built from broadcast history.</text>
   <text x="60" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#adadb8">Each element is derived from the streamer's actual VODs — not aspirational.</text>
 
@@ -176,21 +223,6 @@ const anatomySvg = `<?xml version="1.0" encoding="UTF-8"?>
       <text x="80" y="55" font-size="14" fill="#adadb8">sized by session duration.</text>
     </g>
     <g transform="translate(610, 460)">
-      <!-- Stylized stacked box art (gradient + soft shadow) -->
-      <defs>
-        <linearGradient id="art-grad-1" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#9147ff"/>
-          <stop offset="100%" stop-color="#5a2cb0"/>
-        </linearGradient>
-        <linearGradient id="art-grad-2" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#00c8af"/>
-          <stop offset="100%" stop-color="#0a7a6b"/>
-        </linearGradient>
-        <linearGradient id="art-grad-3" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#3a7bff"/>
-          <stop offset="100%" stop-color="#1e4ba6"/>
-        </linearGradient>
-      </defs>
       <rect x="0" y="-3" width="18" height="26" rx="3" fill="url(#art-grad-1)"/>
       <rect x="20" y="-3" width="18" height="26" rx="3" fill="url(#art-grad-2)"/>
       <rect x="40" y="-3" width="18" height="26" rx="3" fill="url(#art-grad-3)"/>
@@ -199,7 +231,6 @@ const anatomySvg = `<?xml version="1.0" encoding="UTF-8"?>
       <text x="80" y="55" font-size="14" fill="#adadb8">the games they actually play.</text>
     </g>
     <g transform="translate(610, 570)">
-      <!-- Stylized partner avatars: accent-colored monogram circles, overlapping -->
       <circle cx="11" cy="11" r="11" fill="#9147ff" stroke="#0d0518" stroke-width="2"/>
       <text x="11" y="15" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
       <circle cx="28" cy="11" r="11" fill="#00c8af" stroke="#0d0518" stroke-width="2"/>
@@ -223,35 +254,97 @@ await sharp(anatomyBg)
   .toFile(path.join(outDir, "screenshot-2-anatomy.png"));
 console.log("wrote screenshot-2-anatomy.png");
 
-// ── 3. Config view: two cards side-by-side (no signup vs. connected) ──
-const configFrameSvg = `<?xml version="1.0" encoding="UTF-8"?>
+// ── 3. Colors customization (NEW) — accent-color swatches ─────────────
+const colorChips = [
+  { hex: "#9146FF", name: "Twitch Purple" },
+  { hex: "#FF6600", name: "Sunset" },
+  { hex: "#00C8AF", name: "Mint" },
+  { hex: "#FF3F8C", name: "Pink" },
+  { hex: "#3A7BFF", name: "Sky" },
+  { hex: "#F1C40F", name: "Gold" },
+];
+const colorCardsSvg = colorChips.map((c, i) => {
+  const x = (i % 3) * 165;
+  const y = Math.floor(i / 3) * 175;
+  return `<g transform="translate(${x}, ${y})">
+    <rect width="148" height="155" rx="9" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
+    <g transform="translate(12, 14)">
+      <text font-family="Segoe UI, Arial, sans-serif" font-size="8" font-weight="700" fill="#6b6b75" letter-spacing="0.08em">NEXT LIVE</text>
+      <text y="34" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="800" fill="${c.hex}" letter-spacing="-0.04em">~11<tspan font-size="13">PM</tspan></text>
+      <text y="50" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#6b6b75">Eastern Time</text>
+      <g transform="translate(0, 68)">
+        ${["S","M","T","W","T","F","S"].map((d, j) => `<text x="${j*18}" font-family="Segoe UI, Arial, sans-serif" font-size="9" font-weight="700" fill="${[0,1,3].includes(j) ? c.hex : "#3a3a3d"}" text-anchor="middle">${d}</text>`).join("")}
+      </g>
+      <g transform="translate(0, 84)">
+        ${[0, 1, 3].map((d) => `<rect x="${d*18-7}" y="0" width="14" height="20" rx="3" fill="${c.hex}" fill-opacity="0.92"/>`).join("")}
+      </g>
+      <text y="135" font-family="Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" fill="#adadb8">${c.name}</text>
+      <text x="124" y="135" font-family="ui-monospace, Consolas, monospace" font-size="7" font-weight="500" fill="#6b6b75" text-anchor="end">${c.hex}</text>
+    </g>
+  </g>`;
+}).join("");
+const colorsSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
-  <rect width="1024" height="768" fill="#0d0518"/>
-  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="700" fill="#efeff1" letter-spacing="-1.2">Works without a signup.</text>
-  <text x="60" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#adadb8">Panel is live the moment you install it. Sign in for richer signal — optional.</text>
-  <text x="120" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#00c8af" letter-spacing="0.08em">NO ACCOUNT NEEDED</text>
-  <text x="604" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#9147ff" letter-spacing="0.08em">SIGNED IN — MORE FEATURES</text>
-  <text x="60" y="710" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">Broadcaster config view (Twitch dashboard)</text>
+  <defs>${ORBY_DEFS}</defs>
+  ${ORBY_BG_1024}
+  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#9147ff" letter-spacing="0.12em">YOUR COLOR. YOUR PANEL.</text>
+  <text x="60" y="160" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="800" fill="#efeff1" letter-spacing="-1.4">Pick any accent.</text>
+  <text x="60" y="210" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="800" fill="#efeff1" letter-spacing="-1.4">Or auto-pull yours</text>
+  <text x="60" y="260" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="800" fill="#9147ff" letter-spacing="-1.4">from Twitch.</text>
+  <text x="60" y="320" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#adadb8">One-click "Use my Twitch profile color" pulls</text>
+  <text x="60" y="343" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#adadb8">your channel's accent straight from your account.</text>
+  <text x="60" y="386" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">Or paste any hex. Color cascades through every chip,</text>
+  <text x="60" y="407" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">block, link, and button — instantly.</text>
+  <g transform="translate(525, 120)">${colorCardsSvg}</g>
 </svg>`;
-const configBg = renderSvgPng(configFrameSvg);
-// Fit each config card into a ~420×450 box (the 1024-wide canvas has
-// room for two side-by-side, and 768-220-60 = 488px of vertical space).
-const cardFresh = await sharp(configFresh)
-  .resize({ width: 420, height: 480, fit: "inside", withoutEnlargement: true })
-  .png()
-  .toBuffer();
-const cardConnected = await sharp(configConnected)
-  .resize({ width: 420, height: 480, fit: "inside", withoutEnlargement: true })
-  .png()
-  .toBuffer();
-await sharp(configBg)
-  .composite([
-    { input: cardFresh, left: 60, top: 220 },
-    { input: cardConnected, left: 544, top: 220 },
-  ])
-  .png()
-  .toFile(path.join(outDir, "screenshot-3-config.png"));
-console.log("wrote screenshot-3-config.png");
+writeFileSync(path.join(outDir, "screenshot-3-colors.png"), renderSvgPng(colorsSvg));
+console.log("wrote screenshot-3-colors.png");
+
+// ── 4. Works without a signup — concept-only, no real screenshot ──────
+const noSignupSvg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
+  <defs>${ORBY_DEFS}</defs>
+  ${ORBY_BG_1024}
+  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#00c8af" letter-spacing="0.12em">NO ACCOUNT NEEDED</text>
+  <text x="60" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="50" font-weight="800" fill="#efeff1" letter-spacing="-1.6">Works the moment</text>
+  <text x="60" y="226" font-family="Segoe UI, Arial, sans-serif" font-size="50" font-weight="800" fill="#efeff1" letter-spacing="-1.6">you install it.</text>
+  <text x="60" y="290" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">Predictions auto-build from your channel's</text>
+  <text x="60" y="316" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">public broadcast history. Zero setup.</text>
+  <text x="60" y="372" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">Sign in at collab.deutschmark.online to add planned collabs,</text>
+  <text x="60" y="392" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">schedule sync, and sharper signal — totally optional.</text>
+
+  <!-- 3-stage flow: Install → Live → Sign in (optional) -->
+  <g transform="translate(60, 470)">
+    <g transform="translate(0, 0)">
+      <rect width="280" height="220" rx="14" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
+      <circle cx="140" cy="80" r="38" fill="#9147ff" fill-opacity="0.15" stroke="#9147ff" stroke-width="1.5"/>
+      <text x="140" y="90" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" fill="#9147ff" text-anchor="middle">1</text>
+      <text x="140" y="150" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#efeff1" text-anchor="middle">Install</text>
+      <text x="140" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8" text-anchor="middle">on your channel</text>
+      <text x="140" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8" text-anchor="middle">from the Twitch dashboard</text>
+    </g>
+    <text x="305" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="34" fill="#6b6b75">→</text>
+    <g transform="translate(340, 0)">
+      <rect width="280" height="220" rx="14" fill="#00c8af" fill-opacity="0.08" stroke="#00c8af" stroke-width="1.5"/>
+      <circle cx="140" cy="80" r="38" fill="#00c8af" fill-opacity="0.2" stroke="#00c8af" stroke-width="1.5"/>
+      <text x="140" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" fill="#00c8af" text-anchor="middle">✓</text>
+      <text x="140" y="150" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#efeff1" text-anchor="middle">Panel is live</text>
+      <text x="140" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8" text-anchor="middle">predictions from your</text>
+      <text x="140" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8" text-anchor="middle">broadcast history</text>
+    </g>
+    <text x="645" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="34" fill="#6b6b75">→</text>
+    <g transform="translate(680, 0)">
+      <rect width="280" height="220" rx="14" fill="#18181b" stroke="#6b6b75" stroke-width="1" stroke-dasharray="5 5"/>
+      <circle cx="140" cy="80" r="38" fill="#18181b" stroke="#6b6b75" stroke-width="1.5"/>
+      <text x="140" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#6b6b75" text-anchor="middle">+</text>
+      <text x="140" y="150" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#adadb8" text-anchor="middle">Sign in</text>
+      <text x="140" y="172" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#6b6b75" text-anchor="middle">(optional)</text>
+      <text x="140" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#6b6b75" text-anchor="middle">for collabs + sync</text>
+    </g>
+  </g>
+</svg>`;
+writeFileSync(path.join(outDir, "screenshot-4-no-signup.png"), renderSvgPng(noSignupSvg));
+console.log("wrote screenshot-4-no-signup.png");
 
 // ── 4. Empty / no_data states — bonus, not for dashboard ──────────────
 writeFileSync(path.join(outDir, "_capture-empty.png"), panelEmpty);
