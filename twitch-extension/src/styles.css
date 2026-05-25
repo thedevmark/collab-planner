@@ -178,3 +178,40 @@ h2 {
   font-family: inherit;
   font-size: inherit;
 }
+
+/* ── Heatmap (day × hour grid) ────────────────────────────────── */
+.heatmap {
+  margin-top: 12px;
+  font-size: 9px;
+  color: #adadb8;
+}
+.heatmap-header {
+  display: grid;
+  grid-template-columns: 18px repeat(4, 1fr);
+  margin-bottom: 2px;
+  padding-left: 0;
+}
+.heatmap-label-spacer { width: 18px; }
+.heatmap-h { text-align: left; }
+.heatmap-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.heatmap-row {
+  display: grid;
+  grid-template-columns: 18px repeat(24, 1fr);
+  gap: 1px;
+  align-items: center;
+}
+.heatmap-day-label {
+  font-weight: 600;
+  color: #6b6b75;
+  text-align: center;
+}
+.heatmap-cell {
+  height: 10px;
+  background: var(--accent);
+  border-radius: 1px;
+  display: block;
+}
