@@ -94,7 +94,7 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
     return { status: "no_data" };
   }
 
-  const [history, segments, eventParticipants] = await Promise.all([
+  const [history, segments, eventParticipants, helixRecent] = await Promise.all([
     prisma.streamHistory.findMany({
       where: { friendId: friend.id },
       orderBy: { startTime: "desc" },
@@ -120,6 +120,9 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
       orderBy: { event: { startTime: "asc" } },
       take: 5,
     }),
+    // streamHistory can lag the actual broadcast cadence if the sync job is behind.
+    // Pull the latest VOD from Helix in parallel so "last live" stays fresh.
+    getRecentBroadcasts(twitchId, 5).catch(() => []),
   ]);
 
   const sessions: StreamSession[] = history.map((s) => ({
@@ -150,14 +153,41 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
       })),
   }));
 
-  const lastStreamRow = history[0] ?? null;
-  const lastStream = lastStreamRow
-    ? {
-        startedAt: lastStreamRow.startTime,
-        gameName: lastStreamRow.gameName || null,
-        durationSec: lastStreamRow.durationSec,
-      }
-    : null;
+  // Prefer Helix latest (fresh) over our streamHistory (may lag). If both exist,
+  // pick whichever started later. Try to enrich gameName by matching the Helix
+  // VOD's start time to a streamHistory row within ±2h (so we keep the rich
+  // game label our sync wrote).
+  const helixLatest = helixRecent[0] ?? null;
+  const dbLatest = history[0] ?? null;
+  type LastStream = { startedAt: Date; gameName: string | null; durationSec: number };
+  let lastStream: LastStream | null = null;
+  if (helixLatest) {
+    const helixStart = new Date(helixLatest.created_at);
+    const helixDurationSec = parseDuration(helixLatest.duration);
+    const matched = history.find(
+      (h) => Math.abs(h.startTime.getTime() - helixStart.getTime()) < 2 * 3600 * 1000
+    );
+    const candidate: LastStream = {
+      startedAt: helixStart,
+      gameName: matched?.gameName || null,
+      durationSec: helixDurationSec || matched?.durationSec || 0,
+    };
+    if (!dbLatest || helixStart.getTime() >= dbLatest.startTime.getTime()) {
+      lastStream = candidate;
+    } else {
+      lastStream = {
+        startedAt: dbLatest.startTime,
+        gameName: dbLatest.gameName || null,
+        durationSec: dbLatest.durationSec,
+      };
+    }
+  } else if (dbLatest) {
+    lastStream = {
+      startedAt: dbLatest.startTime,
+      gameName: dbLatest.gameName || null,
+      durationSec: dbLatest.durationSec,
+    };
+  }
 
   return shapeConnectedPanelResponse({
     pattern,

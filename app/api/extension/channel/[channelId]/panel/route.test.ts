@@ -45,6 +45,7 @@ async function makeToken(channelId: string) {
 
 import { GET, OPTIONS } from "./route";
 import { prisma } from "@/lib/db";
+import { getRecentBroadcasts } from "@/lib/twitch/client";
 
 const mockPrisma = prisma as unknown as {
   profile: { findUnique: ReturnType<typeof vi.fn> };
@@ -166,6 +167,9 @@ function makeConnectedSeed() {
     durationSec: 14_400,
   }));
   mockPrisma.streamHistory.findMany.mockResolvedValue(sessions);
+
+  // Helix VOD lookup for "last live" freshness — default to empty (use DB row)
+  (getRecentBroadcasts as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
   // no schedule segments
   mockPrisma.scheduleSegment.findMany.mockResolvedValue([]);
