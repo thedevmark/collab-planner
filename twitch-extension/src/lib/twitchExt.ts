@@ -37,3 +37,36 @@ export function awaitAuthorized(timeoutMs = 10_000): Promise<TwitchAuth> {
     });
   });
 }
+
+/** Resolve once the broadcaster's stored configuration has loaded. */
+export function awaitConfiguration(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const ext = window.Twitch?.ext;
+    if (!ext?.configuration) {
+      resolve(null);
+      return;
+    }
+    // configuration.broadcaster may already be populated synchronously
+    if (ext.configuration.broadcaster?.content !== undefined) {
+      resolve(ext.configuration.broadcaster.content ?? null);
+      return;
+    }
+    ext.configuration.onChanged?.(() => {
+      resolve(ext.configuration?.broadcaster?.content ?? null);
+    });
+  });
+}
+
+/** Persist broadcaster config to Twitch's Configuration Service. */
+export function setBroadcasterConfiguration(version: string, content: string): void {
+  const ext = window.Twitch?.ext;
+  if (!ext?.configuration) {
+    throw new Error("Twitch.ext.configuration not available");
+  }
+  // The helper API is `Twitch.ext.configuration.set(segment, version, content)`
+  // (untyped in the helper). Cast through unknown.
+  const cfg = ext.configuration as unknown as {
+    set: (segment: "broadcaster", version: string, content: string) => void;
+  };
+  cfg.set("broadcaster", version, content);
+}

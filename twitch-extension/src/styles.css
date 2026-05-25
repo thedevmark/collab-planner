@@ -140,3 +140,32 @@ h2 {
 .cta:hover {
   background: #7a3fd9;
 }
+
+/* ── Accent color via Twitch ext config ───────────────────────── */
+:root {
+  --accent: #9146FF;
+  --accent-text: #FFFFFF;
+}
+/* Override existing hardcoded purple so accent applies */
+.day-chip-active { background: var(--accent); color: var(--accent-text); }
+.cta { background: var(--accent); color: var(--accent-text); }
+.cta:hover { filter: brightness(0.88); }
+.powered-by a { color: var(--accent); }
+
+/* ── Settings form (config view) ──────────────────────────────── */
+.settings-form { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.settings-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #efeff1; }
+.settings-form label.checkbox { flex-direction: row; align-items: center; gap: 8px; }
+.settings-form input[type="text"],
+.settings-form input[type="url"],
+.settings-form input:not([type="checkbox"]):not([type="color"]):not([type="submit"]):not([type="button"]) {
+  padding: 6px 8px; background: #2a2a2e; border: 1px solid #3a3a3d; color: #efeff1; border-radius: 4px;
+}
+.settings-form fieldset { border: 1px solid #2a2a2e; border-radius: 4px; padding: 8px 10px; }
+.settings-form fieldset legend { font-size: 11px; padding: 0 4px; color: #adadb8; text-transform: uppercase; }
+.settings-form .accent-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.settings-form button[type="button"] { padding: 6px 10px; background: #2a2a2e; color: #efeff1; border: 1px solid #3a3a3d; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.settings-form button[type="button"]:hover { background: #3a3a3d; }
+.settings-form .saved-toast { color: #00c8af; font-size: 12px; margin-left: 8px; }
+.settings-form .form-error { color: #ff7878; font-size: 12px; margin-left: 8px; }
+.settings-form small { color: #6b6b75; font-size: 11px; }
