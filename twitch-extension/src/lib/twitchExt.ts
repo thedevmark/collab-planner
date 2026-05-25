@@ -39,7 +39,7 @@ export function awaitAuthorized(timeoutMs = 10_000): Promise<TwitchAuth> {
 }
 
 /** Resolve once the broadcaster's stored configuration has loaded. */
-export function awaitConfiguration(): Promise<string | null> {
+export function awaitConfiguration(timeoutMs = 5_000): Promise<string | null> {
   return new Promise((resolve) => {
     const ext = window.Twitch?.ext;
     if (!ext?.configuration) {
@@ -51,7 +51,9 @@ export function awaitConfiguration(): Promise<string | null> {
       resolve(ext.configuration.broadcaster.content ?? null);
       return;
     }
+    const timer = setTimeout(() => resolve(null), timeoutMs);
     ext.configuration.onChanged?.(() => {
+      clearTimeout(timer);
       resolve(ext.configuration?.broadcaster?.content ?? null);
     });
   });
