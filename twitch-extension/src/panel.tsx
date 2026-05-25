@@ -1,9 +1,11 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { awaitAuthorized, type TwitchAuth } from "./lib/twitchExt";
+import { awaitAuthorized, awaitConfiguration, type TwitchAuth } from "./lib/twitchExt";
 import { fetchPanel } from "./lib/api";
 import type { PanelResponse } from "./lib/types";
 import { resolveViewerLocale, resolveViewerTimeZone, type FormatOptions } from "./lib/format";
+import { parseConfig, DEFAULT_CONFIG, type ExtConfigV1 } from "./lib/configSchema";
+import { pickTextColor } from "./lib/contrast";
 import { ScheduleSummary } from "./components/ScheduleSummary";
 import { CollabsList } from "./components/CollabsList";
 import { PoweredByFooter } from "./components/PoweredByFooter";
@@ -18,6 +20,8 @@ function Panel() {
     | { kind: "no_data"; fmt: FormatOptions }
     | { kind: "error"; message: string }
   >({ kind: "loading" });
+
+  const [config, setConfig] = useState<ExtConfigV1>(DEFAULT_CONFIG);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,7 +44,8 @@ function Panel() {
           status: "ok",
           summary: {
             topDays: ["Sun", "Tue", "Mon"],
-            medianHourUtc: 23, // ~7PM ET
+            medianHour: 23, // ~7PM ET
+            tz: "America/New_York",
             topGame: "Apex Legends",
             isEstimate: false,
             hasPostedSchedule: true,
@@ -67,14 +72,14 @@ function Panel() {
       };
     }
 
-    async function load(auth: TwitchAuth, fmt: FormatOptions) {
+    async function load(auth: TwitchAuth, fmt: FormatOptions, cfg: ExtConfigV1) {
       try {
-        const data = await fetchPanel(auth.channelId, auth.token);
+        const data = await fetchPanel(auth.channelId, auth.token, cfg.tz);
         if (cancelled) return;
         if (data.status === "ok") setState({ kind: "ok", data, fmt });
         else if (data.status === "warming") {
           setState({ kind: "warming", fmt });
-          timer = setTimeout(() => load(auth, fmt), WARMING_RETRY_MS);
+          timer = setTimeout(() => load(auth, fmt, cfg), WARMING_RETRY_MS);
         } else setState({ kind: "no_data", fmt });
       } catch (err) {
         if (!cancelled) {
@@ -83,13 +88,17 @@ function Panel() {
       }
     }
 
-    awaitAuthorized()
-      .then((auth) => {
+    Promise.all([awaitAuthorized(), awaitConfiguration()])
+      .then(async ([auth, rawCfg]) => {
+        const cfg = parseConfig(rawCfg);
+        document.documentElement.style.setProperty("--accent", cfg.accentColor);
+        document.documentElement.style.setProperty("--accent-text", pickTextColor(cfg.accentColor));
+        setConfig(cfg);
         const fmt: FormatOptions = {
           locale: resolveViewerLocale(undefined),
           timeZone: resolveViewerTimeZone(),
         };
-        return load(auth, fmt);
+        return load(auth, fmt, cfg);
       })
       .catch((err) =>
         setState({ kind: "error", message: err instanceof Error ? err.message : "unknown" })
@@ -114,9 +123,9 @@ function Panel() {
 
   return (
     <>
-      <ScheduleSummary summary={state.data.summary} />
-      <CollabsList collabs={state.data.collabs} format={state.fmt} />
-      <PoweredByFooter campaign="panel_footer" />
+      <ScheduleSummary summary={state.data.summary} showGame={config.showGame} />
+      {config.showCollabs && <CollabsList collabs={state.data.collabs} format={state.fmt} />}
+      <PoweredByFooter campaign="panel_footer" cta={config.cta} />
     </>
   );
 }

@@ -92,7 +92,7 @@ function Config() {
         setAuthState(auth);
         setConfigRaw(rawCfg);
         try {
-          const data: PanelResponse = await fetchPanel(auth.channelId, auth.token);
+          const data: PanelResponse = await fetchPanel(auth.channelId, auth.token, "UTC");
           if (data.status === "ok") {
             setState({
               kind: "connected",

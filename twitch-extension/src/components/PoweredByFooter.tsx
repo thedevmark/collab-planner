@@ -1,8 +1,18 @@
 interface Props {
-  campaign: string; // "panel_footer" | "panel_empty" | "config_view"
+  campaign: string;
+  cta?: { label: string; url: string } | null;
 }
 
-export function PoweredByFooter({ campaign }: Props) {
+export function PoweredByFooter({ campaign, cta }: Props) {
+  if (cta) {
+    return (
+      <footer className="powered-by">
+        <a className="cta" href={cta.url} target="_blank" rel="noopener noreferrer">
+          {cta.label} <span aria-hidden="true">↗</span>
+        </a>
+      </footer>
+    );
+  }
   const href = `https://collab.deutschmark.online/?utm_source=twitch_ext&utm_medium=panel&utm_campaign=${campaign}`;
   return (
     <footer className="powered-by">

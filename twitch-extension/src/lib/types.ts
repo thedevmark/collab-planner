@@ -5,7 +5,8 @@ export type PanelResponse =
       status: "ok";
       summary: {
         topDays: string[];
-        medianHourUtc: number;
+        medianHour: number;        // in tz below
+        tz: string;                // IANA timezone used for binning
         topGame: string | null;
         isEstimate: boolean;
         hasPostedSchedule: boolean;
