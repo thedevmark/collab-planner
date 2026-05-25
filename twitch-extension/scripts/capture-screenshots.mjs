@@ -176,16 +176,34 @@ const anatomySvg = `<?xml version="1.0" encoding="UTF-8"?>
       <text x="80" y="55" font-size="14" fill="#adadb8">sized by session duration.</text>
     </g>
     <g transform="translate(610, 460)">
-      <rect width="22" height="30" rx="3" fill="#3a3a3d"/>
-      <rect x="26" width="22" height="30" rx="3" fill="#3a3a3d"/>
-      <rect x="52" width="22" height="30" rx="3" fill="#3a3a3d"/>
+      <!-- Stylized stacked box art (gradient + soft shadow) -->
+      <defs>
+        <linearGradient id="art-grad-1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#9147ff"/>
+          <stop offset="100%" stop-color="#5a2cb0"/>
+        </linearGradient>
+        <linearGradient id="art-grad-2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#00c8af"/>
+          <stop offset="100%" stop-color="#0a7a6b"/>
+        </linearGradient>
+        <linearGradient id="art-grad-3" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#3a7bff"/>
+          <stop offset="100%" stop-color="#1e4ba6"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="-3" width="18" height="26" rx="3" fill="url(#art-grad-1)"/>
+      <rect x="20" y="-3" width="18" height="26" rx="3" fill="url(#art-grad-2)"/>
+      <rect x="40" y="-3" width="18" height="26" rx="3" fill="url(#art-grad-3)"/>
       <text x="80" y="11" font-size="15" font-weight="600">Recently played</text>
       <text x="80" y="36" font-size="14" fill="#adadb8">Twitch box-art thumbnails of</text>
       <text x="80" y="55" font-size="14" fill="#adadb8">the games they actually play.</text>
     </g>
     <g transform="translate(610, 570)">
-      <circle cx="9" cy="11" r="9" fill="#3a3a3d"/>
-      <circle cx="22" cy="11" r="9" fill="#3a3a3d"/>
+      <!-- Stylized partner avatars: accent-colored monogram circles, overlapping -->
+      <circle cx="11" cy="11" r="11" fill="#9147ff" stroke="#0d0518" stroke-width="2"/>
+      <text x="11" y="15" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
+      <circle cx="28" cy="11" r="11" fill="#00c8af" stroke="#0d0518" stroke-width="2"/>
+      <text x="28" y="15" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">B</text>
       <text x="80" y="11" font-size="15" font-weight="600">Collab teasers</text>
       <text x="80" y="36" font-size="14" fill="#adadb8">Partner avatars link to their</text>
       <text x="80" y="55" font-size="14" fill="#adadb8">Twitch — plus game when known.</text>
