@@ -29,6 +29,8 @@ export type PanelResponse =
         dayFrequency: number[];
         /** Typical session length in hours (used to size calendar event blocks). */
         avgDurationHours: number;
+        /** Broadcaster's Twitch profile image URL, or null if unknown. */
+        broadcasterAvatar: string | null;
       };
       collabs: Array<{
         startsAt: string;
@@ -58,6 +60,7 @@ interface Inputs {
   upcomingCollabs: CollabInput[];
   timezone?: string;
   lastStream: { startedAt: Date; gameName: string | null; durationSec: number } | null;
+  broadcasterAvatar?: string | null;
 }
 
 /** Convert StreamingPattern's full day names (e.g. "Sunday") to short ones (e.g. "Sun"). */
@@ -75,7 +78,7 @@ function shortenDays(longDays: string[]): string[] {
 }
 
 export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
-  const { pattern, postedSchedule, upcomingCollabs, timezone = "UTC", lastStream } = inputs;
+  const { pattern, postedSchedule, upcomingCollabs, timezone = "UTC", lastStream, broadcasterAvatar = null } = inputs;
 
   if (pattern.sampleSize === 0 && postedSchedule.length === 0) {
     return { status: "no_data" };
@@ -101,6 +104,7 @@ export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
       hourDistribution: pattern.hourDistribution,
       dayFrequency: pattern.dayFrequency,
       avgDurationHours: pattern.avgDurationHours,
+      broadcasterAvatar,
     },
     collabs: upcomingCollabs,
     lastStream: lastStream

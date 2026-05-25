@@ -19,12 +19,29 @@ body {
   margin-top: 4px;
 }
 
-/* Top row: label on left, live countdown chip on right */
+/* Top row: label + countdown stacked left, streamer avatar right */
 .schedule-toprow {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 12px;
+}
+.schedule-toprow-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+.schedule-avatar {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  display: block;
+  /* No circle, no border — just the image. */
+  border-radius: 4px;
 }
 .schedule-label {
   font-size: 10px;

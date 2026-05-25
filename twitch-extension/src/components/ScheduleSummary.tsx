@@ -84,7 +84,7 @@ function nextLikelyRelative(topDays: string[], medianHour: number): { dayLabel: 
 }
 
 export function ScheduleSummary({ summary }: Props) {
-  const { topDays, medianHour, tz, isEstimate, hasPostedSchedule } = summary;
+  const { topDays, medianHour, tz, isEstimate, hasPostedSchedule, broadcasterAvatar } = summary;
   const { h, ampm } = clockParts(medianHour);
   const tzName = tzLongName(tz);
   const next = nextLikelyRelative(topDays, medianHour);
@@ -101,13 +101,18 @@ export function ScheduleSummary({ summary }: Props) {
   return (
     <div className="schedule">
       <div className="schedule-toprow">
-        <div className="schedule-label">
-          {isEstimate ? "Estimated next live" : "Next likely live"}
-          {hasPostedSchedule && (
-            <span className="schedule-posted" title="Has posted Twitch schedule">●</span>
-          )}
+        <div className="schedule-toprow-left">
+          <div className="schedule-label">
+            {isEstimate ? "Estimated next live" : "Next likely live"}
+            {hasPostedSchedule && (
+              <span className="schedule-posted" title="Has posted Twitch schedule">●</span>
+            )}
+          </div>
+          {countdown && <div className="schedule-countdown">{countdown}</div>}
         </div>
-        {countdown && <div className="schedule-countdown">{countdown}</div>}
+        {broadcasterAvatar && (
+          <img className="schedule-avatar" src={broadcasterAvatar} alt="" loading="lazy" />
+        )}
       </div>
 
       {next && (

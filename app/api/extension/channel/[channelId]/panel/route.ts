@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { verifyExtensionJwt, ExtensionJwtError } from "@/lib/twitch/extensionJwt";
 import { shapeConnectedPanelResponse, type PanelResponse } from "@/lib/twitch/extensionPredictions";
 import { analyzePatterns, type StreamSession, type ScheduleHint } from "@/lib/scheduling/patterns";
-import { getRecentBroadcasts, getBroadcasterSchedule, parseDuration } from "@/lib/twitch/client";
+import { getRecentBroadcasts, getBroadcasterSchedule, parseDuration, getUserById } from "@/lib/twitch/client";
 
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -195,6 +195,7 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
     upcomingCollabs: collabs,
     timezone,
     lastStream,
+    broadcasterAvatar: friend.avatarUrl || null,
   });
 }
 
@@ -247,9 +248,10 @@ async function handleUnconnected(twitchId: string, timezone: string): Promise<Ne
 }
 
 async function computeUnconnectedNoCache(twitchId: string, timezone: string): Promise<PanelResponse> {
-  const [videos, schedule] = await Promise.all([
+  const [videos, schedule, user] = await Promise.all([
     getRecentBroadcasts(twitchId, 30),
     getBroadcasterSchedule(twitchId).catch(() => null),
+    getUserById(twitchId).catch(() => null),
   ]);
 
   const sessions: StreamSession[] = videos.map((v) => {
@@ -282,6 +284,7 @@ async function computeUnconnectedNoCache(twitchId: string, timezone: string): Pr
     lastStream: lastSession
       ? { startedAt: lastSession.startTime, gameName: lastSession.gameName || null, durationSec: lastSession.durationSec }
       : null,
+    broadcasterAvatar: user?.profile_image_url || null,
   });
 }
 
