@@ -9,6 +9,8 @@ import { pickTextColor } from "./lib/contrast";
 import { ScheduleSummary } from "./components/ScheduleSummary";
 import { CollabsList } from "./components/CollabsList";
 import { PoweredByFooter } from "./components/PoweredByFooter";
+import { Heatmap } from "./components/Heatmap";
+import { LastLive } from "./components/LastLive";
 
 const WARMING_RETRY_MS = 5_000;
 
@@ -127,6 +129,11 @@ function Panel() {
   return (
     <>
       <ScheduleSummary summary={state.data.summary} showGame={config.showGame} />
+      <Heatmap
+        hourDistribution={state.data.summary.hourDistribution}
+        dayFrequency={state.data.summary.dayFrequency}
+      />
+      <LastLive lastStream={state.data.lastStream} />
       {config.showCollabs && <CollabsList collabs={state.data.collabs} format={state.fmt} />}
       <PoweredByFooter campaign="panel_footer" />
     </>

@@ -215,3 +215,10 @@ h2 {
   border-radius: 1px;
   display: block;
 }
+
+/* ── Last live (previous stream info) ──────────────────────────── */
+.last-live {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #6b6b75;
+}
