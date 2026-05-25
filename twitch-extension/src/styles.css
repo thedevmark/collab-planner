@@ -169,3 +169,12 @@ h2 {
 .settings-form .saved-toast { color: #00c8af; font-size: 12px; margin-left: 8px; }
 .settings-form .form-error { color: #ff7878; font-size: 12px; margin-left: 8px; }
 .settings-form small { color: #6b6b75; font-size: 11px; }
+.settings-form select {
+  padding: 6px 8px;
+  background: #2a2a2e;
+  border: 1px solid #3a3a3d;
+  color: #efeff1;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: inherit;
+}

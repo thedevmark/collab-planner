@@ -82,15 +82,14 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
     <form className="settings-form" onSubmit={save}>
       <label>
         <span>Timezone</span>
-        <input
-          list="tz-options"
+        <select
           value={tz}
           onChange={(e) => setTz(e.target.value)}
-          placeholder="America/New_York"
-        />
-        <datalist id="tz-options">
-          {tzOptions.map((z) => <option key={z} value={z} />)}
-        </datalist>
+        >
+          {/* If the current tz is not in the IANA list (very rare), still show it so the value persists */}
+          {!tzOptions.includes(tz) && <option value={tz}>{tz}</option>}
+          {tzOptions.map((z) => <option key={z} value={z}>{z}</option>)}
+        </select>
         <small>This setting is separate from your Collab Planner timezone.</small>
       </label>
 

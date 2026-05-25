@@ -10,12 +10,15 @@ export type PanelResponse =
         topGame: string | null;
         isEstimate: boolean;
         hasPostedSchedule: boolean;
+        hourDistribution: number[];   // length 24, values 0-1
+        dayFrequency: number[];       // length 7, values 0-1, index 0 = Sunday
       };
       collabs: Array<{
         startsAt: string;
         gameName: string | null;
         partners: Array<{ username: string; displayName: string; avatarUrl: string }>;
       }>;
+      lastStream: { startedAt: string; gameName: string | null; durationSec: number } | null;
       generatedAt: string;
     }
   | { status: "warming" }
