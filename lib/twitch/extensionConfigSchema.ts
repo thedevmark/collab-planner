@@ -17,7 +17,6 @@ export type ExtConfigV1 = {
   showCollabs: boolean;
   showGame: boolean;
   accentColor: string;
-  cta: { label: string; url: string } | null;
 };
 
 export const DEFAULT_CONFIG: ExtConfigV1 = {
@@ -26,7 +25,6 @@ export const DEFAULT_CONFIG: ExtConfigV1 = {
   showCollabs: true,
   showGame: true,
   accentColor: "#9146FF",
-  cta: null,
 };
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
@@ -49,17 +47,6 @@ function coerceBool(value: unknown, fallback: boolean): boolean {
   }
   if (typeof value === "number") return value !== 0;
   return fallback;
-}
-
-function parseCta(raw: unknown): ExtConfigV1["cta"] {
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw as Record<string, unknown>;
-  const url = typeof r.url === "string" ? r.url : "";
-  const labelRaw = typeof r.label === "string" ? r.label : "";
-  const label = labelRaw.trim().slice(0, 40);
-  if (!label) return null;
-  if (!url.startsWith("https://")) return null;
-  return { label, url };
 }
 
 export function parseConfig(content: string | null | undefined): ExtConfigV1 {
@@ -86,7 +73,6 @@ export function parseConfig(content: string | null | undefined): ExtConfigV1 {
     showCollabs: coerceBool(r.showCollabs, DEFAULT_CONFIG.showCollabs),
     showGame: coerceBool(r.showGame, DEFAULT_CONFIG.showGame),
     accentColor,
-    cta: parseCta(r.cta),
   };
 }
 

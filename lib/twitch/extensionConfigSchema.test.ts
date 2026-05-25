@@ -24,7 +24,6 @@ describe("parseConfig", () => {
       showCollabs: false,
       showGame: false,
       accentColor: "#FF6600",
-      cta: { label: "Join Discord", url: "https://discord.gg/abc" },
     };
     expect(parseConfig(serializeConfig(cfg))).toEqual(cfg);
   });
@@ -48,26 +47,7 @@ describe("parseConfig", () => {
     expect(parseConfig(JSON.stringify({ v: 1, accentColor: "#GGGGGG" })).accentColor).toEqual(DEFAULT_CONFIG.accentColor);
   });
 
-  it("drops cta when url is not https", () => {
-    const raw = JSON.stringify({ v: 1, cta: { label: "x", url: "http://insecure.example" } });
-    expect(parseConfig(raw).cta).toBeNull();
-  });
-
-  it("drops cta when label is empty after trim or url is missing", () => {
-    expect(parseConfig(JSON.stringify({ v: 1, cta: { label: "   ", url: "https://ok.com" } })).cta).toBeNull();
-    expect(parseConfig(JSON.stringify({ v: 1, cta: { label: "ok" } })).cta).toBeNull();
-  });
-
-  it("trims and length-caps cta.label at 40 chars", () => {
-    const longLabel = "a".repeat(80);
-    const parsed = parseConfig(JSON.stringify({
-      v: 1,
-      cta: { label: `  ${longLabel}  `, url: "https://ok.com" },
-    }));
-    expect(parsed.cta?.label.length).toBe(40);
-  });
-
-  it("coerces showCollabs / showGame to booleans", () => {
+it("coerces showCollabs / showGame to booleans", () => {
     const raw = JSON.stringify({ v: 1, showCollabs: 0, showGame: "yes" });
     const parsed = parseConfig(raw);
     expect(parsed.showCollabs).toBe(false);
