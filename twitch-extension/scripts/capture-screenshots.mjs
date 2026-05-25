@@ -20,7 +20,7 @@ const repoRoot = path.resolve(here, "..", "..");
 const outDir = path.resolve(here, "..", "assets");
 mkdirSync(outDir, { recursive: true });
 
-const VITE = "https://localhost:5173";
+const VITE = "https://localhost:5174";
 
 // Inter font buffers reused for resvg-rendered captions.
 const interDir = path.join(repoRoot, "node_modules/@fontsource/inter/files");
