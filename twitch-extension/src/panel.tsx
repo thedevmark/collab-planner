@@ -53,6 +53,7 @@ function Panel() {
             hasPostedSchedule: true,
             hourDistribution: [0.1, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.0, 0.9, 0.8, 0.7, 0.5, 0.3],
             dayFrequency: [1.0, 0.8, 0.3, 0.9, 0.4, 0.3, 0.6],
+            avgDurationHours: 4,
           },
           lastStream: { startedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(), gameName: "Apex Legends", durationSec: 4 * 3600 },
           collabs:
@@ -130,7 +131,9 @@ function Panel() {
     <>
       <ScheduleSummary summary={state.data.summary} showGame={config.showGame} />
       <Heatmap
-        hourDistribution={state.data.summary.hourDistribution}
+        topDays={state.data.summary.topDays}
+        medianHour={state.data.summary.medianHour}
+        avgDurationHours={state.data.summary.avgDurationHours}
         dayFrequency={state.data.summary.dayFrequency}
       />
       <LastLive lastStream={state.data.lastStream} />

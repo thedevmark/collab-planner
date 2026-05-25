@@ -22,19 +22,30 @@ function StatusStrip({ state }: { state: State }) {
   if (state.kind === "loading") return <p className="loading">Loading…</p>;
   if (state.kind === "error") return <p className="error">Unable to load config.</p>;
 
-  if (state.kind === "not_in_cp" || state.kind === "no_data") {
+  if (state.kind === "not_in_cp") {
     return (
       <>
-        <h1>Collab Planner</h1>
+        <h1>Panel is live ✓</h1>
         <p>
-          Your channel isn't connected yet. Sign in with Twitch at Collab Planner — your panel
-          will start working automatically.
+          Predictions are auto-built from this channel's recent broadcasts — no signup needed.
+        </p>
+        <p className="upgrade-note">
+          Sign in at Collab Planner to add planned collabs and sharper predictions.
         </p>
         <p>
-          <a className="cta" href={SIGN_IN} target="_blank" rel="noopener noreferrer">
-            Sign in with Twitch ↗
+          <a className="cta-secondary" href={SIGN_IN} target="_blank" rel="noopener noreferrer">
+            Sign in (optional) ↗
           </a>
         </p>
+      </>
+    );
+  }
+
+  if (state.kind === "no_data") {
+    return (
+      <>
+        <h1>Collab Planner ✓</h1>
+        <p>Account detected. Predictions will populate as your broadcast history syncs.</p>
       </>
     );
   }

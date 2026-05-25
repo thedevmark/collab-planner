@@ -25,6 +25,8 @@ export type PanelResponse =
         hourDistribution: number[];
         /** Normalized stream frequency per day-of-week (length 7, values 0-1, index 0 = Sunday). */
         dayFrequency: number[];
+        /** Typical session length in hours (used to size calendar event blocks). */
+        avgDurationHours: number;
       };
       collabs: Array<{
         startsAt: string;
@@ -94,6 +96,7 @@ export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
       hasPostedSchedule,
       hourDistribution: pattern.hourDistribution,
       dayFrequency: pattern.dayFrequency,
+      avgDurationHours: pattern.avgDurationHours,
     },
     collabs: upcomingCollabs,
     lastStream: lastStream

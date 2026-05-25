@@ -1,72 +1,100 @@
-const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+// Renamed conceptually: this is a weekly calendar (iOS-style) showing
+// typical stream windows as time blocks, not a heatmap. File name kept
+// so panel.tsx import doesn't move; component export name is unchanged.
 
-// Hour-tick labels on the top axis — only show at 0/6/12/18 so we don't crowd.
-const HOUR_TICKS = [0, 6, 12, 18];
-const HOUR_LABELS: Record<number, string> = {
-  0: "12a",
-  6: "6a",
-  12: "12p",
-  18: "6p",
-};
+const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 interface Props {
-  hourDistribution: number[]; // length 24, 0-1
-  dayFrequency: number[];     // length 7, 0-1 (index 0 = Sunday)
+  topDays: string[];          // ["Sun", "Mon", "Wed"] — days the streamer is active
+  medianHour: number;         // 0-23, typical start hour in broadcaster's tz
+  avgDurationHours: number;   // typical session length
+  dayFrequency: number[];     // length 7, 0-1, varies block opacity per day
 }
 
-/**
- * GitHub-style contribution-graph layout. 7 rows (days, Sunday-first) by 24
- * columns (hours). Near-square cells with subtle rounding and visible gaps —
- * the panel is too narrow for a 24-row transposed layout, which forced
- * wide-thin cells that looked cramped.
- *
- * Cell intensity = dayFrequency[day] * hourDistribution[hour]. This assumes
- * day and hour are independent (only marginal distributions exposed
- * server-side). A future revision could compute a true 7×24 matrix in
- * patterns.ts for streamers whose hours vary a lot day-to-day.
- */
-export function Heatmap({ hourDistribution, dayFrequency }: Props) {
-  const hasData =
-    hourDistribution.length === 24 &&
-    dayFrequency.length === 7 &&
-    (hourDistribution.some((v) => v > 0) || dayFrequency.some((v) => v > 0));
-  if (!hasData) return null;
+function formatHourLabel(hour: number): string {
+  const h = ((hour % 24) + 24) % 24;
+  const h12 = h % 12 || 12;
+  return `${h12}${h >= 12 ? "PM" : "AM"}`;
+}
+
+// Visual: 7 day columns × N hour rows. Each active day gets a single
+// rounded block from medianHour to medianHour+avgDurationHours.
+const ROW_HEIGHT = 22; // px per hour
+const HOURS_BEFORE = 1; // hours of padding above the typical start
+const HOURS_AFTER = 2;  // hours of padding below the typical end
+
+export function Heatmap({ topDays, medianHour, avgDurationHours, dayFrequency }: Props) {
+  if (topDays.length === 0) return null;
+
+  // Snap duration to whole hours, minimum 1.
+  const duration = Math.max(1, Math.round(avgDurationHours));
+  const visibleHours = HOURS_BEFORE + duration + HOURS_AFTER;
+  const startHourOffset = medianHour - HOURS_BEFORE;
+
+  // Hour labels for each visible row (wrapping past midnight)
+  const hourRows = Array.from({ length: visibleHours }, (_, i) => {
+    return ((startHourOffset + i) % 24 + 24) % 24;
+  });
+
+  const bodyHeight = visibleHours * ROW_HEIGHT;
 
   return (
-    <div className="heatmap">
-      <div className="heatmap-axis-top">
-        <span className="heatmap-corner" />
-        <div className="heatmap-hour-ticks">
-          {HOUR_TICKS.map((h) => (
+    <div className="weekcal">
+      <div className="weekcal-header">
+        <span className="weekcal-corner" />
+        {DAY_LETTERS.map((label, i) => {
+          const isActive = topDays.includes(DAY_NAMES[i]);
+          return (
             <span
-              key={h}
-              className="heatmap-hour-tick"
-              style={{ left: `${(h / 24) * 100}%` }}
+              key={i}
+              className={`weekcal-day-label ${isActive ? "weekcal-day-label-active" : ""}`}
             >
-              {HOUR_LABELS[h]}
+              {label}
             </span>
+          );
+        })}
+      </div>
+
+      <div className="weekcal-body" style={{ height: bodyHeight }}>
+        <div className="weekcal-hours">
+          {hourRows.map((h, i) => (
+            <div key={i} className="weekcal-hour" style={{ top: i * ROW_HEIGHT }}>
+              {formatHourLabel(h)}
+            </div>
           ))}
         </div>
-      </div>
-      <div className="heatmap-rows">
-        {DAY_LABELS.map((label, day) => (
-          <div className="heatmap-row" key={day}>
-            <span className="heatmap-day-label">{label}</span>
-            <div className="heatmap-cells">
-              {Array.from({ length: 24 }, (_, hour) => {
-                const intensity = dayFrequency[day] * hourDistribution[hour];
-                return (
-                  <span
-                    key={hour}
-                    className="heatmap-cell"
-                    style={{ opacity: Math.max(0.06, Math.min(1, intensity)) }}
-                    title={`${label} ${hour}:00 — ${Math.round(intensity * 100)}%`}
+
+        <div className="weekcal-days">
+          {DAY_NAMES.map((dayName, dayIdx) => {
+            const isActive = topDays.includes(dayName);
+            const opacity = isActive
+              ? Math.min(1, 0.55 + 0.45 * (dayFrequency[dayIdx] ?? 0))
+              : 0;
+            return (
+              <div key={dayIdx} className="weekcal-day-col">
+                {hourRows.map((_, i) => (
+                  <div
+                    key={i}
+                    className="weekcal-hourline"
+                    style={{ top: i * ROW_HEIGHT }}
                   />
-                );
-              })}
-            </div>
-          </div>
-        ))}
+                ))}
+                {isActive && (
+                  <div
+                    className="weekcal-event"
+                    style={{
+                      top: HOURS_BEFORE * ROW_HEIGHT,
+                      height: duration * ROW_HEIGHT - 2,
+                      opacity,
+                    }}
+                    title={`${dayName} ${formatHourLabel(medianHour)} — ${duration}h`}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

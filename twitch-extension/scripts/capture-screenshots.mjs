@@ -142,11 +142,11 @@ await compose(
       "auto-built from broadcast history.",
     ],
     bullets: [
-      "Plain-English summary, in their timezone",
-      "Weekly heatmap of live hours",
+      "Hero start-time in their timezone",
+      "Weekly calendar of typical stream blocks",
       "Last live + game played",
       "Upcoming collabs when planned",
-      "Works on every channel",
+      "Works on every channel — no signup",
     ],
   },
   path.join(outDir, "screenshot-1-overview.png")
@@ -173,17 +173,11 @@ const anatomySvg = `<?xml version="1.0" encoding="UTF-8"?>
       <text x="24" y="55" font-size="14" fill="#adadb8">scannable at a glance.</text>
     </g>
     <g transform="translate(610, 420)">
-      <g>
-        <rect x="0" y="0" width="3" height="3" rx="1" fill="#9147ff" opacity="0.3"/>
-        <rect x="5" y="0" width="3" height="3" rx="1" fill="#9147ff" opacity="0.9"/>
-        <rect x="10" y="0" width="3" height="3" rx="1" fill="#9147ff" opacity="0.6"/>
-        <rect x="0" y="5" width="3" height="3" rx="1" fill="#9147ff" opacity="0.8"/>
-        <rect x="5" y="5" width="3" height="3" rx="1" fill="#9147ff" opacity="0.4"/>
-        <rect x="10" y="5" width="3" height="3" rx="1" fill="#9147ff" opacity="0.7"/>
-      </g>
-      <text x="24" y="11" font-size="15" font-weight="600">Weekly heatmap</text>
-      <text x="24" y="36" font-size="14" fill="#adadb8">7×24 grid of when they</text>
-      <text x="24" y="55" font-size="14" fill="#adadb8">actually go live.</text>
+      <rect x="0" y="-2" width="6" height="14" rx="2" fill="#9147ff"/>
+      <rect x="8" y="-2" width="6" height="14" rx="2" fill="#9147ff" opacity="0.7"/>
+      <text x="24" y="11" font-size="15" font-weight="600">Weekly calendar</text>
+      <text x="24" y="36" font-size="14" fill="#adadb8">Typical stream blocks — start</text>
+      <text x="24" y="55" font-size="14" fill="#adadb8">time × duration per day.</text>
     </g>
     <g transform="translate(610, 530)">
       <text x="0" y="11" font-size="18" fill="#6b6b75">⏱</text>
@@ -207,13 +201,15 @@ await sharp(anatomyBg)
   .toFile(path.join(outDir, "screenshot-2-anatomy.png"));
 console.log("wrote screenshot-2-anatomy.png");
 
-// ── 3. Config view: two cards side-by-side (fresh install + connected) ─
+// ── 3. Config view: two cards side-by-side (no signup vs. connected) ──
 const configFrameSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
   <rect width="1024" height="768" fill="#0d0518"/>
-  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="700" fill="#efeff1" letter-spacing="-1.2">Zero setup for streamers.</text>
-  <text x="60" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#adadb8">Install it. The schedule appears. Connect Collab Planner for more.</text>
-  <text x="60" y="700" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">Broadcaster config view (Twitch dashboard)</text>
+  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="700" fill="#efeff1" letter-spacing="-1.2">Works without a signup.</text>
+  <text x="60" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#adadb8">Panel is live the moment you install it. Sign in for richer signal — optional.</text>
+  <text x="120" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#00c8af" letter-spacing="0.08em">NO ACCOUNT NEEDED</text>
+  <text x="604" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#9147ff" letter-spacing="0.08em">SIGNED IN — MORE FEATURES</text>
+  <text x="60" y="710" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">Broadcaster config view (Twitch dashboard)</text>
 </svg>`;
 const configBg = renderSvgPng(configFrameSvg);
 // Fit each config card into a ~420×450 box (the 1024-wide canvas has

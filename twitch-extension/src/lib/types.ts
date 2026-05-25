@@ -12,6 +12,7 @@ export type PanelResponse =
         hasPostedSchedule: boolean;
         hourDistribution: number[];   // length 24, values 0-1
         dayFrequency: number[];       // length 7, values 0-1, index 0 = Sunday
+        avgDurationHours: number;     // typical session length in hours
       };
       collabs: Array<{
         startsAt: string;
