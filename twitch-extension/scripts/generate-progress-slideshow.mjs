@@ -196,18 +196,15 @@ function panelV09() {
 // ── Paired-slide template ─────────────────────────────────────────
 // Two panel mockups side by side, big title + lesson copy above.
 // Conversational copy — no marketing-listicle staccato.
-function pairedSlide({ index, total, leftVer, rightVer, title, lesson, leftPanel, leftHeight, leftCaption, rightPanel, rightHeight, rightCaption }) {
-  // Center the two panels horizontally with a 60px gap between them.
-  // Bottom-align so different panel heights still sit on the same baseline.
-  const baseline = 850;
-  const pairWidth = PANEL_W * 2 + 60;
+function pairedSlide({ index, total, title, leftPanel, leftHeight, leftCaption, rightPanel, rightHeight, rightCaption }) {
+  // Panels dominate. Title is a small one-liner. No body text.
+  // Center two panels with a 80px gap, baseline-anchored at bottom.
+  const baseline = 840;
+  const pairWidth = PANEL_W * 2 + 80;
   const leftX = (1600 - pairWidth) / 2;
-  const rightX = leftX + PANEL_W + 60;
+  const rightX = leftX + PANEL_W + 80;
   const leftY = baseline - leftHeight;
   const rightY = baseline - rightHeight;
-
-  // Lesson wrap: split string on \n
-  const lessonLines = lesson.split("\n");
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
@@ -215,88 +212,56 @@ function pairedSlide({ index, total, leftVer, rightVer, title, lesson, leftPanel
   ${SLIDE_BG}
 
   <!-- Progress dots top-right -->
-  <g transform="translate(1380, 50)">
-    ${Array.from({ length: total }, (_, i) => `<circle cx="${i * 22}" cy="0" r="${i + 1 === index ? 6 : 4}" fill="${i + 1 === index ? ACCENT : "#3a3a3d"}"/>`).join("")}
+  <g transform="translate(1430, 60)">
+    ${Array.from({ length: total }, (_, i) => `<circle cx="${i * 26}" cy="0" r="${i + 1 === index ? 7 : 4}" fill="${i + 1 === index ? ACCENT : "#3a3a3d"}"/>`).join("")}
   </g>
 
-  <!-- Two small version chips top-left -->
-  <g transform="translate(120, 110)">
-    <rect width="68" height="26" rx="13" fill="${ACCENT}" fill-opacity="0.15" stroke="${ACCENT}" stroke-opacity="0.4" stroke-width="1"/>
-    <text x="34" y="17" font-family="${FONT}" font-size="12" font-weight="700" fill="${ACCENT}" text-anchor="middle" letter-spacing="0.04em">${leftVer}</text>
-  </g>
-  <text x="208" y="129" font-family="${FONT}" font-size="14" fill="${SUBTLE}">→</text>
-  <g transform="translate(232, 110)">
-    <rect width="68" height="26" rx="13" fill="${ACCENT}" fill-opacity="0.15" stroke="${ACCENT}" stroke-opacity="0.4" stroke-width="1"/>
-    <text x="34" y="17" font-family="${FONT}" font-size="12" font-weight="700" fill="${ACCENT}" text-anchor="middle" letter-spacing="0.04em">${rightVer}</text>
-  </g>
+  <!-- Title — minimal, single line, centered -->
+  <text x="800" y="130" font-family="${FONT}" font-size="46" font-weight="800" fill="${FG}" letter-spacing="-1.2" text-anchor="middle">${title}</text>
 
-  <!-- Title -->
-  <text x="120" y="220" font-family="${FONT}" font-size="58" font-weight="800" fill="${FG}" letter-spacing="-1.5">${title}</text>
-
-  <!-- Lesson body — flows in a single column up to ~1100px wide -->
-  <g font-family="${FONT}" font-size="22" font-weight="400" fill="${MUTED}">
-    ${lessonLines.map((line, i) => `<text x="120" y="${290 + i * 32}">${line}</text>`).join("")}
-  </g>
-
-  <!-- Two panels at the bottom -->
+  <!-- Two panels — the focus of the slide -->
   <g transform="translate(${leftX}, ${leftY})">${leftPanel}</g>
   <g transform="translate(${rightX}, ${rightY})">${rightPanel}</g>
 
-  <!-- Captions under each panel -->
-  <text x="${leftX + PANEL_W / 2}" y="${baseline + 28}" font-family="${FONT}" font-size="13" font-weight="600" fill="${SUBTLE}" text-anchor="middle" letter-spacing="0.04em">${leftCaption}</text>
-  <text x="${rightX + PANEL_W / 2}" y="${baseline + 28}" font-family="${FONT}" font-size="13" font-weight="600" fill="${SUBTLE}" text-anchor="middle" letter-spacing="0.04em">${rightCaption}</text>
+  <!-- Captions under each panel (small, low-key) -->
+  <text x="${leftX + PANEL_W / 2}" y="${baseline + 30}" font-family="${FONT}" font-size="14" font-weight="500" fill="${SUBTLE}" text-anchor="middle">${leftCaption}</text>
+  <text x="${rightX + PANEL_W / 2}" y="${baseline + 30}" font-family="${FONT}" font-size="14" font-weight="500" fill="${SUBTLE}" text-anchor="middle">${rightCaption}</text>
 </svg>`;
 }
 
 // ── The 4-slide story ─────────────────────────────────────────────
 const TOTAL = 4;
 
-// Slide 1 — v0.2 + v0.5: too much, then rotated
+// Slide 1 — too much, then rotated
 render(pairedSlide({
   index: 1, total: TOTAL,
-  leftVer: "v0.2", rightVer: "v0.5",
   title: "tried fitting it all in.",
-  lesson:
-    "stuffed every stat in. heatmap, chips, game, collabs.\n" +
-    "rotated the grid to fix density. somehow worse.",
-  leftPanel: panelV02(), leftHeight: 360, leftCaption: "everything at once",
-  rightPanel: panelV05(), rightHeight: 280, rightCaption: "rotated. still cramped.",
+  leftPanel: panelV02(), leftHeight: 360, leftCaption: "v0.2 — stat dump",
+  rightPanel: panelV05(), rightHeight: 280, rightCaption: "v0.5 — rotated, still cramped",
 }), path.join(outDir, "01.png"));
 
-// Slide 2 — v0.7 + v0.8: over-corrections
+// Slide 2 — over-corrections
 render(pairedSlide({
   index: 2, total: TOTAL,
-  leftVer: "v0.7", rightVer: "v0.8",
   title: "overcorrected. twice.",
-  lesson:
-    "built a real calendar widget. ugly.\n" +
-    "stripped it bare. too far the other way.",
-  leftPanel: panelV07(), leftHeight: 280, leftCaption: "too literal",
-  rightPanel: panelV08(), rightHeight: 240, rightCaption: "too minimal",
+  leftPanel: panelV07(), leftHeight: 280, leftCaption: "v0.7 — too literal",
+  rightPanel: panelV08(), rightHeight: 240, rightCaption: "v0.8 — too minimal",
 }), path.join(outDir, "02.png"));
 
-// Slide 3 — v0.8 + v0.9: brought richness back
+// Slide 3 — brought richness back
 render(pairedSlide({
   index: 3, total: TOTAL,
-  leftVer: "v0.8", rightVer: "v0.9",
   title: "brought the richness back.",
-  lesson:
-    "calendar in. recent games in. collabs in.\n" +
-    "this time with room to breathe.",
-  leftPanel: panelV08(), leftHeight: 240, leftCaption: "stripped",
-  rightPanel: panelV09(), rightHeight: 450, rightCaption: "designed",
+  leftPanel: panelV08(), leftHeight: 240, leftCaption: "v0.8 — stripped",
+  rightPanel: panelV09(), rightHeight: 450, rightCaption: "v0.9 — designed",
 }), path.join(outDir, "03.png"));
 
-// Slide 4 — v0.2 + v0.9: same data, different feel (punchline)
+// Slide 4 — same data, different feel (punchline)
 render(pairedSlide({
   index: 4, total: TOTAL,
-  leftVer: "v0.2", rightVer: "v0.9",
   title: "same data. different feel.",
-  lesson:
-    "every fact thrown at you vs. one answer up front.\n" +
-    "the trick wasn't subtracting. it was hierarchy.",
-  leftPanel: panelV02(), leftHeight: 360, leftCaption: "where I started",
-  rightPanel: panelV09(), rightHeight: 450, rightCaption: "where it landed",
+  leftPanel: panelV02(), leftHeight: 360, leftCaption: "v0.2 — where I started",
+  rightPanel: panelV09(), rightHeight: 450, rightCaption: "v0.9 — where it ended",
 }), path.join(outDir, "04.png"));
 
 console.log(`\nDone — ${TOTAL} slides at ${outDir}`);

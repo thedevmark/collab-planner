@@ -185,80 +185,39 @@ async function compose(captureBuf, captionSvgStr, outPath) {
   console.log(`wrote ${path.basename(outPath)}`);
 }
 
-// ── 1. Overview — text-left + 2×2 feature card grid right ──────
-// Same layout pattern as screenshot 2 (colors): substantial left
-// column with caption/headline/body, dense visual grid on right.
-const featureCards = [
-  {
-    title: "next live",
-    sub: "day + countdown + start time",
-    visual: `<text y="36" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-0.04em">~11<tspan font-size="16">PM</tspan></text>
-             <text y="56" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#6b6b75">Monday · tonight</text>`,
-  },
-  {
-    title: "week view",
-    sub: "typical blocks per day",
-    visual: `${[0, 1, 3].map((d) => `<rect x="${d * 20}" y="14" width="14" height="34" rx="3" fill="${INTERFACE_ACCENT}" fill-opacity="0.9"/>`).join("")}
-             ${[2, 4, 5, 6].map((d) => `<rect x="${d * 20}" y="14" width="14" height="34" rx="3" fill="#2a2a2e"/>`).join("")}
-             <g font-family="Segoe UI, Arial, sans-serif" font-size="8" font-weight="600">
-               ${["S","M","T","W","T","F","S"].map((d, i) => `<text x="${i*20+7}" y="62" fill="${[0,1,3].includes(i) ? INTERFACE_ACCENT : "#3a3a3d"}" text-anchor="middle">${d}</text>`).join("")}
-             </g>`,
-  },
-  {
-    title: "recent games",
-    sub: "real Twitch box art",
-    visual: `<rect x="0" y="10" width="32" height="42" rx="3" fill="url(#art-grad-1)"/>
-             <rect x="38" y="10" width="32" height="42" rx="3" fill="url(#art-grad-2)"/>
-             <rect x="76" y="10" width="32" height="42" rx="3" fill="url(#art-grad-3)"/>`,
-  },
-  {
-    title: "collab teasers",
-    sub: "linked partner avatars",
-    visual: `<circle cx="14" cy="30" r="14" fill="${INTERFACE_ACCENT}"/>
-             <text x="14" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">A</text>
-             <circle cx="36" cy="30" r="14" fill="#2ec4b6"/>
-             <text x="36" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">B</text>
-             <text x="56" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#adadb8">@alice, @bob</text>`,
-  },
+// ── 1. Overview — text top, 4 feature cards horizontal at bottom ─────
+// Same layout pattern as screenshot-3 no-signup: heading on top half,
+// content row across the bottom half filling the canvas width.
+const features = [
+  { tag: "NEXT LIVE",  title: "~11PM",     sub: "day + countdown",  color: INTERFACE_ACCENT },
+  { tag: "WEEK VIEW",  title: "S M W",     sub: "typical blocks",   color: INTERFACE_ACCENT },
+  { tag: "GAMES",      title: "▰ ▰ ▰",     sub: "real box art",     color: "#2ec4b6" },
+  { tag: "COLLABS",    title: "@ @",        sub: "linked partners",  color: "#3a7bff" },
 ];
-const featureCardsSvg = featureCards.map((c, i) => {
-  const x = (i % 2) * 175;
-  const y = Math.floor(i / 2) * 165;
-  return `<g transform="translate(${x}, ${y})">
-    <rect width="160" height="150" rx="11" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
-    <g transform="translate(16, 18)">
-      ${c.visual}
-      <text y="100" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#efeff1">${c.title}</text>
-      <text y="120" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#6b6b75">${c.sub}</text>
+// Layout: 4 cards × 200w + 3 gaps × 24w = 872 used, 1024-872 = 152 → 76 margin each side
+const featureRowSvg = features.map((f, i) => {
+  const x = i * 224;
+  return `<g transform="translate(${x}, 0)">
+    <rect width="200" height="220" rx="14" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
+    <g transform="translate(20, 28)">
+      <text font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#6b6b75" letter-spacing="0.1em">${f.tag}</text>
+      <text y="88" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="800" fill="${f.color}" letter-spacing="-0.02em">${f.title}</text>
+      <text y="160" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8">${f.sub}</text>
     </g>
   </g>`;
 }).join("");
+
 const overviewSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
-  <defs>
-    ${ORBY_DEFS}
-    <linearGradient id="art-grad-1" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="${INTERFACE_ACCENT}"/>
-      <stop offset="100%" stop-color="#0d2a48"/>
-    </linearGradient>
-    <linearGradient id="art-grad-2" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#2ec4b6"/>
-      <stop offset="100%" stop-color="#0a7a6b"/>
-    </linearGradient>
-    <linearGradient id="art-grad-3" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#3a7bff"/>
-      <stop offset="100%" stop-color="#1e4ba6"/>
-    </linearGradient>
-  </defs>
+  <defs>${ORBY_DEFS}</defs>
   ${ORBY_BG_1024}
 
   <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="${INTERFACE_ACCENT}" letter-spacing="0.12em">SCHEDULE FORECAST</text>
-  <text x="60" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" fill="#efeff1" letter-spacing="-1.6">when they're</text>
-  <text x="60" y="225" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-1.6">next live.</text>
-  <text x="60" y="295" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">built from your real broadcast history.</text>
-  <text x="60" y="319" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">works on every channel. no signup needed.</text>
+  <text x="60" y="180" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="#efeff1" letter-spacing="-1.8">when they're</text>
+  <text x="60" y="240" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-1.8">next live.</text>
+  <text x="60" y="320" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">built from your real broadcast history. works on every channel.</text>
 
-  <g transform="translate(560, 130)">${featureCardsSvg}</g>
+  <g transform="translate(76, 460)">${featureRowSvg}</g>
 </svg>`;
 writeFileSync(path.join(outDir, "screenshot-1.png"), renderSvgPng(overviewSvg));
 console.log("wrote screenshot-1.png");
@@ -277,14 +236,14 @@ const colorChips = [
 // Simplified swatches — just the color + the hero number shown in that
 // color + the name + hex. Lets the COLOR be the focal point, not the
 // surrounding panel chrome.
+// Layout: 6 swatches × 140w + 5 gaps × 16w = 920 used → 52px margin each side
 const colorCardsSvg = colorChips.map((c, i) => {
-  const x = (i % 3) * 165;
-  const y = Math.floor(i / 3) * 180;
-  return `<g transform="translate(${x}, ${y})">
-    <rect width="148" height="160" rx="14" fill="${c.hex}" fill-opacity="0.08" stroke="${c.hex}" stroke-opacity="0.35" stroke-width="1"/>
-    <text x="74" y="78" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="800" fill="${c.hex}" letter-spacing="-0.04em" text-anchor="middle">~11<tspan font-size="18">PM</tspan></text>
-    <text x="74" y="120" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#efeff1" text-anchor="middle">${c.name}</text>
-    <text x="74" y="142" font-family="ui-monospace, Consolas, monospace" font-size="11" font-weight="500" fill="#6b6b75" text-anchor="middle">${c.hex}</text>
+  const x = i * 156;
+  return `<g transform="translate(${x}, 0)">
+    <rect width="140" height="220" rx="14" fill="${c.hex}" fill-opacity="0.10" stroke="${c.hex}" stroke-opacity="0.4" stroke-width="1"/>
+    <text x="70" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="800" fill="${c.hex}" letter-spacing="-0.04em" text-anchor="middle">~11<tspan font-size="20">PM</tspan></text>
+    <text x="70" y="160" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#efeff1" text-anchor="middle">${c.name}</text>
+    <text x="70" y="186" font-family="ui-monospace, Consolas, monospace" font-size="11" font-weight="500" fill="#6b6b75" text-anchor="middle">${c.hex}</text>
   </g>`;
 }).join("");
 const colorsSvg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -292,53 +251,52 @@ const colorsSvg = `<?xml version="1.0" encoding="UTF-8"?>
   <defs>${ORBY_DEFS}</defs>
   ${ORBY_BG_1024}
   <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="${INTERFACE_ACCENT}" letter-spacing="0.12em">YOUR COLOR.</text>
-  <text x="60" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" fill="#efeff1" letter-spacing="-1.6">pick a color or pull</text>
-  <text x="60" y="225" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-1.6">yours from Twitch.</text>
-  <text x="60" y="295" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">one click. cascades through every chip, block, button.</text>
-  <g transform="translate(525, 120)">${colorCardsSvg}</g>
+  <text x="60" y="180" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="#efeff1" letter-spacing="-1.8">pick a color or pull</text>
+  <text x="60" y="240" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-1.8">yours from Twitch.</text>
+  <text x="60" y="320" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">one click. cascades through every chip, block, button.</text>
+  <g transform="translate(52, 460)">${colorCardsSvg}</g>
 </svg>`;
 writeFileSync(path.join(outDir, "screenshot-2.png"), renderSvgPng(colorsSvg));
 console.log("wrote screenshot-2.png");
 
-// ── 3. No-signup — text-left + stacked stage cards right ──────
+// ── 3. No-signup — title top, 3 horizontal stage cards bottom ──────
 const noSignupSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
   <defs>${ORBY_DEFS}</defs>
   ${ORBY_BG_1024}
 
   <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#2ec4b6" letter-spacing="0.12em">NO SIGNUP NEEDED</text>
-  <text x="60" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" fill="#efeff1" letter-spacing="-1.6">works the second</text>
-  <text x="60" y="225" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" fill="#efeff1" letter-spacing="-1.6">you install it.</text>
-  <text x="60" y="295" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">predictions built from your channel's</text>
-  <text x="60" y="319" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">public broadcast history. no setup.</text>
-  <text x="60" y="395" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#6b6b75">sign in at collab.deutschmark.online to add</text>
-  <text x="60" y="415" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#6b6b75">planned collabs and sharper signal — optional.</text>
+  <text x="60" y="180" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="#efeff1" letter-spacing="-1.8">works the second</text>
+  <text x="60" y="240" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="#efeff1" letter-spacing="-1.8">you install it.</text>
+  <text x="60" y="320" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">predictions built from your channel's public broadcast history. no setup.</text>
 
-  <!-- Right column: 3 stage cards stacked vertically -->
-  <g transform="translate(525, 110)">
+  <!-- 3 horizontal stage cards across the bottom -->
+  <g transform="translate(140, 470)">
     <g transform="translate(0, 0)">
-      <rect width="440" height="160" rx="14" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
-      <circle cx="80" cy="80" r="38" fill="${INTERFACE_ACCENT}" fill-opacity="0.18" stroke="${INTERFACE_ACCENT}" stroke-width="1.5"/>
-      <text x="80" y="90" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="${INTERFACE_ACCENT}" text-anchor="middle">1</text>
-      <text x="155" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#6b6b75" letter-spacing="0.08em">STEP ONE</text>
-      <text x="155" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#efeff1">install</text>
-      <text x="155" y="118" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8">on your channel from the Twitch dashboard.</text>
+      <rect width="220" height="220" rx="14" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
+      <circle cx="110" cy="80" r="36" fill="${INTERFACE_ACCENT}" fill-opacity="0.18" stroke="${INTERFACE_ACCENT}" stroke-width="1.5"/>
+      <text x="110" y="90" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="${INTERFACE_ACCENT}" text-anchor="middle">1</text>
+      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#efeff1" text-anchor="middle">install</text>
+      <text x="110" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">on your channel</text>
+      <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">from the Twitch dashboard</text>
     </g>
-    <g transform="translate(0, 180)">
-      <rect width="440" height="160" rx="14" fill="#2ec4b6" fill-opacity="0.08" stroke="#2ec4b6" stroke-width="1.5"/>
-      <circle cx="80" cy="80" r="38" fill="#2ec4b6" fill-opacity="0.2" stroke="#2ec4b6" stroke-width="1.5"/>
-      <text x="80" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="#2ec4b6" text-anchor="middle">✓</text>
-      <text x="155" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#2ec4b6" letter-spacing="0.08em">IT'S LIVE</text>
-      <text x="155" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#efeff1">panel works</text>
-      <text x="155" y="118" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8">predictions auto-built from your broadcasts.</text>
+    <text x="245" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#6b6b75" text-anchor="middle">→</text>
+    <g transform="translate(272, 0)">
+      <rect width="220" height="220" rx="14" fill="#2ec4b6" fill-opacity="0.08" stroke="#2ec4b6" stroke-width="1.5"/>
+      <circle cx="110" cy="80" r="36" fill="#2ec4b6" fill-opacity="0.2" stroke="#2ec4b6" stroke-width="1.5"/>
+      <text x="110" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="#2ec4b6" text-anchor="middle">✓</text>
+      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#efeff1" text-anchor="middle">panel is live</text>
+      <text x="110" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">predictions from your</text>
+      <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">broadcast history</text>
     </g>
-    <g transform="translate(0, 360)">
-      <rect width="440" height="160" rx="14" fill="#18181b" stroke="#6b6b75" stroke-width="1" stroke-dasharray="5 5"/>
-      <circle cx="80" cy="80" r="38" fill="#18181b" stroke="#6b6b75" stroke-width="1.5"/>
-      <text x="80" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#6b6b75" text-anchor="middle">+</text>
-      <text x="155" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#6b6b75" letter-spacing="0.08em">OPTIONAL</text>
-      <text x="155" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#adadb8">sign in</text>
-      <text x="155" y="118" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">add planned collabs + schedule sync.</text>
+    <text x="517" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#6b6b75" text-anchor="middle">→</text>
+    <g transform="translate(544, 0)">
+      <rect width="220" height="220" rx="14" fill="#18181b" stroke="#6b6b75" stroke-width="1" stroke-dasharray="5 5"/>
+      <circle cx="110" cy="80" r="36" fill="#18181b" stroke="#6b6b75" stroke-width="1.5"/>
+      <text x="110" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#6b6b75" text-anchor="middle">+</text>
+      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#adadb8" text-anchor="middle">sign in</text>
+      <text x="110" y="168" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#6b6b75" text-anchor="middle">(optional)</text>
+      <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#6b6b75" text-anchor="middle">for collabs + sync</text>
     </g>
   </g>
 </svg>`;
