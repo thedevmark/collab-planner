@@ -8,26 +8,24 @@ interface Props {
   format: FormatOptions;
 }
 
+/**
+ * Single-line collab teaser. Shows only the next collab to keep the
+ * panel uncluttered. No header — the line speaks for itself.
+ */
 export function CollabsList({ collabs, format }: Props) {
   if (collabs.length === 0) return null;
+  const next = collabs[0];
+  const slot = formatSlot(next.startsAt, format);
+  const firstPartner = next.partners[0];
+  const partnerLabel = firstPartner
+    ? `@${firstPartner.username}${next.partners.length > 1 ? ` +${next.partners.length - 1}` : ""}`
+    : "";
+
   return (
-    <section className="collabs">
-      <h2>Upcoming collabs</h2>
-      <ul>
-        {collabs.map((c, idx) => {
-          const slot = formatSlot(c.startsAt, format);
-          const names = c.partners.map((p) => `@${p.username}`).join(" ");
-          return (
-            <li key={`${c.startsAt}-${idx}`} className="collab">
-              <div>
-                <span className="day">{slot.day}</span> <span className="time">{slot.time}</span>
-              </div>
-              <div className="partners">with {names}</div>
-              {c.gameName && <div className="game">{c.gameName}</div>}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <div className="collab-teaser">
+      <span className="collab-teaser-label">Next collab</span>
+      <span className="collab-teaser-when">{slot.day} {slot.time}</span>
+      {partnerLabel && <span className="collab-teaser-who">with {partnerLabel}</span>}
+    </div>
   );
 }

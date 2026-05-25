@@ -40,7 +40,9 @@ const browser = await puppeteer.launch({
   args: ["--ignore-certificate-errors"], // accept the basic-ssl cert
 });
 
-async function capturePanel(previewMode, viewportHeight = 540) {
+async function capturePanel(previewMode, viewportHeight = 300) {
+  // 0.8.0 minimal panel fits well within Twitch's 300px slot. Capture at
+  // slot-true height so screenshots reflect what viewers actually see.
   const page = await browser.newPage();
   await page.setViewport({ width: 340, height: viewportHeight, deviceScaleFactor: 1 });
   await page.goto(`${VITE}/panel.html?preview=${previewMode}`, { waitUntil: "networkidle0", timeout: 15000 });
@@ -63,12 +65,12 @@ async function captureConfig(previewMode, viewportHeight = 720) {
   return buf;
 }
 
-console.log("capturing panel — preview=ok (full layout, 0.4.0)…");
-const panelOk = await capturePanel("ok", 560);
+console.log("capturing panel — preview=ok (minimal 0.8.0 layout)…");
+const panelOk = await capturePanel("ok", 240);
 console.log("capturing panel — preview=empty…");
-const panelEmpty = await capturePanel("empty", 460);
+const panelEmpty = await capturePanel("empty", 200);
 console.log("capturing panel — preview=no_data…");
-const panelNoData = await capturePanel("no_data", 200);
+const panelNoData = await capturePanel("no_data", 100);
 
 console.log("capturing config — connected w/ settings form…");
 const configConnected = await captureConfig("connected", 760);
@@ -143,9 +145,8 @@ await compose(
     ],
     bullets: [
       "Hero start-time in their timezone",
-      "Weekly calendar of typical stream blocks",
-      "Last live + game played",
-      "Upcoming collabs when planned",
+      "At-a-glance day-of-week strip",
+      "Optional next-collab teaser",
       "Works on every channel — no signup",
     ],
   },
@@ -160,39 +161,36 @@ const anatomySvg = `<?xml version="1.0" encoding="UTF-8"?>
   <text x="60" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#adadb8">Each element is derived from the streamer's actual VODs — not aspirational.</text>
 
   <g font-family="Segoe UI, Arial, sans-serif" fill="#efeff1">
-    <g transform="translate(610, 220)">
-      <text x="0" y="11" fill="#adadb8" font-size="18">↗</text>
-      <text x="24" y="11" font-size="15" font-weight="600">Plain-English summary</text>
-      <text x="24" y="36" font-size="14" fill="#adadb8">Top streaming days + median</text>
-      <text x="24" y="55" font-size="14" fill="#adadb8">start time in their timezone.</text>
+    <g transform="translate(610, 240)">
+      <text x="0" y="11" fill="#adadb8" font-size="14">Sun · Mon</text>
+      <text x="80" y="11" font-size="15" font-weight="600">Day context</text>
+      <text x="80" y="36" font-size="14" fill="#adadb8">Which days they typically</text>
+      <text x="80" y="55" font-size="14" fill="#adadb8">go live, in plain text.</text>
     </g>
-    <g transform="translate(610, 320)">
-      <rect width="14" height="14" rx="3" fill="#9147ff"/>
-      <text x="24" y="11" font-size="15" font-weight="600">7-day chip row</text>
-      <text x="24" y="36" font-size="14" fill="#adadb8">Active days highlighted —</text>
-      <text x="24" y="55" font-size="14" fill="#adadb8">scannable at a glance.</text>
+    <g transform="translate(610, 360)">
+      <text x="0" y="14" font-size="22" fill="#9147ff" font-weight="800">~11PM</text>
+      <text x="80" y="11" font-size="15" font-weight="600">Hero start-time</text>
+      <text x="80" y="36" font-size="14" fill="#adadb8">The one number a viewer</text>
+      <text x="80" y="55" font-size="14" fill="#adadb8">needs to know when to return.</text>
     </g>
-    <g transform="translate(610, 420)">
-      <rect x="0" y="-2" width="6" height="14" rx="2" fill="#9147ff"/>
-      <rect x="8" y="-2" width="6" height="14" rx="2" fill="#9147ff" opacity="0.7"/>
-      <text x="24" y="11" font-size="15" font-weight="600">Weekly calendar</text>
-      <text x="24" y="36" font-size="14" fill="#adadb8">Typical stream blocks — start</text>
-      <text x="24" y="55" font-size="14" fill="#adadb8">time × duration per day.</text>
-    </g>
-    <g transform="translate(610, 530)">
-      <text x="0" y="11" font-size="18" fill="#6b6b75">⏱</text>
-      <text x="24" y="11" font-size="15" font-weight="600">Last live</text>
-      <text x="24" y="36" font-size="14" fill="#adadb8">Relative time + game from</text>
-      <text x="24" y="55" font-size="14" fill="#adadb8">their most recent broadcast.</text>
+    <g transform="translate(610, 490)">
+      <g font-size="13" font-weight="700">
+        <text x="0" y="11" fill="#3a3a3d">S</text>
+        <text x="14" y="11" fill="#9147ff">M</text>
+        <text x="28" y="11" fill="#9147ff">T</text>
+        <text x="42" y="11" fill="#3a3a3d">W</text>
+      </g>
+      <text x="80" y="11" font-size="15" font-weight="600">Day-of-week strip</text>
+      <text x="80" y="36" font-size="14" fill="#adadb8">Active days lit up — scannable</text>
+      <text x="80" y="55" font-size="14" fill="#adadb8">without reading text.</text>
     </g>
   </g>
 </svg>`;
 const anatomyBg = renderSvgPng(anatomySvg);
-// Resize panel so it fits inside the 1024×768 canvas with a 200px top margin.
-// Max available height = 768 - 200 - 40 (bottom breathing room) = 528. Panel
-// capture is 340×540 (varies), so resize to width that produces ≤ 528 tall.
+// 0.8.0 panel is much smaller (~240px tall captured at 340 wide). Scale up
+// 2× to ~480 wide for the anatomy callout positions to align nicely.
 const anatomyPanel = await sharp(panelOk)
-  .resize({ width: 320, height: 510, fit: "inside", withoutEnlargement: true })
+  .resize({ width: 480, fit: "inside", withoutEnlargement: false })
   .png()
   .toBuffer();
 await sharp(anatomyBg)

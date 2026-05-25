@@ -12,141 +12,114 @@ body {
   padding: 14px;
 }
 
-/* ── Schedule summary (top of panel) ───────────────────────────── */
+/* ── Schedule summary — iOS-restraint hierarchy ─────────────────── */
 .schedule {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  margin-top: 4px;
 }
 
-/* Hero start-time display — the most important number on the panel. */
+/* Days context line above the hero (small, muted) */
+.schedule-days-context {
+  font-size: 12px;
+  font-weight: 500;
+  color: #adadb8;
+  letter-spacing: 0.02em;
+}
+.schedule-posted {
+  color: #00c8af;
+  font-size: 10px;
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+
+/* Hero — biggest single element on the panel */
 .schedule-hero {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  line-height: 1;
-}
-.schedule-time {
-  font-size: 34px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  margin-top: 4px;
+  line-height: 0.95;
   color: var(--accent);
+  font-weight: 800;
+  letter-spacing: -0.04em;
   font-feature-settings: "tnum" 1;
-  line-height: 1;
 }
-.schedule-time-tilde {
+.schedule-hero-num {
+  font-size: 56px;
+}
+.schedule-hero-dash {
+  font-size: 40px;
+  margin: 0 2px;
+  opacity: 0.55;
+}
+.schedule-hero-ampm {
   font-size: 22px;
-  font-weight: 600;
-  margin-right: 1px;
-  vertical-align: 2px;
-  opacity: 0.7;
-}
-.schedule-time-ampm {
-  font-size: 18px;
   font-weight: 700;
-  margin-left: 2px;
+  margin-left: 4px;
   opacity: 0.85;
 }
-.schedule-time-tz {
-  font-size: 12px;
-  font-weight: 600;
-  color: #adadb8;
-  letter-spacing: 0.04em;
+
+/* Single subtle sub-line under the hero — sentence case, never caps */
+.schedule-sub {
+  font-size: 11px;
+  color: #6b6b75;
+  margin-top: 4px;
+  font-weight: 400;
 }
-.schedule-caption {
+
+/* Day-letter row — no pills, no buttons. Just typography. */
+.schedule-week {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.schedule-week-active {
+  color: var(--accent);
+}
+.schedule-week-dim {
+  color: #3a3a3d;
+}
+
+/* ── Collab teaser — single line, no header ─────────────────────── */
+.collab-teaser {
+  margin-top: 16px;
+  font-size: 12px;
+  color: #efeff1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+.collab-teaser-label {
+  color: #6b6b75;
   font-size: 10px;
   font-weight: 600;
-  color: #6b6b75;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-top: -4px;
 }
-.posted-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #00c8af;
-  box-shadow: 0 0 0 2px rgba(0, 200, 175, 0.15);
-  align-self: center;
-}
-.day-chips {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-.day-chip {
-  font-size: 11px;
+.collab-teaser-when {
   font-weight: 600;
-  padding: 3px 7px;
-  border-radius: 4px;
-  background: #2a2a2e;
-  color: #6b6b75;
-  user-select: none;
 }
-.day-chip-active {
-  background: #9147ff;
-  color: #ffffff;
-}
-.game-chip {
-  display: inline-block;
-  align-self: flex-start;
-  font-size: 11px;
-  padding: 3px 8px;
-  border: 1px solid #3a3a3d;
-  border-radius: 4px;
-  color: #efeff1;
+.collab-teaser-who {
+  color: #adadb8;
 }
 
-/* ── Collabs section ──────────────────────────────────────────── */
-h2 {
-  font-size: 11px;
-  font-weight: 600;
-  margin: 16px 0 6px;
-  color: #adadb8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-.collabs ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.collab {
-  padding: 6px 0;
-  border-bottom: 1px solid #2a2a2e;
-}
-.collab:last-child {
-  border-bottom: none;
-}
-.collab .day {
-  color: #adadb8;
-  font-weight: 600;
-}
-.partners {
-  font-size: 12px;
-  color: #adadb8;
-}
-.game {
-  font-size: 12px;
-  color: #efeff1;
-  margin-top: 2px;
-}
-
-/* ── Footer ───────────────────────────────────────────────────── */
+/* ── Footer — minimal, no border ────────────────────────────────── */
 .powered-by {
-  margin-top: 14px;
-  padding-top: 8px;
-  border-top: 1px solid #2a2a2e;
+  margin-top: 16px;
   text-align: center;
-  font-size: 11px;
+  font-size: 10px;
 }
 .powered-by a {
-  color: #9147ff;
+  color: #6b6b75;
   text-decoration: none;
+  letter-spacing: 0.02em;
 }
 .powered-by a:hover {
-  text-decoration: underline;
+  color: #adadb8;
 }
 
 /* ── States ───────────────────────────────────────────────────── */

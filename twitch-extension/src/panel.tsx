@@ -9,8 +9,8 @@ import { pickTextColor } from "./lib/contrast";
 import { ScheduleSummary } from "./components/ScheduleSummary";
 import { CollabsList } from "./components/CollabsList";
 import { PoweredByFooter } from "./components/PoweredByFooter";
-import { Heatmap } from "./components/Heatmap";
-import { LastLive } from "./components/LastLive";
+// Heatmap + LastLive components removed from default panel render (0.8.0)
+// — kept on disk in case we want them in an opt-in config view later.
 
 const WARMING_RETRY_MS = 5_000;
 
@@ -51,7 +51,9 @@ function Panel() {
             topGame: "Apex Legends",
             isEstimate: false,
             hasPostedSchedule: true,
-            hourDistribution: [0.1, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.0, 0.9, 0.8, 0.7, 0.5, 0.3],
+            // Realistic concentrated evening pattern — peak at 22-24 UTC.
+            // Range detector stays quiet (IQR < 2h) so hero renders single time.
+            hourDistribution: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.6, 1.0, 0.8],
             dayFrequency: [1.0, 0.8, 0.3, 0.9, 0.4, 0.3, 0.6],
             avgDurationHours: 4,
           },
@@ -129,14 +131,7 @@ function Panel() {
 
   return (
     <>
-      <ScheduleSummary summary={state.data.summary} showGame={config.showGame} />
-      <Heatmap
-        topDays={state.data.summary.topDays}
-        medianHour={state.data.summary.medianHour}
-        avgDurationHours={state.data.summary.avgDurationHours}
-        dayFrequency={state.data.summary.dayFrequency}
-      />
-      <LastLive lastStream={state.data.lastStream} />
+      <ScheduleSummary summary={state.data.summary} />
       {config.showCollabs && <CollabsList collabs={state.data.collabs} format={state.fmt} />}
       <PoweredByFooter campaign="panel_footer" />
     </>
