@@ -24,12 +24,13 @@ describe("shapeConnectedPanelResponse", () => {
       pattern: basePattern,
       postedSchedule: [],
       upcomingCollabs: [],
+      timezone: "UTC",
     });
 
     expect(resp.status).toBe("ok");
     if (resp.status !== "ok") return;
     expect(resp.summary.topDays).toEqual(["Tue", "Thu", "Sat"]);
-    expect(resp.summary.medianHourUtc).toBe(20);
+    expect(resp.summary.medianHour).toBe(20);
     expect(resp.summary.topGame).toBe("Apex Legends");
     expect(resp.summary.isEstimate).toBe(false);
     expect(resp.summary.hasPostedSchedule).toBe(false);
@@ -42,6 +43,7 @@ describe("shapeConnectedPanelResponse", () => {
         { start: new Date("2026-05-26T20:00:00Z"), end: new Date("2026-05-26T23:00:00Z") },
       ],
       upcomingCollabs: [],
+      timezone: "UTC",
     });
     if (resp.status !== "ok") throw new Error("expected ok");
     expect(resp.summary.hasPostedSchedule).toBe(true);
@@ -53,6 +55,7 @@ describe("shapeConnectedPanelResponse", () => {
       pattern: small,
       postedSchedule: [],
       upcomingCollabs: [],
+      timezone: "UTC",
     });
     if (resp.status !== "ok") throw new Error("expected ok");
     expect(resp.summary.isEstimate).toBe(true);
@@ -64,6 +67,7 @@ describe("shapeConnectedPanelResponse", () => {
       pattern: est,
       postedSchedule: [],
       upcomingCollabs: [],
+      timezone: "UTC",
     });
     if (resp.status !== "ok") throw new Error("expected ok");
     expect(resp.summary.isEstimate).toBe(true);
@@ -80,6 +84,7 @@ describe("shapeConnectedPanelResponse", () => {
           partners: [{ username: "alice", displayName: "Alice", avatarUrl: "" }],
         },
       ],
+      timezone: "UTC",
     });
     if (resp.status !== "ok") throw new Error("expected ok");
     expect(resp.collabs).toHaveLength(1);
@@ -92,6 +97,7 @@ describe("shapeConnectedPanelResponse", () => {
       pattern: empty,
       postedSchedule: [],
       upcomingCollabs: [],
+      timezone: "UTC",
     });
     expect(resp.status).toBe("no_data");
   });
@@ -102,8 +108,20 @@ describe("shapeConnectedPanelResponse", () => {
       pattern: noGames,
       postedSchedule: [],
       upcomingCollabs: [],
+      timezone: "UTC",
     });
     if (resp.status !== "ok") throw new Error("expected ok");
     expect(resp.summary.topGame).toBeNull();
+  });
+
+  it("includes timezone in the summary", () => {
+    const resp = shapeConnectedPanelResponse({
+      pattern: basePattern,
+      postedSchedule: [],
+      upcomingCollabs: [],
+      timezone: "America/New_York",
+    });
+    if (resp.status !== "ok") throw new Error("expected ok");
+    expect(resp.summary.tz).toBe("America/New_York");
   });
 });
