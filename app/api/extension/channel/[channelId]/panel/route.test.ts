@@ -48,6 +48,10 @@ import { prisma } from "@/lib/db";
 
 const mockPrisma = prisma as unknown as {
   profile: { findUnique: ReturnType<typeof vi.fn> };
+  friend: { findFirst: ReturnType<typeof vi.fn> };
+  streamHistory: { findMany: ReturnType<typeof vi.fn> };
+  scheduleSegment: { findMany: ReturnType<typeof vi.fn> };
+  eventParticipant: { findMany: ReturnType<typeof vi.fn> };
   extensionPredictionCache: {
     findUnique: ReturnType<typeof vi.fn>;
     upsert: ReturnType<typeof vi.fn>;
@@ -127,5 +131,91 @@ describe("GET /api/extension/channel/[channelId]/panel", () => {
     expect(res.status).toBe(204);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(res.headers.get("Access-Control-Allow-Headers")).toContain("Authorization");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Helpers for timezone tests: seed a fully connected profile so GET takes the
+// buildConnectedPayload path, which threads tz into analyzePatterns.
+// ---------------------------------------------------------------------------
+
+const BASE_NOW = new Date("2026-01-04T12:00:00Z");
+
+function makeConnectedSeed() {
+  // profile
+  mockPrisma.profile.findUnique.mockResolvedValue({ id: "uid-1", twitchId: "12345" });
+
+  // friend (isMe: true)
+  mockPrisma.friend.findFirst.mockResolvedValue({
+    id: 1,
+    userId: "uid-1",
+    twitchId: "12345",
+    isMe: true,
+    displayName: "TestStreamer",
+    username: "teststreamer",
+    avatarUrl: "",
+  });
+
+  // 5 stream history rows so analyzePatterns takes the "history" branch (>=3)
+  const sessions = Array.from({ length: 5 }, (_, i) => ({
+    id: i + 1,
+    friendId: 1,
+    startTime: new Date(BASE_NOW.getTime() - i * 7 * 86_400_000),
+    endTime: new Date(BASE_NOW.getTime() - i * 7 * 86_400_000 + 4 * 3_600_000),
+    gameName: "Apex Legends",
+    durationSec: 14_400,
+  }));
+  mockPrisma.streamHistory.findMany.mockResolvedValue(sessions);
+
+  // no schedule segments
+  mockPrisma.scheduleSegment.findMany.mockResolvedValue([]);
+
+  // no events
+  mockPrisma.eventParticipant.findMany.mockResolvedValue([]);
+}
+
+describe("panel route timezone handling", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("passes the tz query param into the response", async () => {
+    makeConnectedSeed();
+    const token = await makeToken("12345");
+    const req = new Request(
+      "http://localhost/api/extension/channel/12345/panel?tz=America/New_York",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const res = await GET(req, { params: Promise.resolve({ channelId: "12345" }) });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.status).toBe("ok");
+    expect(body.summary.tz).toBe("America/New_York");
+  });
+
+  it("falls back to UTC when tz is missing", async () => {
+    makeConnectedSeed();
+    const token = await makeToken("12345");
+    const req = new Request(
+      "http://localhost/api/extension/channel/12345/panel",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const res = await GET(req, { params: Promise.resolve({ channelId: "12345" }) });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.summary.tz).toBe("UTC");
+  });
+
+  it("falls back to UTC when tz is invalid", async () => {
+    makeConnectedSeed();
+    const token = await makeToken("12345");
+    const req = new Request(
+      "http://localhost/api/extension/channel/12345/panel?tz=Not/A/Real/Zone",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const res = await GET(req, { params: Promise.resolve({ channelId: "12345" }) });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.summary.tz).toBe("UTC");
   });
 });

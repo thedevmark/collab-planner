@@ -21,6 +21,18 @@ export function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
+function readTz(req: Request): string {
+  const url = new URL(req.url);
+  const raw = url.searchParams.get("tz");
+  if (!raw) return "UTC";
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: raw });
+    return raw;
+  } catch {
+    return "UTC";
+  }
+}
+
 function json(body: PanelResponse | { error: string }, init: ResponseInit = {}) {
   return NextResponse.json(body, {
     ...init,
@@ -55,12 +67,14 @@ export async function GET(
     throw err;
   }
 
+  const tz = readTz(req);
+
   const profile = await prisma.profile.findUnique({
     where: { twitchId: channelId },
   });
 
   if (profile) {
-    const payload = await buildConnectedPayload(profile.id, channelId);
+    const payload = await buildConnectedPayload(profile.id, channelId, tz);
     return json(payload, {
       headers: {
         "Cache-Control": `public, s-maxage=${CONNECTED_TTL_SECONDS}, stale-while-revalidate=60`,
@@ -68,10 +82,10 @@ export async function GET(
     });
   }
 
-  return handleUnconnected(channelId);
+  return handleUnconnected(channelId, tz);
 }
 
-async function buildConnectedPayload(userId: string, twitchId: string): Promise<PanelResponse> {
+async function buildConnectedPayload(userId: string, twitchId: string, timezone: string): Promise<PanelResponse> {
   const friend = await prisma.friend.findFirst({
     where: { userId, twitchId, isMe: true },
   });
@@ -122,7 +136,7 @@ async function buildConnectedPayload(userId: string, twitchId: string): Promise<
     isRecurring: s.isRecurring,
   }));
 
-  const pattern = analyzePatterns(friend.id, friend.displayName, sessions, hints);
+  const pattern = analyzePatterns(friend.id, friend.displayName, sessions, hints, timezone);
 
   const collabs = eventParticipants.map((p) => ({
     startsAt: p.event.startTime.toISOString(),
@@ -140,10 +154,18 @@ async function buildConnectedPayload(userId: string, twitchId: string): Promise<
     pattern,
     postedSchedule: segments.map((s) => ({ start: s.startTime, end: s.endTime })),
     upcomingCollabs: collabs,
+    timezone,
   });
 }
 
-async function handleUnconnected(twitchId: string): Promise<NextResponse> {
+async function handleUnconnected(twitchId: string, timezone: string): Promise<NextResponse> {
+  // For non-UTC requests, bypass the cache entirely — the cache key is only
+  // twitchId, so mixing TZ results into one row would serve wrong values.
+  // Non-UTC is rare on launch day; revisit if it becomes a perf issue.
+  if (timezone !== "UTC") {
+    return json(await computeUnconnectedNoCache(twitchId, timezone));
+  }
+
   const now = new Date();
 
   const cached = await prisma.extensionPredictionCache.findUnique({
@@ -177,14 +199,14 @@ async function handleUnconnected(twitchId: string): Promise<NextResponse> {
 
   // Fire-and-forget. We deliberately do not await — the viewer gets "warming"
   // immediately and the next request (after ~5s retry) gets the cached payload.
-  after(() => computeAndCacheUnconnected(twitchId).catch((err) => {
+  after(() => computeAndCacheUnconnected(twitchId, timezone).catch((err) => {
     console.error(`[ext/panel] background analysis failed for ${twitchId}:`, err);
   }));
 
   return json({ status: "warming" });
 }
 
-async function computeAndCacheUnconnected(twitchId: string): Promise<void> {
+async function computeUnconnectedNoCache(twitchId: string, timezone: string): Promise<PanelResponse> {
   const [videos, schedule] = await Promise.all([
     getRecentBroadcasts(twitchId, 30),
     getBroadcasterSchedule(twitchId).catch(() => null),
@@ -208,13 +230,18 @@ async function computeAndCacheUnconnected(twitchId: string): Promise<void> {
     isRecurring: seg.is_recurring ?? false,
   }));
 
-  const pattern = analyzePatterns(0, twitchId, sessions, hints);
+  const pattern = analyzePatterns(0, twitchId, sessions, hints, timezone);
 
-  const payload = shapeConnectedPanelResponse({
+  return shapeConnectedPanelResponse({
     pattern,
     postedSchedule: hints.map((h) => ({ start: h.startTime, end: h.endTime })),
     upcomingCollabs: [],
+    timezone,
   });
+}
+
+async function computeAndCacheUnconnected(twitchId: string, timezone: string): Promise<void> {
+  const payload = await computeUnconnectedNoCache(twitchId, timezone);
 
   const now = new Date();
   await prisma.extensionPredictionCache.upsert({
