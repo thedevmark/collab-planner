@@ -179,38 +179,46 @@ h2 {
   font-size: inherit;
 }
 
-/* ── Heatmap (day × hour grid) ────────────────────────────────── */
+/* ── Heatmap (hour × day grid; hours down the left, days across the top) */
 .heatmap {
   margin-top: 12px;
   font-size: 9px;
   color: #adadb8;
 }
-.heatmap-header {
+.heatmap-day-header {
   display: grid;
-  grid-template-columns: 18px repeat(4, 1fr);
-  margin-bottom: 2px;
-  padding-left: 0;
-}
-.heatmap-label-spacer { width: 18px; }
-.heatmap-h { text-align: left; }
-.heatmap-grid {
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: 28px repeat(7, 1fr);
   gap: 2px;
+  margin-bottom: 3px;
 }
-.heatmap-row {
-  display: grid;
-  grid-template-columns: 18px repeat(24, 1fr);
-  gap: 1px;
-  align-items: center;
-}
+.heatmap-corner { width: 28px; }
 .heatmap-day-label {
   font-weight: 600;
   color: #6b6b75;
   text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.heatmap-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.heatmap-hour-row {
+  display: grid;
+  grid-template-columns: 28px repeat(7, 1fr);
+  gap: 2px;
+  align-items: center;
+}
+.heatmap-hour-label {
+  color: #6b6b75;
+  text-align: right;
+  padding-right: 4px;
+  font-size: 9px;
+  line-height: 1;
 }
 .heatmap-cell {
-  height: 10px;
+  height: 4px;
   background: var(--accent);
   border-radius: 1px;
   display: block;

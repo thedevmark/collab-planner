@@ -1,21 +1,30 @@
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
+// Hour labels — only show at 0/6/12/18; other rows are blank to keep the
+// left column tidy.
+const HOUR_LABELS: Record<number, string> = {
+  0: "12a",
+  6: "6a",
+  12: "12p",
+  18: "6p",
+};
+
 interface Props {
   hourDistribution: number[]; // length 24, 0-1
   dayFrequency: number[];     // length 7, 0-1 (index 0 = Sunday)
 }
 
 /**
- * NOTE: We only have marginal distributions (day and hour separately), not a
- * true 2D day×hour matrix. The cell intensity is computed as the product
- * `dayFrequency[day] * hourDistribution[hour]`, which assumes day and hour
- * are independent. This isn't perfectly accurate (a streamer who does
- * "Sunday 7pm" and "Saturday morning" will show false intensity at "Saturday
- * 7pm") but is a reasonable v1 approximation. A future revision could compute
- * the true 2D matrix server-side in patterns.ts.
+ * 24-row × 7-col grid. Hour labels run down the left margin (12a/6a/12p/6p),
+ * day labels across the top (S M T W T F S, Sunday-first).
+ *
+ * Cell intensity = dayFrequency[day] * hourDistribution[hour]. This assumes
+ * day and hour are independent (only marginal distributions are exposed
+ * server-side). For most streamers this is accurate enough; a streamer with
+ * very different hours on different days may see some false-bright cells.
+ * Improving requires computing a true 7×24 matrix in patterns.ts.
  */
 export function Heatmap({ hourDistribution, dayFrequency }: Props) {
-  // Render nothing if both arrays are flat/empty (no data)
   const hasData =
     hourDistribution.length === 24 &&
     dayFrequency.length === 7 &&
@@ -24,25 +33,24 @@ export function Heatmap({ hourDistribution, dayFrequency }: Props) {
 
   return (
     <div className="heatmap">
-      <div className="heatmap-header">
-        <span className="heatmap-label-spacer" />
-        <span className="heatmap-h">12a</span>
-        <span className="heatmap-h">6a</span>
-        <span className="heatmap-h">12p</span>
-        <span className="heatmap-h">6p</span>
+      <div className="heatmap-day-header">
+        <span className="heatmap-corner" />
+        {DAY_LABELS.map((d, i) => (
+          <span key={i} className="heatmap-day-label">{d}</span>
+        ))}
       </div>
-      <div className="heatmap-grid">
-        {DAY_LABELS.map((label, day) => (
-          <div className="heatmap-row" key={day}>
-            <span className="heatmap-day-label">{label}</span>
-            {Array.from({ length: 24 }, (_, hour) => {
+      <div className="heatmap-body">
+        {Array.from({ length: 24 }, (_, hour) => (
+          <div className="heatmap-hour-row" key={hour}>
+            <span className="heatmap-hour-label">{HOUR_LABELS[hour] ?? ""}</span>
+            {Array.from({ length: 7 }, (_, day) => {
               const intensity = dayFrequency[day] * hourDistribution[hour];
               return (
                 <span
-                  key={hour}
+                  key={day}
                   className="heatmap-cell"
-                  style={{ opacity: Math.max(0.05, Math.min(1, intensity)) }}
-                  title={`${label} ${hour}:00 — ${Math.round(intensity * 100)}%`}
+                  style={{ opacity: Math.max(0.06, Math.min(1, intensity)) }}
+                  title={`${DAY_LABELS[day]} ${hour}:00 — ${Math.round(intensity * 100)}%`}
                 />
               );
             })}
