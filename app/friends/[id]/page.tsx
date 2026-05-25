@@ -28,47 +28,6 @@ function isPlaceholderTitle(title: string | null | undefined): boolean {
   return PLACEHOLDER_TITLE_RE.test(title);
 }
 
-function getStreamingPattern(streamHistory: any[], scheduleSegments: any[]) {
-  const dayCounts: Record<number, number> = {};
-  const hourCounts: number[] = [];
-  const gameCounts: Record<string, number> = {};
-  let totalSec = 0;
-  let source: "history" | "schedule" | "mixed" | "estimated" = "estimated";
-
-  for (const s of streamHistory ?? []) {
-    const d = new Date(s.startTime).getDay();
-    dayCounts[d] = (dayCounts[d] ?? 0) + 1;
-    hourCounts.push(new Date(s.startTime).getHours());
-    if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 1;
-    totalSec += s.durationSec;
-  }
-
-  if ((streamHistory?.length ?? 0) >= 3) {
-    source = scheduleSegments?.length > 0 ? "mixed" : "history";
-  }
-
-  for (const s of scheduleSegments ?? []) {
-    const d = new Date(s.startTime).getDay();
-    dayCounts[d] = (dayCounts[d] ?? 0) + (s.isRecurring ? 2 : 1) * 0.5;
-    hourCounts.push(new Date(s.startTime).getHours());
-    if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 0.5;
-    if (source === "estimated") source = "schedule";
-  }
-
-  if (hourCounts.length === 0) {
-    return { topDays: [] as string[], typicalTime: "", topGames: [] as string[], avgHours: 0, total: 0, source: "estimated" as const };
-  }
-
-  const topDays = Object.entries(dayCounts).sort(([, a], [, b]) => b - a).slice(0, 3).map(([d]) => DAYS[parseInt(d)]);
-  hourCounts.sort((a, b) => a - b);
-  const medianHour = hourCounts[Math.floor(hourCounts.length / 2)];
-  const h = medianHour % 12 || 12;
-  const typicalTime = `~${h}${medianHour >= 12 ? "PM" : "AM"}`;
-  const topGames = Object.entries(gameCounts).sort(([, a], [, b]) => b - a).slice(0, 5).map(([g]) => g);
-  const avgHours = streamHistory?.length > 0 ? Math.round((totalSec / streamHistory.length / 3600) * 10) / 10 : 3;
-
-  return { topDays, typicalTime, topGames, avgHours, total: streamHistory?.length ?? 0, source };
-}
 
 export default function FriendDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -123,7 +82,52 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
     mutate();
   }
 
-  const pattern = getStreamingPattern(friend.streamHistory, friend.scheduleSegments);
+  const { data: patternResponse } = useSWR<{
+    status: "ok" | "warming" | "no_data";
+    summary?: {
+      topDays: string[];
+      medianHour: number;
+      tz: string;
+      topGame: string | null;
+      isEstimate: boolean;
+      hasPostedSchedule: boolean;
+    };
+  }>(friend ? `/api/friends/${friend.id}/pattern` : null, fetcher);
+
+  const pattern = (() => {
+    if (!patternResponse || patternResponse.status !== "ok" || !patternResponse.summary) {
+      return {
+        topDays: [] as string[],
+        typicalTime: "",
+        topGames: [] as string[],
+        avgHours: 0,
+        total: 0,
+        source: "estimated" as const,
+      };
+    }
+    const s = patternResponse.summary;
+    const h = s.medianHour % 12 || 12;
+    const typicalTime = `~${h}${s.medianHour >= 12 ? "PM" : "AM"}`;
+    const historyLen: number = friend?.streamHistory?.length ?? 0;
+    const avgHours = historyLen > 0
+      ? Math.round((friend.streamHistory.reduce((a: number, x: { durationSec: number }) => a + x.durationSec, 0) / historyLen / 3600) * 10) / 10
+      : 0;
+    const source = s.isEstimate
+      ? ("estimated" as const)
+      : s.hasPostedSchedule && historyLen >= 3
+        ? ("mixed" as const)
+        : historyLen >= 3
+          ? ("history" as const)
+          : ("schedule" as const);
+    return {
+      topDays: s.topDays.slice(0, 3),
+      typicalTime,
+      topGames: s.topGame ? [s.topGame] : [],
+      avgHours,
+      total: historyLen,
+      source,
+    };
+  })();
   const upcomingSegments = friend.scheduleSegments?.filter((s: any) => new Date(s.endTime) > new Date()) ?? [];
   const collabPartners = collabData?.summary?.partners ?? [];
   const collabSignals = collabData?.signals ?? [];
