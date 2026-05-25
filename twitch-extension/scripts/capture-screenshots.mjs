@@ -33,34 +33,46 @@ function renderSvgPng(svg) {
   }).render().asPng();
 }
 
-// ── Orby chill background — matches the slideshow visual language ────
+// ── Interface accent + orby chill background ─────────────────────────
+// Interface accent uses the broadcaster's Twitch profile color (#1D4470)
+// across all panel mockups, version chips, and slide accents.
+const INTERFACE_ACCENT = "#1D4470";
+
+// Background: purple presence halved, sea-green/cyan boosted so the
+// page feels less Twitch-purple-by-default and more your-brand.
 const ORBY_DEFS = `
   <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
     <stop offset="0%" stop-color="#0d0518"/>
-    <stop offset="100%" stop-color="#1a0a2e"/>
+    <stop offset="100%" stop-color="#0a1822"/>
   </linearGradient>
   <radialGradient id="orb-purple" cx="0.5" cy="0.5" r="0.5">
-    <stop offset="0%" stop-color="#9147ff" stop-opacity="0.22"/>
-    <stop offset="60%" stop-color="#9147ff" stop-opacity="0.05"/>
+    <stop offset="0%" stop-color="#9147ff" stop-opacity="0.11"/>
+    <stop offset="60%" stop-color="#9147ff" stop-opacity="0.025"/>
     <stop offset="100%" stop-color="#9147ff" stop-opacity="0"/>
   </radialGradient>
+  <radialGradient id="orb-cyan" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0%" stop-color="#2ec4b6" stop-opacity="0.26"/>
+    <stop offset="60%" stop-color="#2ec4b6" stop-opacity="0.07"/>
+    <stop offset="100%" stop-color="#2ec4b6" stop-opacity="0"/>
+  </radialGradient>
   <radialGradient id="orb-teal" cx="0.5" cy="0.5" r="0.5">
-    <stop offset="0%" stop-color="#00c8af" stop-opacity="0.16"/>
-    <stop offset="60%" stop-color="#00c8af" stop-opacity="0.04"/>
+    <stop offset="0%" stop-color="#00c8af" stop-opacity="0.20"/>
+    <stop offset="60%" stop-color="#00c8af" stop-opacity="0.05"/>
     <stop offset="100%" stop-color="#00c8af" stop-opacity="0"/>
   </radialGradient>
   <radialGradient id="orb-blue" cx="0.5" cy="0.5" r="0.5">
-    <stop offset="0%" stop-color="#3a7bff" stop-opacity="0.12"/>
-    <stop offset="60%" stop-color="#3a7bff" stop-opacity="0.03"/>
-    <stop offset="100%" stop-color="#3a7bff" stop-opacity="0"/>
+    <stop offset="0%" stop-color="#1D4470" stop-opacity="0.20"/>
+    <stop offset="60%" stop-color="#1D4470" stop-opacity="0.05"/>
+    <stop offset="100%" stop-color="#1D4470" stop-opacity="0"/>
   </radialGradient>
 `;
-// Orbs sized for a 1024×768 canvas
+// Orbs sized for a 1024×768 canvas — cyan + teal dominant, purple subtle
 const ORBY_BG_1024 = `
   <rect width="1024" height="768" fill="url(#bg)"/>
-  <ellipse cx="130" cy="660" rx="320" ry="260" fill="url(#orb-purple)"/>
-  <ellipse cx="900" cy="130" rx="280" ry="230" fill="url(#orb-teal)"/>
+  <ellipse cx="850" cy="130" rx="340" ry="280" fill="url(#orb-cyan)"/>
+  <ellipse cx="130" cy="660" rx="320" ry="260" fill="url(#orb-teal)"/>
   <ellipse cx="600" cy="720" rx="340" ry="200" fill="url(#orb-blue)"/>
+  <ellipse cx="450" cy="180" rx="220" ry="180" fill="url(#orb-purple)"/>
 `;
 
 // ── Launch headless Chrome and capture the panel in each preview state ─
@@ -71,11 +83,16 @@ const browser = await puppeteer.launch({
 });
 
 async function capturePanel(previewMode, viewportHeight = 300) {
-  // 0.8.0 minimal panel fits well within Twitch's 300px slot. Capture at
-  // slot-true height so screenshots reflect what viewers actually see.
   const page = await browser.newPage();
   await page.setViewport({ width: 340, height: viewportHeight, deviceScaleFactor: 1 });
   await page.goto(`${VITE}/panel.html?preview=${previewMode}`, { waitUntil: "networkidle0", timeout: 15000 });
+  // Override the panel's CSS accent so the screenshot reflects the
+  // broadcaster's actual Twitch profile color (#1D4470) instead of
+  // the default Twitch purple. Panel code reads `var(--accent)`.
+  await page.evaluate((accent) => {
+    document.documentElement.style.setProperty("--accent", accent);
+    document.documentElement.style.setProperty("--accent-text", "#FFFFFF");
+  }, INTERFACE_ACCENT);
   await new Promise((r) => setTimeout(r, 400));
   const buf = await page.screenshot({ type: "png", fullPage: false });
   await page.close();
@@ -83,11 +100,13 @@ async function capturePanel(previewMode, viewportHeight = 300) {
 }
 
 async function captureConfig(previewMode, viewportHeight = 720) {
-  // 0.4.0 settings form renders against config.html when ?preview= is set
-  // (config.tsx populates a fake authState in preview mode).
   const page = await browser.newPage();
   await page.setViewport({ width: 380, height: viewportHeight, deviceScaleFactor: 1 });
   await page.goto(`${VITE}/config.html?preview=${previewMode}`, { waitUntil: "networkidle0", timeout: 15000 });
+  await page.evaluate((accent) => {
+    document.documentElement.style.setProperty("--accent", accent);
+    document.documentElement.style.setProperty("--accent-text", "#FFFFFF");
+  }, INTERFACE_ACCENT);
   await new Promise((r) => setTimeout(r, 500));
   const buf = await page.screenshot({ type: "png", fullPage: false });
   await page.close();
@@ -166,37 +185,17 @@ async function compose(captureBuf, captionSvgStr, outPath) {
   console.log(`wrote ${path.basename(outPath)}`);
 }
 
-// ── 1. Hero: the panel populated with bullets explaining what it shows ─
-await compose(
-  panelOk,
-  {
-    title: "Schedule Forecast",
-    subtitle: [
-      "When this streamer is likely live —",
-      "auto-built from broadcast history.",
-    ],
-    bullets: [
-      "\"Next live\" prediction with day + countdown",
-      "Weekly calendar of typical stream blocks",
-      "Recently played games with Twitch box art",
-      "Multi-partner collab teasers with avatars",
-      "Works on every channel — no signup",
-    ],
-  },
-  path.join(outDir, "screenshot-1-overview.png")
-);
-
-// ── 2. Anatomy: oversized panel with callouts pointing to each piece ──
+// ── 1. Combined overview + anatomy (the panel, with what each piece is) ──
 const anatomySvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
   <defs>
     ${ORBY_DEFS}
     <linearGradient id="art-grad-1" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#9147ff"/>
-      <stop offset="100%" stop-color="#5a2cb0"/>
+      <stop offset="0%" stop-color="${INTERFACE_ACCENT}"/>
+      <stop offset="100%" stop-color="#0d2a48"/>
     </linearGradient>
     <linearGradient id="art-grad-2" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#00c8af"/>
+      <stop offset="0%" stop-color="#2ec4b6"/>
       <stop offset="100%" stop-color="#0a7a6b"/>
     </linearGradient>
     <linearGradient id="art-grad-3" x1="0" y1="0" x2="0" y2="1">
@@ -205,62 +204,63 @@ const anatomySvg = `<?xml version="1.0" encoding="UTF-8"?>
     </linearGradient>
   </defs>
   ${ORBY_BG_1024}
-  <text x="60" y="80" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="700" fill="#efeff1" letter-spacing="-1.2">Built from broadcast history.</text>
-  <text x="60" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#adadb8">Each element is derived from the streamer's actual VODs — not aspirational.</text>
+  <text x="60" y="80" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="${INTERFACE_ACCENT}" letter-spacing="0.12em">SCHEDULE FORECAST</text>
+  <text x="60" y="130" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="700" fill="#efeff1" letter-spacing="-1.2">When they're next live.</text>
+  <text x="60" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#adadb8">built from your real broadcast history. works on every channel.</text>
 
   <g font-family="Segoe UI, Arial, sans-serif" fill="#efeff1">
     <g transform="translate(610, 230)">
-      <text x="0" y="14" font-size="20" fill="#9147ff" font-weight="800">~11PM</text>
-      <text x="80" y="11" font-size="15" font-weight="600">Next-live hero</text>
-      <text x="80" y="36" font-size="14" fill="#adadb8">Day + countdown + start time —</text>
-      <text x="80" y="55" font-size="14" fill="#adadb8">forward-looking, not a stat dump.</text>
+      <text x="0" y="14" font-size="20" fill="${INTERFACE_ACCENT}" font-weight="800">~11PM</text>
+      <text x="80" y="11" font-size="15" font-weight="600">next live</text>
+      <text x="80" y="36" font-size="14" fill="#adadb8">day + countdown + start time,</text>
+      <text x="80" y="55" font-size="14" fill="#adadb8">in their timezone.</text>
     </g>
     <g transform="translate(610, 340)">
-      <rect width="14" height="36" rx="3" fill="#9147ff"/>
-      <rect x="18" width="14" height="36" rx="3" fill="#9147ff" opacity="0.7"/>
-      <text x="80" y="11" font-size="15" font-weight="600">Week calendar</text>
-      <text x="80" y="36" font-size="14" fill="#adadb8">Typical stream blocks per day,</text>
-      <text x="80" y="55" font-size="14" fill="#adadb8">sized by session duration.</text>
+      <rect width="14" height="36" rx="3" fill="${INTERFACE_ACCENT}"/>
+      <rect x="18" width="14" height="36" rx="3" fill="${INTERFACE_ACCENT}" opacity="0.7"/>
+      <text x="80" y="11" font-size="15" font-weight="600">week view</text>
+      <text x="80" y="36" font-size="14" fill="#adadb8">typical stream blocks per day,</text>
+      <text x="80" y="55" font-size="14" fill="#adadb8">sized to their session length.</text>
     </g>
     <g transform="translate(610, 460)">
       <rect x="0" y="-3" width="18" height="26" rx="3" fill="url(#art-grad-1)"/>
       <rect x="20" y="-3" width="18" height="26" rx="3" fill="url(#art-grad-2)"/>
       <rect x="40" y="-3" width="18" height="26" rx="3" fill="url(#art-grad-3)"/>
-      <text x="80" y="11" font-size="15" font-weight="600">Recently played</text>
-      <text x="80" y="36" font-size="14" fill="#adadb8">Twitch box-art thumbnails of</text>
-      <text x="80" y="55" font-size="14" fill="#adadb8">the games they actually play.</text>
+      <text x="80" y="11" font-size="15" font-weight="600">recent games</text>
+      <text x="80" y="36" font-size="14" fill="#adadb8">real Twitch box art for</text>
+      <text x="80" y="55" font-size="14" fill="#adadb8">whatever they actually stream.</text>
     </g>
     <g transform="translate(610, 570)">
-      <circle cx="11" cy="11" r="11" fill="#9147ff" stroke="#0d0518" stroke-width="2"/>
+      <circle cx="11" cy="11" r="11" fill="${INTERFACE_ACCENT}" stroke="#0d0518" stroke-width="2"/>
       <text x="11" y="15" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
-      <circle cx="28" cy="11" r="11" fill="#00c8af" stroke="#0d0518" stroke-width="2"/>
+      <circle cx="28" cy="11" r="11" fill="#2ec4b6" stroke="#0d0518" stroke-width="2"/>
       <text x="28" y="15" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">B</text>
-      <text x="80" y="11" font-size="15" font-weight="600">Collab teasers</text>
-      <text x="80" y="36" font-size="14" fill="#adadb8">Partner avatars link to their</text>
-      <text x="80" y="55" font-size="14" fill="#adadb8">Twitch — plus game when known.</text>
+      <text x="80" y="11" font-size="15" font-weight="600">collab teasers</text>
+      <text x="80" y="36" font-size="14" fill="#adadb8">partner avatars link to their</text>
+      <text x="80" y="55" font-size="14" fill="#adadb8">Twitch. game shows if known.</text>
     </g>
   </g>
 </svg>`;
 const anatomyBg = renderSvgPng(anatomySvg);
-// Panel must fit inside the 1024×768 canvas with a 180px top margin.
-// Available height = 768 - 180 - 40 = 548. Constrain by both axes.
 const anatomyPanel = await sharp(panelOk)
   .resize({ width: 360, height: 548, fit: "inside", withoutEnlargement: true })
   .png()
   .toBuffer();
 await sharp(anatomyBg)
-  .composite([{ input: anatomyPanel, left: 80, top: 180 }])
+  .composite([{ input: anatomyPanel, left: 80, top: 200 }])
   .png()
-  .toFile(path.join(outDir, "screenshot-2-anatomy.png"));
-console.log("wrote screenshot-2-anatomy.png");
+  .toFile(path.join(outDir, "screenshot-1.png"));
+console.log("wrote screenshot-1.png");
 
-// ── 3. Colors customization (NEW) — accent-color swatches ─────────────
+// ── 2. Colors customization — accent-color swatches ─────────────
+// First slot is the broadcaster's own Twitch profile color (the
+// auto-detected default when they click "use my Twitch color").
 const colorChips = [
+  { hex: INTERFACE_ACCENT, name: "your Twitch color" },
   { hex: "#9146FF", name: "Twitch Purple" },
   { hex: "#FF6600", name: "Sunset" },
-  { hex: "#00C8AF", name: "Mint" },
+  { hex: "#2EC4B6", name: "Sea" },
   { hex: "#FF3F8C", name: "Pink" },
-  { hex: "#3A7BFF", name: "Sky" },
   { hex: "#F1C40F", name: "Gold" },
 ];
 // Simplified swatches — just the color + the hero number shown in that
@@ -280,51 +280,43 @@ const colorsSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
   <defs>${ORBY_DEFS}</defs>
   ${ORBY_BG_1024}
-  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#9147ff" letter-spacing="0.12em">YOUR COLOR. YOUR PANEL.</text>
-  <text x="60" y="160" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="800" fill="#efeff1" letter-spacing="-1.4">Pick any accent.</text>
-  <text x="60" y="210" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="800" fill="#efeff1" letter-spacing="-1.4">Or auto-pull yours</text>
-  <text x="60" y="260" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="800" fill="#9147ff" letter-spacing="-1.4">from Twitch.</text>
-  <text x="60" y="320" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#adadb8">One-click "Use my Twitch profile color" pulls</text>
-  <text x="60" y="343" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#adadb8">your channel's accent straight from your account.</text>
-  <text x="60" y="386" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">Or paste any hex. Color cascades through every chip,</text>
-  <text x="60" y="407" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">block, link, and button — instantly.</text>
+  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="${INTERFACE_ACCENT}" letter-spacing="0.12em">YOUR COLOR.</text>
+  <text x="60" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" fill="#efeff1" letter-spacing="-1.6">pick a color or pull</text>
+  <text x="60" y="225" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-1.6">yours from Twitch.</text>
+  <text x="60" y="295" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">one click. cascades through every chip, block, button.</text>
   <g transform="translate(525, 120)">${colorCardsSvg}</g>
 </svg>`;
-writeFileSync(path.join(outDir, "screenshot-3-colors.png"), renderSvgPng(colorsSvg));
-console.log("wrote screenshot-3-colors.png");
+writeFileSync(path.join(outDir, "screenshot-2.png"), renderSvgPng(colorsSvg));
+console.log("wrote screenshot-2.png");
 
-// ── 4. Works without a signup — concept-only, no real screenshot ──────
+// ── 3. Works without a signup — concept-only, no real screenshot ──────
 const noSignupSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
   <defs>${ORBY_DEFS}</defs>
   ${ORBY_BG_1024}
-  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#00c8af" letter-spacing="0.12em">NO ACCOUNT NEEDED</text>
-  <text x="60" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="50" font-weight="800" fill="#efeff1" letter-spacing="-1.6">Works the moment</text>
+  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#2ec4b6" letter-spacing="0.12em">NO SIGNUP NEEDED</text>
+  <text x="60" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="50" font-weight="800" fill="#efeff1" letter-spacing="-1.6">works the second</text>
   <text x="60" y="226" font-family="Segoe UI, Arial, sans-serif" font-size="50" font-weight="800" fill="#efeff1" letter-spacing="-1.6">you install it.</text>
-  <text x="60" y="290" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">Predictions auto-build from your channel's</text>
-  <text x="60" y="316" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">public broadcast history. Zero setup.</text>
-  <text x="60" y="372" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">Sign in at collab.deutschmark.online to add planned collabs,</text>
-  <text x="60" y="392" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">schedule sync, and sharper signal — totally optional.</text>
+  <text x="60" y="290" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">predictions built from your channel's public</text>
+  <text x="60" y="316" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">broadcast history. no setup.</text>
+  <text x="60" y="372" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">sign in at collab.deutschmark.online to add planned collabs,</text>
+  <text x="60" y="392" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">schedule sync, and sharper signal. totally optional.</text>
 
-  <!-- 3-stage flow: Install → Live → Sign in (optional)
-       Layout math (1024 canvas): 3 boxes × 220 wide + 2 arrows × 26 wide
-       + 20px gaps × 4 = 152 of padding/arrows = 812 used, 212px total
-       margin → 106px each side. Plenty of breathing room. -->
   <g transform="translate(140, 470)">
     <g transform="translate(0, 0)">
       <rect width="220" height="220" rx="14" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
-      <circle cx="110" cy="80" r="36" fill="#9147ff" fill-opacity="0.15" stroke="#9147ff" stroke-width="1.5"/>
-      <text x="110" y="90" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="#9147ff" text-anchor="middle">1</text>
-      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#efeff1" text-anchor="middle">Install</text>
+      <circle cx="110" cy="80" r="36" fill="${INTERFACE_ACCENT}" fill-opacity="0.18" stroke="${INTERFACE_ACCENT}" stroke-width="1.5"/>
+      <text x="110" y="90" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="${INTERFACE_ACCENT}" text-anchor="middle">1</text>
+      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#efeff1" text-anchor="middle">install</text>
       <text x="110" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">on your channel</text>
       <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">from the Twitch dashboard</text>
     </g>
     <text x="245" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#6b6b75" text-anchor="middle">→</text>
     <g transform="translate(272, 0)">
-      <rect width="220" height="220" rx="14" fill="#00c8af" fill-opacity="0.08" stroke="#00c8af" stroke-width="1.5"/>
-      <circle cx="110" cy="80" r="36" fill="#00c8af" fill-opacity="0.2" stroke="#00c8af" stroke-width="1.5"/>
-      <text x="110" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="#00c8af" text-anchor="middle">✓</text>
-      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#efeff1" text-anchor="middle">Panel is live</text>
+      <rect width="220" height="220" rx="14" fill="#2ec4b6" fill-opacity="0.08" stroke="#2ec4b6" stroke-width="1.5"/>
+      <circle cx="110" cy="80" r="36" fill="#2ec4b6" fill-opacity="0.2" stroke="#2ec4b6" stroke-width="1.5"/>
+      <text x="110" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="#2ec4b6" text-anchor="middle">✓</text>
+      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#efeff1" text-anchor="middle">panel is live</text>
       <text x="110" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">predictions from your</text>
       <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">broadcast history</text>
     </g>
@@ -333,14 +325,14 @@ const noSignupSvg = `<?xml version="1.0" encoding="UTF-8"?>
       <rect width="220" height="220" rx="14" fill="#18181b" stroke="#6b6b75" stroke-width="1" stroke-dasharray="5 5"/>
       <circle cx="110" cy="80" r="36" fill="#18181b" stroke="#6b6b75" stroke-width="1.5"/>
       <text x="110" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#6b6b75" text-anchor="middle">+</text>
-      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#adadb8" text-anchor="middle">Sign in</text>
+      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#adadb8" text-anchor="middle">sign in</text>
       <text x="110" y="168" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#6b6b75" text-anchor="middle">(optional)</text>
       <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#6b6b75" text-anchor="middle">for collabs + sync</text>
     </g>
   </g>
 </svg>`;
-writeFileSync(path.join(outDir, "screenshot-4-no-signup.png"), renderSvgPng(noSignupSvg));
-console.log("wrote screenshot-4-no-signup.png");
+writeFileSync(path.join(outDir, "screenshot-3.png"), renderSvgPng(noSignupSvg));
+console.log("wrote screenshot-3.png");
 
 // ── 4. Empty / no_data states — bonus, not for dashboard ──────────────
 writeFileSync(path.join(outDir, "_capture-empty.png"), panelEmpty);

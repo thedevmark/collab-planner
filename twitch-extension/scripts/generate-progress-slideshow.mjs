@@ -44,8 +44,10 @@ const boxArtMap = {};
 for (const g of BOX_ART_GAMES) boxArtMap[g] = await getBoxArtDataUri(g);
 
 // ── Visual constants ──────────────────────────────────────────────
-const ACCENT = "#9147ff";
-const TEAL = "#00c8af";
+// ACCENT is the broadcaster's Twitch profile color (#1D4470). All
+// panel mockup highlights + slide chrome (titles, chips) use it.
+const ACCENT = "#1D4470";
+const TEAL = "#2ec4b6";
 const MUTED = "#adadb8";
 const SUBTLE = "#6b6b75";
 const FG = "#efeff1";
@@ -54,32 +56,40 @@ const PANEL_STROKE = "#2a2a2e";
 const PANEL_W = 380;
 const FONT = "Segoe UI, Inter, Arial, sans-serif";
 
+// Orby background — purple halved, sea-green/cyan boosted so the
+// page leans more aquatic than Twitch-purple-default.
 const SLIDE_DEFS = `
   <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
     <stop offset="0%" stop-color="#0d0518"/>
-    <stop offset="100%" stop-color="#1a0a2e"/>
+    <stop offset="100%" stop-color="#0a1822"/>
   </linearGradient>
   <radialGradient id="orb-purple" cx="0.5" cy="0.5" r="0.5">
-    <stop offset="0%" stop-color="#9147ff" stop-opacity="0.22"/>
-    <stop offset="60%" stop-color="#9147ff" stop-opacity="0.05"/>
+    <stop offset="0%" stop-color="#9147ff" stop-opacity="0.11"/>
+    <stop offset="60%" stop-color="#9147ff" stop-opacity="0.025"/>
     <stop offset="100%" stop-color="#9147ff" stop-opacity="0"/>
   </radialGradient>
+  <radialGradient id="orb-cyan" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0%" stop-color="#2ec4b6" stop-opacity="0.26"/>
+    <stop offset="60%" stop-color="#2ec4b6" stop-opacity="0.07"/>
+    <stop offset="100%" stop-color="#2ec4b6" stop-opacity="0"/>
+  </radialGradient>
   <radialGradient id="orb-teal" cx="0.5" cy="0.5" r="0.5">
-    <stop offset="0%" stop-color="#00c8af" stop-opacity="0.16"/>
-    <stop offset="60%" stop-color="#00c8af" stop-opacity="0.04"/>
+    <stop offset="0%" stop-color="#00c8af" stop-opacity="0.20"/>
+    <stop offset="60%" stop-color="#00c8af" stop-opacity="0.05"/>
     <stop offset="100%" stop-color="#00c8af" stop-opacity="0"/>
   </radialGradient>
   <radialGradient id="orb-blue" cx="0.5" cy="0.5" r="0.5">
-    <stop offset="0%" stop-color="#3a7bff" stop-opacity="0.12"/>
-    <stop offset="60%" stop-color="#3a7bff" stop-opacity="0.03"/>
-    <stop offset="100%" stop-color="#3a7bff" stop-opacity="0"/>
+    <stop offset="0%" stop-color="#1D4470" stop-opacity="0.20"/>
+    <stop offset="60%" stop-color="#1D4470" stop-opacity="0.05"/>
+    <stop offset="100%" stop-color="#1D4470" stop-opacity="0"/>
   </radialGradient>
 `;
 const SLIDE_BG = `
   <rect width="1600" height="900" fill="url(#bg)"/>
-  <ellipse cx="200" cy="780" rx="480" ry="380" fill="url(#orb-purple)"/>
-  <ellipse cx="1400" cy="150" rx="420" ry="340" fill="url(#orb-teal)"/>
+  <ellipse cx="1400" cy="150" rx="500" ry="380" fill="url(#orb-cyan)"/>
+  <ellipse cx="200" cy="780" rx="480" ry="380" fill="url(#orb-teal)"/>
   <ellipse cx="950" cy="850" rx="500" ry="280" fill="url(#orb-blue)"/>
+  <ellipse cx="700" cy="200" rx="300" ry="240" fill="url(#orb-purple)"/>
 `;
 
 function panelFrame(height, inner) {
@@ -241,60 +251,52 @@ function pairedSlide({ index, total, leftVer, rightVer, title, lesson, leftPanel
 // ── The 4-slide story ─────────────────────────────────────────────
 const TOTAL = 4;
 
-// Slide 1 — v0.2 + v0.5: density mistakes
+// Slide 1 — v0.2 + v0.5: too much, then rotated
 render(pairedSlide({
   index: 1, total: TOTAL,
   leftVer: "v0.2", rightVer: "v0.5",
-  title: "Tried to fit everything in.",
+  title: "tried fitting it all in.",
   lesson:
-    "First swing: heatmap, day chips, game name, collab list — every fact I had,\n" +
-    "all in 300px. You said it read like a dashboard. So I tried fixing the density\n" +
-    "by rotating the heatmap so hours ran down the side. That made the cells thin\n" +
-    "and the whole thing somehow more cramped, not less.",
-  leftPanel: panelV02(), leftHeight: 360, leftCaption: "EVERYTHING AT ONCE",
-  rightPanel: panelV05(), rightHeight: 280, rightCaption: "ROTATED. CRAMPED.",
-}), path.join(outDir, "01-density.png"));
+    "stuffed every stat in. heatmap, chips, game, collabs.\n" +
+    "rotated the grid to fix density. somehow worse.",
+  leftPanel: panelV02(), leftHeight: 360, leftCaption: "everything at once",
+  rightPanel: panelV05(), rightHeight: 280, rightCaption: "rotated. still cramped.",
+}), path.join(outDir, "01.png"));
 
 // Slide 2 — v0.7 + v0.8: over-corrections
 render(pairedSlide({
   index: 2, total: TOTAL,
   leftVer: "v0.7", rightVer: "v0.8",
-  title: "Then I over-corrected. Twice.",
+  title: "overcorrected. twice.",
   lesson:
-    "You said \"like a calendar but weekly,\" so I built a literal calendar widget\n" +
-    "with event blocks. Still ugly. So I asked a fresh agent to audit the whole arc.\n" +
-    "It told me every round of your feedback was asking me to subtract. So I subtracted\n" +
-    "everything. Down to a single number. You said: \"I meant beautiful, not minimal.\"",
-  leftPanel: panelV07(), leftHeight: 280, leftCaption: "TOO LITERAL",
-  rightPanel: panelV08(), rightHeight: 240, rightCaption: "TOO STRIPPED",
-}), path.join(outDir, "02-overcorrected.png"));
+    "built a real calendar widget. ugly.\n" +
+    "stripped it bare. too far the other way.",
+  leftPanel: panelV07(), leftHeight: 280, leftCaption: "too literal",
+  rightPanel: panelV08(), rightHeight: 240, rightCaption: "too minimal",
+}), path.join(outDir, "02.png"));
 
-// Slide 3 — v0.8 + v0.9: where it landed
+// Slide 3 — v0.8 + v0.9: brought richness back
 render(pairedSlide({
   index: 3, total: TOTAL,
   leftVer: "v0.8", rightVer: "v0.9",
-  title: "Brought the richness back.",
+  title: "brought the richness back.",
   lesson:
-    "Stripped-down didn't read as polished. It read as empty.\n" +
-    "Brought the calendar back, plus recently-played game thumbnails and\n" +
-    "the collab list. Reframed the hero as \"next live\" so the time has tense.\n" +
-    "Polished isn't sparse. It's dense done with restraint.",
-  leftPanel: panelV08(), leftHeight: 240, leftCaption: "BEFORE",
-  rightPanel: panelV09(), rightHeight: 450, rightCaption: "AFTER",
-}), path.join(outDir, "03-restraint.png"));
+    "calendar in. recent games in. collabs in.\n" +
+    "this time with room to breathe.",
+  leftPanel: panelV08(), leftHeight: 240, leftCaption: "stripped",
+  rightPanel: panelV09(), rightHeight: 450, rightCaption: "designed",
+}), path.join(outDir, "03.png"));
 
-// Slide 4 — v0.2 + v0.9: before / after
+// Slide 4 — v0.2 + v0.9: same data, different feel (punchline)
 render(pairedSlide({
   index: 4, total: TOTAL,
   leftVer: "v0.2", rightVer: "v0.9",
-  title: "Same data. Completely different feel.",
+  title: "same data. different feel.",
   lesson:
-    "The kitchen-sink version pushed every fact at the viewer at once.\n" +
-    "The final version puts ONE answer up front — when's this person next live —\n" +
-    "and lets everything else support that answer.\n" +
-    "Subtraction wasn't the lesson. Hierarchy was.",
-  leftPanel: panelV02(), leftHeight: 360, leftCaption: "WHERE I STARTED",
-  rightPanel: panelV09(), rightHeight: 450, rightCaption: "WHERE IT LANDED",
-}), path.join(outDir, "04-before-after.png"));
+    "every fact thrown at you vs. one answer up front.\n" +
+    "the trick wasn't subtracting. it was hierarchy.",
+  leftPanel: panelV02(), leftHeight: 360, leftCaption: "where I started",
+  rightPanel: panelV09(), rightHeight: 450, rightCaption: "where it landed",
+}), path.join(outDir, "04.png"));
 
 console.log(`\nDone — ${TOTAL} slides at ${outDir}`);
