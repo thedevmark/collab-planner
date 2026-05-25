@@ -3,6 +3,25 @@ const HOURS_PER_DAY = 24;
 const DEFAULT_DURATION_HOURS = 3;
 const MAX_SESSION_HOURS = 12;
 
+const DAY_NAME_TO_INDEX: Record<string, number> = {
+  Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+};
+
+function partsInTz(date: Date, timeZone: string): { dayIndex: number; hour: number } {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+    hour: "2-digit",
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(date);
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "Sun";
+  const hourStr = parts.find((p) => p.type === "hour")?.value ?? "0";
+  let hour = parseInt(hourStr, 10);
+  if (hour === 24) hour = 0; // Intl quirk: midnight is sometimes "24"
+  return { dayIndex: DAY_NAME_TO_INDEX[weekday] ?? 0, hour };
+}
+
 export interface StreamSession {
   startTime: Date;
   endTime: Date;
@@ -48,16 +67,17 @@ export function analyzePatterns(
   friendId: number,
   displayName: string,
   sessions: StreamSession[],
-  scheduleHints: ScheduleHint[] = []
+  scheduleHints: ScheduleHint[] = [],
+  timezone: string = "UTC"
 ): StreamingPattern {
   if (sessions.length >= 3) {
-    return analyzeFromHistory(friendId, displayName, sessions, scheduleHints);
+    return analyzeFromHistory(friendId, displayName, sessions, scheduleHints, timezone);
   }
   if (scheduleHints.length > 0) {
-    return analyzeFromSchedule(friendId, displayName, scheduleHints, sessions);
+    return analyzeFromSchedule(friendId, displayName, scheduleHints, sessions, timezone);
   }
   if (sessions.length > 0) {
-    return analyzeFromHistory(friendId, displayName, sessions, scheduleHints);
+    return analyzeFromHistory(friendId, displayName, sessions, scheduleHints, timezone);
   }
   return estimatedPattern(friendId, displayName);
 }
@@ -66,7 +86,9 @@ function analyzeFromHistory(
   friendId: number,
   displayName: string,
   sessions: StreamSession[],
-  scheduleHints: ScheduleHint[]
+  scheduleHints: ScheduleHint[],
+  // ADD timezone param to signature only; body unchanged in this task
+  _timezone: string
 ): StreamingPattern {
   const dayCounts = new Array(7).fill(0);
   const hourCounts = new Array(HOURS_PER_DAY).fill(0);
@@ -147,7 +169,9 @@ function analyzeFromSchedule(
   friendId: number,
   displayName: string,
   hints: ScheduleHint[],
-  sessions: StreamSession[]
+  sessions: StreamSession[],
+  // ADD timezone param to signature only; body unchanged in this task
+  _timezone: string
 ): StreamingPattern {
   const dayCounts = new Array(7).fill(0);
   const hourCounts = new Array(HOURS_PER_DAY).fill(0);
