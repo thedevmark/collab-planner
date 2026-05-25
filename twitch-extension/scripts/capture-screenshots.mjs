@@ -263,24 +263,17 @@ const colorChips = [
   { hex: "#3A7BFF", name: "Sky" },
   { hex: "#F1C40F", name: "Gold" },
 ];
+// Simplified swatches — just the color + the hero number shown in that
+// color + the name + hex. Lets the COLOR be the focal point, not the
+// surrounding panel chrome.
 const colorCardsSvg = colorChips.map((c, i) => {
   const x = (i % 3) * 165;
-  const y = Math.floor(i / 3) * 175;
+  const y = Math.floor(i / 3) * 180;
   return `<g transform="translate(${x}, ${y})">
-    <rect width="148" height="155" rx="9" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
-    <g transform="translate(12, 14)">
-      <text font-family="Segoe UI, Arial, sans-serif" font-size="8" font-weight="700" fill="#6b6b75" letter-spacing="0.08em">NEXT LIVE</text>
-      <text y="34" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="800" fill="${c.hex}" letter-spacing="-0.04em">~11<tspan font-size="13">PM</tspan></text>
-      <text y="50" font-family="Segoe UI, Arial, sans-serif" font-size="8" fill="#6b6b75">Eastern Time</text>
-      <g transform="translate(0, 68)">
-        ${["S","M","T","W","T","F","S"].map((d, j) => `<text x="${j*18}" font-family="Segoe UI, Arial, sans-serif" font-size="9" font-weight="700" fill="${[0,1,3].includes(j) ? c.hex : "#3a3a3d"}" text-anchor="middle">${d}</text>`).join("")}
-      </g>
-      <g transform="translate(0, 84)">
-        ${[0, 1, 3].map((d) => `<rect x="${d*18-7}" y="0" width="14" height="20" rx="3" fill="${c.hex}" fill-opacity="0.92"/>`).join("")}
-      </g>
-      <text y="135" font-family="Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" fill="#adadb8">${c.name}</text>
-      <text x="124" y="135" font-family="ui-monospace, Consolas, monospace" font-size="7" font-weight="500" fill="#6b6b75" text-anchor="end">${c.hex}</text>
-    </g>
+    <rect width="148" height="160" rx="14" fill="${c.hex}" fill-opacity="0.08" stroke="${c.hex}" stroke-opacity="0.35" stroke-width="1"/>
+    <text x="74" y="78" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="800" fill="${c.hex}" letter-spacing="-0.04em" text-anchor="middle">~11<tspan font-size="18">PM</tspan></text>
+    <text x="74" y="120" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#efeff1" text-anchor="middle">${c.name}</text>
+    <text x="74" y="142" font-family="ui-monospace, Consolas, monospace" font-size="11" font-weight="500" fill="#6b6b75" text-anchor="middle">${c.hex}</text>
   </g>`;
 }).join("");
 const colorsSvg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -313,33 +306,36 @@ const noSignupSvg = `<?xml version="1.0" encoding="UTF-8"?>
   <text x="60" y="372" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">Sign in at collab.deutschmark.online to add planned collabs,</text>
   <text x="60" y="392" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">schedule sync, and sharper signal — totally optional.</text>
 
-  <!-- 3-stage flow: Install → Live → Sign in (optional) -->
-  <g transform="translate(60, 470)">
+  <!-- 3-stage flow: Install → Live → Sign in (optional)
+       Layout math (1024 canvas): 3 boxes × 220 wide + 2 arrows × 26 wide
+       + 20px gaps × 4 = 152 of padding/arrows = 812 used, 212px total
+       margin → 106px each side. Plenty of breathing room. -->
+  <g transform="translate(140, 470)">
     <g transform="translate(0, 0)">
-      <rect width="280" height="220" rx="14" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
-      <circle cx="140" cy="80" r="38" fill="#9147ff" fill-opacity="0.15" stroke="#9147ff" stroke-width="1.5"/>
-      <text x="140" y="90" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" fill="#9147ff" text-anchor="middle">1</text>
-      <text x="140" y="150" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#efeff1" text-anchor="middle">Install</text>
-      <text x="140" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8" text-anchor="middle">on your channel</text>
-      <text x="140" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8" text-anchor="middle">from the Twitch dashboard</text>
+      <rect width="220" height="220" rx="14" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
+      <circle cx="110" cy="80" r="36" fill="#9147ff" fill-opacity="0.15" stroke="#9147ff" stroke-width="1.5"/>
+      <text x="110" y="90" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="#9147ff" text-anchor="middle">1</text>
+      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#efeff1" text-anchor="middle">Install</text>
+      <text x="110" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">on your channel</text>
+      <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">from the Twitch dashboard</text>
     </g>
-    <text x="305" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="34" fill="#6b6b75">→</text>
-    <g transform="translate(340, 0)">
-      <rect width="280" height="220" rx="14" fill="#00c8af" fill-opacity="0.08" stroke="#00c8af" stroke-width="1.5"/>
-      <circle cx="140" cy="80" r="38" fill="#00c8af" fill-opacity="0.2" stroke="#00c8af" stroke-width="1.5"/>
-      <text x="140" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" fill="#00c8af" text-anchor="middle">✓</text>
-      <text x="140" y="150" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#efeff1" text-anchor="middle">Panel is live</text>
-      <text x="140" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8" text-anchor="middle">predictions from your</text>
-      <text x="140" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8" text-anchor="middle">broadcast history</text>
+    <text x="245" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#6b6b75" text-anchor="middle">→</text>
+    <g transform="translate(272, 0)">
+      <rect width="220" height="220" rx="14" fill="#00c8af" fill-opacity="0.08" stroke="#00c8af" stroke-width="1.5"/>
+      <circle cx="110" cy="80" r="36" fill="#00c8af" fill-opacity="0.2" stroke="#00c8af" stroke-width="1.5"/>
+      <text x="110" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="#00c8af" text-anchor="middle">✓</text>
+      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#efeff1" text-anchor="middle">Panel is live</text>
+      <text x="110" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">predictions from your</text>
+      <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">broadcast history</text>
     </g>
-    <text x="645" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="34" fill="#6b6b75">→</text>
-    <g transform="translate(680, 0)">
-      <rect width="280" height="220" rx="14" fill="#18181b" stroke="#6b6b75" stroke-width="1" stroke-dasharray="5 5"/>
-      <circle cx="140" cy="80" r="38" fill="#18181b" stroke="#6b6b75" stroke-width="1.5"/>
-      <text x="140" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#6b6b75" text-anchor="middle">+</text>
-      <text x="140" y="150" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#adadb8" text-anchor="middle">Sign in</text>
-      <text x="140" y="172" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#6b6b75" text-anchor="middle">(optional)</text>
-      <text x="140" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#6b6b75" text-anchor="middle">for collabs + sync</text>
+    <text x="517" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#6b6b75" text-anchor="middle">→</text>
+    <g transform="translate(544, 0)">
+      <rect width="220" height="220" rx="14" fill="#18181b" stroke="#6b6b75" stroke-width="1" stroke-dasharray="5 5"/>
+      <circle cx="110" cy="80" r="36" fill="#18181b" stroke="#6b6b75" stroke-width="1.5"/>
+      <text x="110" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#6b6b75" text-anchor="middle">+</text>
+      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#adadb8" text-anchor="middle">Sign in</text>
+      <text x="110" y="168" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#6b6b75" text-anchor="middle">(optional)</text>
+      <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#6b6b75" text-anchor="middle">for collabs + sync</text>
     </g>
   </g>
 </svg>`;
