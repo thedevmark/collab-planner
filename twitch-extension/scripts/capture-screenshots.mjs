@@ -40,53 +40,40 @@ const browser = await puppeteer.launch({
   args: ["--ignore-certificate-errors"], // accept the basic-ssl cert
 });
 
-async function capturePanel(previewMode, viewportHeight = 480) {
+async function capturePanel(previewMode, viewportHeight = 540) {
   const page = await browser.newPage();
   await page.setViewport({ width: 340, height: viewportHeight, deviceScaleFactor: 1 });
   await page.goto(`${VITE}/panel.html?preview=${previewMode}`, { waitUntil: "networkidle0", timeout: 15000 });
-  await new Promise((r) => setTimeout(r, 300)); // settle
+  await new Promise((r) => setTimeout(r, 400));
   const buf = await page.screenshot({ type: "png", fullPage: false });
   await page.close();
   return buf;
 }
 
-async function captureConfigState(stateLabel, html) {
-  // Inject a static config-card snapshot — config.tsx normally needs a JWT,
-  // so we render an HTML stub against vite to capture the styled card.
+async function captureConfig(previewMode, viewportHeight = 720) {
+  // 0.4.0 settings form renders against config.html when ?preview= is set
+  // (config.tsx populates a fake authState in preview mode).
   const page = await browser.newPage();
-  await page.setViewport({ width: 460, height: 360, deviceScaleFactor: 1 });
-  await page.goto(`${VITE}/panel.html?preview=ok`, { waitUntil: "networkidle0" }); // pull stylesheet
-  await page.evaluate((h) => {
-    document.body.innerHTML = `<div id="root">${h}</div>`;
-  }, html);
-  await new Promise((r) => setTimeout(r, 200));
-  const buf = await page.screenshot({ type: "png", fullPage: false, clip: { x: 0, y: 0, width: 460, height: 360 } });
+  await page.setViewport({ width: 380, height: viewportHeight, deviceScaleFactor: 1 });
+  await page.goto(`${VITE}/config.html?preview=${previewMode}`, { waitUntil: "networkidle0", timeout: 15000 });
+  await new Promise((r) => setTimeout(r, 500));
+  const buf = await page.screenshot({ type: "png", fullPage: false });
   await page.close();
-  console.log(`captured config state: ${stateLabel}`);
+  console.log(`captured config (preview=${previewMode})`);
   return buf;
 }
 
-console.log("capturing panel — preview=ok…");
-const panelOk = await capturePanel("ok", 360);
+console.log("capturing panel — preview=ok (full layout, 0.4.0)…");
+const panelOk = await capturePanel("ok", 560);
 console.log("capturing panel — preview=empty…");
-const panelEmpty = await capturePanel("empty", 220);
+const panelEmpty = await capturePanel("empty", 460);
 console.log("capturing panel — preview=no_data…");
-const panelNoData = await capturePanel("no_data", 160);
+const panelNoData = await capturePanel("no_data", 200);
 
-console.log("capturing config card — fresh install…");
-const configFresh = await captureConfigState(
-  "fresh-install",
-  `<h1>Collab Planner</h1>
-   <p>Your channel isn't connected yet. Sign in with Twitch at Collab Planner — your panel will start working automatically.</p>
-   <p><a class="cta" href="#" target="_blank" rel="noopener noreferrer">Sign in with Twitch ↗</a></p>`
-);
-console.log("capturing config card — connected…");
-const configConnected = await captureConfigState(
-  "connected",
-  `<h1>Collab Planner <span style="color:#00c8af">&#10004;</span></h1>
-   <p>Account detected. Streams Sun, Tue, Mon — 2 upcoming collabs.</p>
-   <p><a class="cta" href="#" target="_blank" rel="noopener noreferrer">Open dashboard ↗</a></p>`
-);
+console.log("capturing config — connected w/ settings form…");
+const configConnected = await captureConfig("connected", 760);
+console.log("capturing config — not in CP (fresh install)…");
+const configFresh = await captureConfig("not_in_cp", 760);
 
 await browser.close();
 console.log("browser closed");
@@ -124,21 +111,21 @@ function captionSvg(title, subtitleLines, bullets) {
 async function compose(captureBuf, captionSvgStr, outPath) {
   const captionPng = renderSvgPng(captionSvg(captionSvgStr.title, captionSvgStr.subtitle, captionSvgStr.bullets));
 
-  // Scale the captured panel up so it reads at Twitch dashboard size, but
-  // not so much that it overlaps the caption text on the left. Panel is
-  // designed for 340px width in production; ~1.3× keeps the bullets
-  // comfortably readable next to it.
-  const scaledPanel = await sharp(captureBuf).resize({ width: 440 }).png().toBuffer();
+  // Fit the panel to the right column of the 1024×768 frame without
+  // exceeding the canvas height. Panel column ~400px wide × ~520px tall.
+  const scaledPanel = await sharp(captureBuf)
+    .resize({ width: 400, height: 520, fit: "inside", withoutEnlargement: true })
+    .png()
+    .toBuffer();
 
   const bg = await sharp({
     create: { width: 1024, height: 768, channels: 4, background: PAGE_BG },
   }).png().toBuffer();
 
-  // Caption left (60–540), scaled panel right (560+), centered vertically.
   await sharp(bg)
     .composite([
       { input: captionPng, left: 60, top: 130 },
-      { input: scaledPanel, left: 560, top: 130 },
+      { input: scaledPanel, left: 580, top: 130 },
     ])
     .png()
     .toFile(outPath);
@@ -155,9 +142,9 @@ await compose(
       "auto-built from broadcast history.",
     ],
     bullets: [
-      "Plain-English summary",
-      "7-day chip row, active days highlighted",
-      "Most-played game tag",
+      "Plain-English summary, in their timezone",
+      "Weekly heatmap of live hours",
+      "Last live + game played",
       "Upcoming collabs when planned",
       "Works on every channel",
     ],
@@ -166,8 +153,6 @@ await compose(
 );
 
 // ── 2. Anatomy: oversized panel with callouts pointing to each piece ──
-// Render the panel at deviceScaleFactor 2 (we did) so 340×360 → 680×720 PNG.
-// Then composite a captioned breakdown of the elements.
 const anatomySvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
   <rect width="1024" height="768" fill="#0d0518"/>
@@ -175,34 +160,47 @@ const anatomySvg = `<?xml version="1.0" encoding="UTF-8"?>
   <text x="60" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#adadb8">Each element is derived from the streamer's actual VODs — not aspirational.</text>
 
   <g font-family="Segoe UI, Arial, sans-serif" fill="#efeff1">
-    <g transform="translate(610, 240)">
+    <g transform="translate(610, 220)">
       <text x="0" y="11" fill="#adadb8" font-size="18">↗</text>
       <text x="24" y="11" font-size="15" font-weight="600">Plain-English summary</text>
-      <text x="24" y="36" font-size="14" fill="#adadb8">Top 3 streaming days +</text>
-      <text x="24" y="55" font-size="14" fill="#adadb8">median start time, your local TZ.</text>
+      <text x="24" y="36" font-size="14" fill="#adadb8">Top streaming days + median</text>
+      <text x="24" y="55" font-size="14" fill="#adadb8">start time in their timezone.</text>
     </g>
-    <g transform="translate(610, 340)">
+    <g transform="translate(610, 320)">
       <rect width="14" height="14" rx="3" fill="#9147ff"/>
       <text x="24" y="11" font-size="15" font-weight="600">7-day chip row</text>
       <text x="24" y="36" font-size="14" fill="#adadb8">Active days highlighted —</text>
       <text x="24" y="55" font-size="14" fill="#adadb8">scannable at a glance.</text>
     </g>
-    <g transform="translate(610, 440)">
-      <circle cx="7" cy="7" r="6" fill="#00c8af"/>
-      <text x="24" y="11" font-size="15" font-weight="600">Posted schedule indicator</text>
-      <text x="24" y="36" font-size="14" fill="#adadb8">Teal dot when the streamer</text>
-      <text x="24" y="55" font-size="14" fill="#adadb8">has a Twitch schedule posted.</text>
+    <g transform="translate(610, 420)">
+      <g>
+        <rect x="0" y="0" width="3" height="3" rx="1" fill="#9147ff" opacity="0.3"/>
+        <rect x="5" y="0" width="3" height="3" rx="1" fill="#9147ff" opacity="0.9"/>
+        <rect x="10" y="0" width="3" height="3" rx="1" fill="#9147ff" opacity="0.6"/>
+        <rect x="0" y="5" width="3" height="3" rx="1" fill="#9147ff" opacity="0.8"/>
+        <rect x="5" y="5" width="3" height="3" rx="1" fill="#9147ff" opacity="0.4"/>
+        <rect x="10" y="5" width="3" height="3" rx="1" fill="#9147ff" opacity="0.7"/>
+      </g>
+      <text x="24" y="11" font-size="15" font-weight="600">Weekly heatmap</text>
+      <text x="24" y="36" font-size="14" fill="#adadb8">7×24 grid of when they</text>
+      <text x="24" y="55" font-size="14" fill="#adadb8">actually go live.</text>
     </g>
-    <g transform="translate(610, 540)">
-      <rect x="0" y="-2" width="14" height="14" rx="3" fill="none" stroke="#3a3a3d" stroke-width="1.5"/>
-      <text x="24" y="11" font-size="15" font-weight="600">Most-played game</text>
-      <text x="24" y="36" font-size="14" fill="#adadb8">From their recent VOD</text>
-      <text x="24" y="55" font-size="14" fill="#adadb8">category metadata.</text>
+    <g transform="translate(610, 530)">
+      <text x="0" y="11" font-size="18" fill="#6b6b75">⏱</text>
+      <text x="24" y="11" font-size="15" font-weight="600">Last live</text>
+      <text x="24" y="36" font-size="14" fill="#adadb8">Relative time + game from</text>
+      <text x="24" y="55" font-size="14" fill="#adadb8">their most recent broadcast.</text>
     </g>
   </g>
 </svg>`;
 const anatomyBg = renderSvgPng(anatomySvg);
-const anatomyPanel = await sharp(panelOk).resize({ width: 480 }).png().toBuffer();
+// Resize panel so it fits inside the 1024×768 canvas with a 200px top margin.
+// Max available height = 768 - 200 - 40 (bottom breathing room) = 528. Panel
+// capture is 340×540 (varies), so resize to width that produces ≤ 528 tall.
+const anatomyPanel = await sharp(panelOk)
+  .resize({ width: 320, height: 510, fit: "inside", withoutEnlargement: true })
+  .png()
+  .toBuffer();
 await sharp(anatomyBg)
   .composite([{ input: anatomyPanel, left: 80, top: 200 }])
   .png()
@@ -218,8 +216,16 @@ const configFrameSvg = `<?xml version="1.0" encoding="UTF-8"?>
   <text x="60" y="700" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">Broadcaster config view (Twitch dashboard)</text>
 </svg>`;
 const configBg = renderSvgPng(configFrameSvg);
-const cardFresh = await sharp(configFresh).resize({ width: 420 }).png().toBuffer();
-const cardConnected = await sharp(configConnected).resize({ width: 420 }).png().toBuffer();
+// Fit each config card into a ~420×450 box (the 1024-wide canvas has
+// room for two side-by-side, and 768-220-60 = 488px of vertical space).
+const cardFresh = await sharp(configFresh)
+  .resize({ width: 420, height: 480, fit: "inside", withoutEnlargement: true })
+  .png()
+  .toBuffer();
+const cardConnected = await sharp(configConnected)
+  .resize({ width: 420, height: 480, fit: "inside", withoutEnlargement: true })
+  .png()
+  .toBuffer();
 await sharp(configBg)
   .composite([
     { input: cardFresh, left: 60, top: 220 },

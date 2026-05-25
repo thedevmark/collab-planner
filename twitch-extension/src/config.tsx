@@ -73,7 +73,13 @@ function Config() {
   useEffect(() => {
     // Preview mode: ?preview=connected|warming|not_in_cp|no_data — bypasses the
     // Twitch JWT dance so the config layout is viewable in a plain browser.
+    // Also populates a fake authState so SettingsForm renders for screenshots.
     const previewMode = new URLSearchParams(window.location.search).get("preview");
+    if (previewMode) {
+      // Fake auth so the SettingsForm renders below the status strip
+      setAuthState({ channelId: "12345", clientId: "preview", token: "preview", userId: "u1" });
+      setConfigRaw(null);
+    }
     if (previewMode === "connected") {
       setState({ kind: "connected", topDays: ["Sun", "Tue", "Mon"], collabs: 2 });
       return;

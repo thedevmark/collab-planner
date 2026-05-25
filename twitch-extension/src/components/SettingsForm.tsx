@@ -176,11 +176,21 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
       <label className="checkbox">
         <input type="checkbox" checked={showCollabs} onChange={(e) => setShowCollabs(e.target.checked)} />
         <span>Show upcoming collabs</span>
+        <span
+          className="info-tip"
+          data-tip="Lists your planned collabs (with partner names and the game) below the schedule. Pulls from Collab Planner."
+          aria-label="What does this do?"
+        >ⓘ</span>
       </label>
 
       <label className="checkbox">
         <input type="checkbox" checked={showGame} onChange={(e) => setShowGame(e.target.checked)} />
         <span>Show top game</span>
+        <span
+          className="info-tip"
+          data-tip="Shows your most-played recent game as a small chip below the schedule. Variety streamers may want this off."
+          aria-label="What does this do?"
+        >ⓘ</span>
       </label>
 
       <label>

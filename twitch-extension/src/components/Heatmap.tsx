@@ -1,7 +1,7 @@
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
-// Hour labels — only show at 0/6/12/18; other rows are blank to keep the
-// left column tidy.
+// Hour-tick labels on the top axis — only show at 0/6/12/18 so we don't crowd.
+const HOUR_TICKS = [0, 6, 12, 18];
 const HOUR_LABELS: Record<number, string> = {
   0: "12a",
   6: "6a",
@@ -15,14 +15,15 @@ interface Props {
 }
 
 /**
- * 24-row × 7-col grid. Hour labels run down the left margin (12a/6a/12p/6p),
- * day labels across the top (S M T W T F S, Sunday-first).
+ * GitHub-style contribution-graph layout. 7 rows (days, Sunday-first) by 24
+ * columns (hours). Near-square cells with subtle rounding and visible gaps —
+ * the panel is too narrow for a 24-row transposed layout, which forced
+ * wide-thin cells that looked cramped.
  *
  * Cell intensity = dayFrequency[day] * hourDistribution[hour]. This assumes
- * day and hour are independent (only marginal distributions are exposed
- * server-side). For most streamers this is accurate enough; a streamer with
- * very different hours on different days may see some false-bright cells.
- * Improving requires computing a true 7×24 matrix in patterns.ts.
+ * day and hour are independent (only marginal distributions exposed
+ * server-side). A future revision could compute a true 7×24 matrix in
+ * patterns.ts for streamers whose hours vary a lot day-to-day.
  */
 export function Heatmap({ hourDistribution, dayFrequency }: Props) {
   const hasData =
@@ -33,27 +34,37 @@ export function Heatmap({ hourDistribution, dayFrequency }: Props) {
 
   return (
     <div className="heatmap">
-      <div className="heatmap-day-header">
+      <div className="heatmap-axis-top">
         <span className="heatmap-corner" />
-        {DAY_LABELS.map((d, i) => (
-          <span key={i} className="heatmap-day-label">{d}</span>
-        ))}
+        <div className="heatmap-hour-ticks">
+          {HOUR_TICKS.map((h) => (
+            <span
+              key={h}
+              className="heatmap-hour-tick"
+              style={{ left: `${(h / 24) * 100}%` }}
+            >
+              {HOUR_LABELS[h]}
+            </span>
+          ))}
+        </div>
       </div>
-      <div className="heatmap-body">
-        {Array.from({ length: 24 }, (_, hour) => (
-          <div className="heatmap-hour-row" key={hour}>
-            <span className="heatmap-hour-label">{HOUR_LABELS[hour] ?? ""}</span>
-            {Array.from({ length: 7 }, (_, day) => {
-              const intensity = dayFrequency[day] * hourDistribution[hour];
-              return (
-                <span
-                  key={day}
-                  className="heatmap-cell"
-                  style={{ opacity: Math.max(0.06, Math.min(1, intensity)) }}
-                  title={`${DAY_LABELS[day]} ${hour}:00 — ${Math.round(intensity * 100)}%`}
-                />
-              );
-            })}
+      <div className="heatmap-rows">
+        {DAY_LABELS.map((label, day) => (
+          <div className="heatmap-row" key={day}>
+            <span className="heatmap-day-label">{label}</span>
+            <div className="heatmap-cells">
+              {Array.from({ length: 24 }, (_, hour) => {
+                const intensity = dayFrequency[day] * hourDistribution[hour];
+                return (
+                  <span
+                    key={hour}
+                    className="heatmap-cell"
+                    style={{ opacity: Math.max(0.06, Math.min(1, intensity)) }}
+                    title={`${label} ${hour}:00 — ${Math.round(intensity * 100)}%`}
+                  />
+                );
+              })}
+            </div>
           </div>
         ))}
       </div>
