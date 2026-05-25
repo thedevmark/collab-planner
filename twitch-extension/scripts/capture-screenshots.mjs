@@ -86,12 +86,13 @@ async function capturePanel(previewMode, viewportHeight = 300) {
   const page = await browser.newPage();
   await page.setViewport({ width: 340, height: viewportHeight, deviceScaleFactor: 1 });
   await page.goto(`${VITE}/panel.html?preview=${previewMode}`, { waitUntil: "networkidle0", timeout: 15000 });
-  // Override the panel's CSS accent so the screenshot reflects the
-  // broadcaster's actual Twitch profile color (#1D4470) instead of
-  // the default Twitch purple. Panel code reads `var(--accent)`.
   await page.evaluate((accent) => {
     document.documentElement.style.setProperty("--accent", accent);
     document.documentElement.style.setProperty("--accent-text", "#FFFFFF");
+    // For screenshot purposes, kill the margin-top:auto on the footer
+    // so it sits flush with the content above (no dead gap in the capture).
+    const footer = document.querySelector(".powered-by");
+    if (footer) footer.style.marginTop = "8px";
   }, INTERFACE_ACCENT);
   await new Promise((r) => setTimeout(r, 400));
   const buf = await page.screenshot({ type: "png", fullPage: false });
@@ -115,7 +116,7 @@ async function captureConfig(previewMode, viewportHeight = 720) {
 }
 
 console.log("capturing panel — preview=ok (rich 0.9.0 layout)…");
-const panelOk = await capturePanel("ok", 720);
+const panelOk = await capturePanel("ok", 580);
 console.log("capturing panel — preview=empty…");
 const panelEmpty = await capturePanel("empty", 540);
 console.log("capturing panel — preview=no_data…");
@@ -185,39 +186,54 @@ async function compose(captureBuf, captionSvgStr, outPath) {
   console.log(`wrote ${path.basename(outPath)}`);
 }
 
-// ── 1. Overview — text top, 4 feature cards horizontal at bottom ─────
-// Same layout pattern as screenshot-3 no-signup: heading on top half,
-// content row across the bottom half filling the canvas width.
-const features = [
-  { tag: "NEXT LIVE",  title: "~11PM",     sub: "day + countdown",  color: INTERFACE_ACCENT },
-  { tag: "WEEK VIEW",  title: "S M W",     sub: "typical blocks",   color: INTERFACE_ACCENT },
-  { tag: "GAMES",      title: "▰ ▰ ▰",     sub: "real box art",     color: "#2ec4b6" },
-  { tag: "COLLABS",    title: "@ @",        sub: "linked partners",  color: "#3a7bff" },
-];
-// Layout: 4 cards × 200w + 3 gaps × 24w = 872 used, 1024-872 = 152 → 76 margin each side
-const featureRowSvg = features.map((f, i) => {
-  const x = i * 224;
-  return `<g transform="translate(${x}, 0)">
-    <rect width="200" height="220" rx="14" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
-    <g transform="translate(20, 28)">
-      <text font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#6b6b75" letter-spacing="0.1em">${f.tag}</text>
-      <text y="88" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="800" fill="${f.color}" letter-spacing="-0.02em">${f.title}</text>
-      <text y="160" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8">${f.sub}</text>
-    </g>
-  </g>`;
-}).join("");
-
+// ── 1. Overview — headline left, real panel screenshot right ────────
+// First impression: text on left, the actual product on the right with
+// rounded corners, drop shadow, and a subtle accent glow halo behind it.
+const panelOkDataUri = `data:image/png;base64,${panelOk.toString("base64")}`;
+// Panel capture is 340w × 580h. Match aspect for display: 380×648.
+const PW = 380, PH = 648;
 const overviewSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
-  <defs>${ORBY_DEFS}</defs>
+  <defs>
+    ${ORBY_DEFS}
+    <radialGradient id="panel-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="${INTERFACE_ACCENT}" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="${INTERFACE_ACCENT}" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="panel-round">
+      <rect width="${PW}" height="${PH}" rx="20" ry="20"/>
+    </clipPath>
+    <filter id="soft-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="20"/>
+      <feOffset dx="0" dy="14" result="off"/>
+      <feFlood flood-color="#000000" flood-opacity="0.55"/>
+      <feComposite in2="off" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
   ${ORBY_BG_1024}
 
-  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="${INTERFACE_ACCENT}" letter-spacing="0.12em">SCHEDULE FORECAST</text>
-  <text x="60" y="180" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="#efeff1" letter-spacing="-1.8">when they're</text>
-  <text x="60" y="240" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-1.8">next live.</text>
-  <text x="60" y="320" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">built from your real broadcast history. works on every channel.</text>
+  <!-- Headline on the left -->
+  <text x="60" y="120" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="${INTERFACE_ACCENT}" letter-spacing="0.14em">SCHEDULE FORECAST</text>
+  <text x="60" y="220" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="800" fill="#efeff1" letter-spacing="-2">when they're</text>
+  <text x="60" y="290" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-2">next live.</text>
+  <text x="60" y="370" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">built from your real broadcast history.</text>
+  <text x="60" y="396" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">works on every channel.</text>
 
-  <g transform="translate(76, 460)">${featureRowSvg}</g>
+  <!-- Panel showcase on the right -->
+  <g transform="translate(560, 80)">
+    <!-- Subtle accent glow halo behind the panel -->
+    <ellipse cx="${PW/2}" cy="${PH/2}" rx="${PW/2+60}" ry="${PH/2+30}" fill="url(#panel-glow)" opacity="0.6"/>
+    <!-- Panel with soft drop shadow + rounded corners -->
+    <g filter="url(#soft-shadow)">
+      <image href="${panelOkDataUri}" width="${PW}" height="${PH}" preserveAspectRatio="xMidYMid slice" clip-path="url(#panel-round)"/>
+      <!-- Crisp 1px border on top for definition -->
+      <rect width="${PW}" height="${PH}" rx="20" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    </g>
+  </g>
 </svg>`;
 writeFileSync(path.join(outDir, "screenshot-1.png"), renderSvgPng(overviewSvg));
 console.log("wrote screenshot-1.png");
