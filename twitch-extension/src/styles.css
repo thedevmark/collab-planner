@@ -153,30 +153,182 @@ h2 {
 .powered-by a { color: var(--accent); }
 
 /* ── Settings form (config view) ──────────────────────────────── */
-.settings-form { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-.settings-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #efeff1; }
-.settings-form label.checkbox { flex-direction: row; align-items: center; gap: 8px; }
-.settings-form input[type="text"],
-.settings-form input[type="url"],
-.settings-form input:not([type="checkbox"]):not([type="color"]):not([type="submit"]):not([type="button"]) {
-  padding: 6px 8px; background: #2a2a2e; border: 1px solid #3a3a3d; color: #efeff1; border-radius: 4px;
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #2a2a2e;
 }
-.settings-form fieldset { border: 1px solid #2a2a2e; border-radius: 4px; padding: 8px 10px; }
-.settings-form fieldset legend { font-size: 11px; padding: 0 4px; color: #adadb8; text-transform: uppercase; }
-.settings-form .accent-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.settings-form button[type="button"] { padding: 6px 10px; background: #2a2a2e; color: #efeff1; border: 1px solid #3a3a3d; border-radius: 4px; cursor: pointer; font-size: 12px; }
-.settings-form button[type="button"]:hover { background: #3a3a3d; }
-.settings-form .saved-toast { color: #00c8af; font-size: 12px; margin-left: 8px; }
-.settings-form .form-error { color: #ff7878; font-size: 12px; margin-left: 8px; }
-.settings-form small { color: #6b6b75; font-size: 11px; }
-.settings-form select {
-  padding: 6px 8px;
-  background: #2a2a2e;
+
+/* Field rows — each setting in a vertical stack */
+.settings-form > label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #efeff1;
+  text-transform: uppercase;
+}
+.settings-form > label > span:first-child {
+  font-size: 10.5px;
+  color: #adadb8;
+}
+.settings-form > label.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  color: #efeff1;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: #1f1f23;
+  border: 1px solid #2a2a2e;
+  transition: background 100ms ease;
+}
+.settings-form > label.checkbox:hover { background: #26262b; }
+.settings-form > label.checkbox > span { color: #efeff1; }
+.settings-form input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+/* Text & URL inputs (used inside accent-block) */
+.settings-form input[type="text"],
+.settings-form input[type="url"] {
+  padding: 8px 10px;
+  background: #18181b;
   border: 1px solid #3a3a3d;
   color: #efeff1;
   border-radius: 4px;
   font-family: inherit;
-  font-size: inherit;
+  font-size: 13px;
+  transition: border-color 100ms ease;
+}
+.settings-form input[type="text"]:focus,
+.settings-form input[type="url"]:focus,
+.settings-form select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* TZ select — full width, styled to match inputs */
+.settings-form select {
+  padding: 8px 10px;
+  background: #18181b;
+  border: 1px solid #3a3a3d;
+  color: #efeff1;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23adadb8' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+/* Generic secondary buttons */
+.settings-form button[type="button"] {
+  padding: 7px 12px;
+  background: #2a2a2e;
+  color: #efeff1;
+  border: 1px solid #3a3a3d;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+.settings-form button[type="button"]:hover {
+  background: #3a3a3d;
+  border-color: #4a4a4d;
+}
+
+/* Save button — primary CTA */
+.settings-form button[type="submit"] {
+  margin-top: 4px;
+  padding: 10px 14px;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+  transition: filter 100ms ease;
+}
+.settings-form button[type="submit"]:hover { filter: brightness(1.08); }
+.settings-form button[type="submit"]:disabled { opacity: 0.55; cursor: wait; }
+
+.settings-form .saved-toast { color: #00c8af; font-size: 12px; margin-top: 4px; font-weight: 500; }
+.settings-form .form-error { color: #ff7878; font-size: 12px; margin-top: 4px; }
+.settings-form small {
+  color: #6b6b75;
+  font-size: 10.5px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ── Accent color block ──────────────────────────────────────── */
+.settings-form .accent-block {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.settings-form .accent-swatch {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid #3a3a3d;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  overflow: hidden;
+}
+.settings-form .accent-swatch::-webkit-color-swatch-wrapper { padding: 0; }
+.settings-form .accent-swatch::-webkit-color-swatch { border: none; border-radius: 4px; }
+.settings-form .accent-swatch::-moz-color-swatch { border: none; border-radius: 4px; }
+.settings-form .accent-hex {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace !important;
+  font-size: 13px !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.settings-form .accent-copy { min-width: 64px; }
+
+.settings-form .accent-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.settings-form .accent-twitch-btn::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9146FF;
+  margin-right: 6px;
+  vertical-align: middle;
 }
 
 /* ── Heatmap (hour × day grid; hours down the left, days across the top) */
