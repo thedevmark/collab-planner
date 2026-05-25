@@ -15,6 +15,7 @@ export type PanelResponse =
         dayFrequency: number[];       // length 7, values 0-1, index 0 = Sunday
         avgDurationHours: number;     // typical session length in hours
         broadcasterAvatar: string | null;  // Twitch profile image URL
+        broadcasterName: string | null;    // Twitch display name
       };
       collabs: Array<{
         startsAt: string;

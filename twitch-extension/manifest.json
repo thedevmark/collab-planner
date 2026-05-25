@@ -1,6 +1,6 @@
 {
   "name": "Schedule Forecast by Collab Planner",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Surfaces this streamer's most likely upcoming live times based on broadcast history, plus any scheduled collabs they've planned.",
   "views": {
     "panel": {

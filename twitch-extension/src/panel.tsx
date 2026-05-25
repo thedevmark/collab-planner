@@ -59,6 +59,7 @@ function Panel() {
             dayFrequency: [1.0, 0.8, 0.3, 0.9, 0.4, 0.3, 0.6],
             avgDurationHours: 4,
             broadcasterAvatar: "https://static-cdn.jtvnw.net/jtv_user_pictures/54c170ef-e1d0-463d-adda-922e751ef6b8-profile_image-300x300.png",
+            broadcasterName: "thedeutschmark",
           },
           lastStream: { startedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(), gameName: "Apex Legends", durationSec: 5 * 3600 },
           collabs:

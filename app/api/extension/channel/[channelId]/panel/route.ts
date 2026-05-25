@@ -196,6 +196,7 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
     timezone,
     lastStream,
     broadcasterAvatar: friend.avatarUrl || null,
+    broadcasterName: friend.displayName || null,
   });
 }
 
@@ -285,6 +286,7 @@ async function computeUnconnectedNoCache(twitchId: string, timezone: string): Pr
       ? { startedAt: lastSession.startTime, gameName: lastSession.gameName || null, durationSec: lastSession.durationSec }
       : null,
     broadcasterAvatar: user?.profile_image_url || null,
+    broadcasterName: user?.display_name || null,
   });
 }
 
