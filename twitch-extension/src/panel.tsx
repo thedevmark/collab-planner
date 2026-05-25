@@ -50,7 +50,7 @@ function Panel() {
             medianHour: 23, // ~7PM ET
             tz: "America/New_York",
             topGame: "Apex Legends",
-            topGames: ["Apex Legends", "Just Chatting", "Marvel Rivals", "League of Legends"],
+            topGames: ["Apex Legends", "Just Chatting", "Fortnite", "League of Legends"],
             isEstimate: false,
             hasPostedSchedule: true,
             // Realistic concentrated evening pattern — peak at 22-24 UTC.

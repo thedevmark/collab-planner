@@ -39,7 +39,7 @@ async function getBoxArtDataUri(gameName) {
   }
   return `data:image/jpeg;base64,${readFileSync(cachePath).toString("base64")}`;
 }
-const BOX_ART_GAMES = ["Apex Legends", "Just Chatting", "Marvel Rivals", "League of Legends"];
+const BOX_ART_GAMES = ["Apex Legends", "Just Chatting", "Fortnite", "League of Legends"];
 const boxArtMap = {};
 for (const g of BOX_ART_GAMES) boxArtMap[g] = await getBoxArtDataUri(g);
 

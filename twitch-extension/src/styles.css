@@ -19,13 +19,30 @@ body {
   margin-top: 4px;
 }
 
-/* Caption above the day — gives the hero number tense ("future, not historical") */
+/* Top row: label on left, live countdown chip on right */
+.schedule-toprow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
 .schedule-label {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #6b6b75;
+}
+.schedule-countdown {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
 }
 .schedule-posted {
   color: #00c8af;
