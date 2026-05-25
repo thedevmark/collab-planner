@@ -185,8 +185,55 @@ async function compose(captureBuf, captionSvgStr, outPath) {
   console.log(`wrote ${path.basename(outPath)}`);
 }
 
-// ── 1. Combined overview + anatomy (the panel, with what each piece is) ──
-const anatomySvg = `<?xml version="1.0" encoding="UTF-8"?>
+// ── 1. Overview — text-left + 2×2 feature card grid right ──────
+// Same layout pattern as screenshot 2 (colors): substantial left
+// column with caption/headline/body, dense visual grid on right.
+const featureCards = [
+  {
+    title: "next live",
+    sub: "day + countdown + start time",
+    visual: `<text y="36" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-0.04em">~11<tspan font-size="16">PM</tspan></text>
+             <text y="56" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#6b6b75">Monday · tonight</text>`,
+  },
+  {
+    title: "week view",
+    sub: "typical blocks per day",
+    visual: `${[0, 1, 3].map((d) => `<rect x="${d * 20}" y="14" width="14" height="34" rx="3" fill="${INTERFACE_ACCENT}" fill-opacity="0.9"/>`).join("")}
+             ${[2, 4, 5, 6].map((d) => `<rect x="${d * 20}" y="14" width="14" height="34" rx="3" fill="#2a2a2e"/>`).join("")}
+             <g font-family="Segoe UI, Arial, sans-serif" font-size="8" font-weight="600">
+               ${["S","M","T","W","T","F","S"].map((d, i) => `<text x="${i*20+7}" y="62" fill="${[0,1,3].includes(i) ? INTERFACE_ACCENT : "#3a3a3d"}" text-anchor="middle">${d}</text>`).join("")}
+             </g>`,
+  },
+  {
+    title: "recent games",
+    sub: "real Twitch box art",
+    visual: `<rect x="0" y="10" width="32" height="42" rx="3" fill="url(#art-grad-1)"/>
+             <rect x="38" y="10" width="32" height="42" rx="3" fill="url(#art-grad-2)"/>
+             <rect x="76" y="10" width="32" height="42" rx="3" fill="url(#art-grad-3)"/>`,
+  },
+  {
+    title: "collab teasers",
+    sub: "linked partner avatars",
+    visual: `<circle cx="14" cy="30" r="14" fill="${INTERFACE_ACCENT}"/>
+             <text x="14" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">A</text>
+             <circle cx="36" cy="30" r="14" fill="#2ec4b6"/>
+             <text x="36" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">B</text>
+             <text x="56" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#adadb8">@alice, @bob</text>`,
+  },
+];
+const featureCardsSvg = featureCards.map((c, i) => {
+  const x = (i % 2) * 175;
+  const y = Math.floor(i / 2) * 165;
+  return `<g transform="translate(${x}, ${y})">
+    <rect width="160" height="150" rx="11" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
+    <g transform="translate(16, 18)">
+      ${c.visual}
+      <text y="100" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#efeff1">${c.title}</text>
+      <text y="120" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#6b6b75">${c.sub}</text>
+    </g>
+  </g>`;
+}).join("");
+const overviewSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
   <defs>
     ${ORBY_DEFS}
@@ -204,52 +251,16 @@ const anatomySvg = `<?xml version="1.0" encoding="UTF-8"?>
     </linearGradient>
   </defs>
   ${ORBY_BG_1024}
-  <text x="60" y="80" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="${INTERFACE_ACCENT}" letter-spacing="0.12em">SCHEDULE FORECAST</text>
-  <text x="60" y="130" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="700" fill="#efeff1" letter-spacing="-1.2">When they're next live.</text>
-  <text x="60" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#adadb8">built from your real broadcast history. works on every channel.</text>
 
-  <g font-family="Segoe UI, Arial, sans-serif" fill="#efeff1">
-    <g transform="translate(610, 230)">
-      <text x="0" y="14" font-size="20" fill="${INTERFACE_ACCENT}" font-weight="800">~11PM</text>
-      <text x="80" y="11" font-size="15" font-weight="600">next live</text>
-      <text x="80" y="36" font-size="14" fill="#adadb8">day + countdown + start time,</text>
-      <text x="80" y="55" font-size="14" fill="#adadb8">in their timezone.</text>
-    </g>
-    <g transform="translate(610, 340)">
-      <rect width="14" height="36" rx="3" fill="${INTERFACE_ACCENT}"/>
-      <rect x="18" width="14" height="36" rx="3" fill="${INTERFACE_ACCENT}" opacity="0.7"/>
-      <text x="80" y="11" font-size="15" font-weight="600">week view</text>
-      <text x="80" y="36" font-size="14" fill="#adadb8">typical stream blocks per day,</text>
-      <text x="80" y="55" font-size="14" fill="#adadb8">sized to their session length.</text>
-    </g>
-    <g transform="translate(610, 460)">
-      <rect x="0" y="-3" width="18" height="26" rx="3" fill="url(#art-grad-1)"/>
-      <rect x="20" y="-3" width="18" height="26" rx="3" fill="url(#art-grad-2)"/>
-      <rect x="40" y="-3" width="18" height="26" rx="3" fill="url(#art-grad-3)"/>
-      <text x="80" y="11" font-size="15" font-weight="600">recent games</text>
-      <text x="80" y="36" font-size="14" fill="#adadb8">real Twitch box art for</text>
-      <text x="80" y="55" font-size="14" fill="#adadb8">whatever they actually stream.</text>
-    </g>
-    <g transform="translate(610, 570)">
-      <circle cx="11" cy="11" r="11" fill="${INTERFACE_ACCENT}" stroke="#0d0518" stroke-width="2"/>
-      <text x="11" y="15" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
-      <circle cx="28" cy="11" r="11" fill="#2ec4b6" stroke="#0d0518" stroke-width="2"/>
-      <text x="28" y="15" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">B</text>
-      <text x="80" y="11" font-size="15" font-weight="600">collab teasers</text>
-      <text x="80" y="36" font-size="14" fill="#adadb8">partner avatars link to their</text>
-      <text x="80" y="55" font-size="14" fill="#adadb8">Twitch. game shows if known.</text>
-    </g>
-  </g>
+  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="${INTERFACE_ACCENT}" letter-spacing="0.12em">SCHEDULE FORECAST</text>
+  <text x="60" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" fill="#efeff1" letter-spacing="-1.6">when they're</text>
+  <text x="60" y="225" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-1.6">next live.</text>
+  <text x="60" y="295" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">built from your real broadcast history.</text>
+  <text x="60" y="319" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">works on every channel. no signup needed.</text>
+
+  <g transform="translate(560, 130)">${featureCardsSvg}</g>
 </svg>`;
-const anatomyBg = renderSvgPng(anatomySvg);
-const anatomyPanel = await sharp(panelOk)
-  .resize({ width: 360, height: 548, fit: "inside", withoutEnlargement: true })
-  .png()
-  .toBuffer();
-await sharp(anatomyBg)
-  .composite([{ input: anatomyPanel, left: 80, top: 200 }])
-  .png()
-  .toFile(path.join(outDir, "screenshot-1.png"));
+writeFileSync(path.join(outDir, "screenshot-1.png"), renderSvgPng(overviewSvg));
 console.log("wrote screenshot-1.png");
 
 // ── 2. Colors customization — accent-color swatches ─────────────
@@ -289,45 +300,45 @@ const colorsSvg = `<?xml version="1.0" encoding="UTF-8"?>
 writeFileSync(path.join(outDir, "screenshot-2.png"), renderSvgPng(colorsSvg));
 console.log("wrote screenshot-2.png");
 
-// ── 3. Works without a signup — concept-only, no real screenshot ──────
+// ── 3. No-signup — text-left + stacked stage cards right ──────
 const noSignupSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
   <defs>${ORBY_DEFS}</defs>
   ${ORBY_BG_1024}
-  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#2ec4b6" letter-spacing="0.12em">NO SIGNUP NEEDED</text>
-  <text x="60" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="50" font-weight="800" fill="#efeff1" letter-spacing="-1.6">works the second</text>
-  <text x="60" y="226" font-family="Segoe UI, Arial, sans-serif" font-size="50" font-weight="800" fill="#efeff1" letter-spacing="-1.6">you install it.</text>
-  <text x="60" y="290" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">predictions built from your channel's public</text>
-  <text x="60" y="316" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">broadcast history. no setup.</text>
-  <text x="60" y="372" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">sign in at collab.deutschmark.online to add planned collabs,</text>
-  <text x="60" y="392" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">schedule sync, and sharper signal. totally optional.</text>
 
-  <g transform="translate(140, 470)">
+  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#2ec4b6" letter-spacing="0.12em">NO SIGNUP NEEDED</text>
+  <text x="60" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" fill="#efeff1" letter-spacing="-1.6">works the second</text>
+  <text x="60" y="225" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" fill="#efeff1" letter-spacing="-1.6">you install it.</text>
+  <text x="60" y="295" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">predictions built from your channel's</text>
+  <text x="60" y="319" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">public broadcast history. no setup.</text>
+  <text x="60" y="395" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#6b6b75">sign in at collab.deutschmark.online to add</text>
+  <text x="60" y="415" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#6b6b75">planned collabs and sharper signal — optional.</text>
+
+  <!-- Right column: 3 stage cards stacked vertically -->
+  <g transform="translate(525, 110)">
     <g transform="translate(0, 0)">
-      <rect width="220" height="220" rx="14" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
-      <circle cx="110" cy="80" r="36" fill="${INTERFACE_ACCENT}" fill-opacity="0.18" stroke="${INTERFACE_ACCENT}" stroke-width="1.5"/>
-      <text x="110" y="90" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="${INTERFACE_ACCENT}" text-anchor="middle">1</text>
-      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#efeff1" text-anchor="middle">install</text>
-      <text x="110" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">on your channel</text>
-      <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">from the Twitch dashboard</text>
+      <rect width="440" height="160" rx="14" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
+      <circle cx="80" cy="80" r="38" fill="${INTERFACE_ACCENT}" fill-opacity="0.18" stroke="${INTERFACE_ACCENT}" stroke-width="1.5"/>
+      <text x="80" y="90" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="${INTERFACE_ACCENT}" text-anchor="middle">1</text>
+      <text x="155" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#6b6b75" letter-spacing="0.08em">STEP ONE</text>
+      <text x="155" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#efeff1">install</text>
+      <text x="155" y="118" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8">on your channel from the Twitch dashboard.</text>
     </g>
-    <text x="245" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#6b6b75" text-anchor="middle">→</text>
-    <g transform="translate(272, 0)">
-      <rect width="220" height="220" rx="14" fill="#2ec4b6" fill-opacity="0.08" stroke="#2ec4b6" stroke-width="1.5"/>
-      <circle cx="110" cy="80" r="36" fill="#2ec4b6" fill-opacity="0.2" stroke="#2ec4b6" stroke-width="1.5"/>
-      <text x="110" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="#2ec4b6" text-anchor="middle">✓</text>
-      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#efeff1" text-anchor="middle">panel is live</text>
-      <text x="110" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">predictions from your</text>
-      <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">broadcast history</text>
+    <g transform="translate(0, 180)">
+      <rect width="440" height="160" rx="14" fill="#2ec4b6" fill-opacity="0.08" stroke="#2ec4b6" stroke-width="1.5"/>
+      <circle cx="80" cy="80" r="38" fill="#2ec4b6" fill-opacity="0.2" stroke="#2ec4b6" stroke-width="1.5"/>
+      <text x="80" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="#2ec4b6" text-anchor="middle">✓</text>
+      <text x="155" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#2ec4b6" letter-spacing="0.08em">IT'S LIVE</text>
+      <text x="155" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#efeff1">panel works</text>
+      <text x="155" y="118" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#adadb8">predictions auto-built from your broadcasts.</text>
     </g>
-    <text x="517" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#6b6b75" text-anchor="middle">→</text>
-    <g transform="translate(544, 0)">
-      <rect width="220" height="220" rx="14" fill="#18181b" stroke="#6b6b75" stroke-width="1" stroke-dasharray="5 5"/>
-      <circle cx="110" cy="80" r="36" fill="#18181b" stroke="#6b6b75" stroke-width="1.5"/>
-      <text x="110" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#6b6b75" text-anchor="middle">+</text>
-      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#adadb8" text-anchor="middle">sign in</text>
-      <text x="110" y="168" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#6b6b75" text-anchor="middle">(optional)</text>
-      <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#6b6b75" text-anchor="middle">for collabs + sync</text>
+    <g transform="translate(0, 360)">
+      <rect width="440" height="160" rx="14" fill="#18181b" stroke="#6b6b75" stroke-width="1" stroke-dasharray="5 5"/>
+      <circle cx="80" cy="80" r="38" fill="#18181b" stroke="#6b6b75" stroke-width="1.5"/>
+      <text x="80" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#6b6b75" text-anchor="middle">+</text>
+      <text x="155" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#6b6b75" letter-spacing="0.08em">OPTIONAL</text>
+      <text x="155" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#adadb8">sign in</text>
+      <text x="155" y="118" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#6b6b75">add planned collabs + schedule sync.</text>
     </g>
   </g>
 </svg>`;
