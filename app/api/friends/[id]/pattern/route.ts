@@ -65,6 +65,7 @@ export async function GET(
     postedSchedule: segments.map((s) => ({ start: s.startTime, end: s.endTime })),
     upcomingCollabs: [],
     timezone,
+    lastStream: null,
   });
 
   return NextResponse.json(response, {

@@ -150,11 +150,21 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
       })),
   }));
 
+  const lastStreamRow = history[0] ?? null;
+  const lastStream = lastStreamRow
+    ? {
+        startedAt: lastStreamRow.startTime,
+        gameName: lastStreamRow.gameName || null,
+        durationSec: lastStreamRow.durationSec,
+      }
+    : null;
+
   return shapeConnectedPanelResponse({
     pattern,
     postedSchedule: segments.map((s) => ({ start: s.startTime, end: s.endTime })),
     upcomingCollabs: collabs,
     timezone,
+    lastStream,
   });
 }
 
@@ -232,11 +242,16 @@ async function computeUnconnectedNoCache(twitchId: string, timezone: string): Pr
 
   const pattern = analyzePatterns(0, twitchId, sessions, hints, timezone);
 
+  const lastSession = sessions[0] ?? null;
+
   return shapeConnectedPanelResponse({
     pattern,
     postedSchedule: hints.map((h) => ({ start: h.startTime, end: h.endTime })),
     upcomingCollabs: [],
     timezone,
+    lastStream: lastSession
+      ? { startedAt: lastSession.startTime, gameName: lastSession.gameName || null, durationSec: lastSession.durationSec }
+      : null,
   });
 }
 

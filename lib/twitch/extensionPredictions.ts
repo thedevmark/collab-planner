@@ -21,12 +21,17 @@ export type PanelResponse =
         isEstimate: boolean;
         /** True when one or more posted Twitch schedule slots exist within the next 14 days. */
         hasPostedSchedule: boolean;
+        /** Normalized stream frequency per hour-of-day (length 24, values 0-1). */
+        hourDistribution: number[];
+        /** Normalized stream frequency per day-of-week (length 7, values 0-1, index 0 = Sunday). */
+        dayFrequency: number[];
       };
       collabs: Array<{
         startsAt: string;
         gameName: string | null;
         partners: Array<{ username: string; displayName: string; avatarUrl: string }>;
       }>;
+      lastStream: { startedAt: string; gameName: string | null; durationSec: number } | null;
       generatedAt: string;
     }
   | { status: "warming" }
@@ -48,6 +53,7 @@ interface Inputs {
   postedSchedule: PostedSlot[];
   upcomingCollabs: CollabInput[];
   timezone?: string;
+  lastStream: { startedAt: Date; gameName: string | null; durationSec: number } | null;
 }
 
 /** Convert StreamingPattern's full day names (e.g. "Sunday") to short ones (e.g. "Sun"). */
@@ -65,7 +71,7 @@ function shortenDays(longDays: string[]): string[] {
 }
 
 export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
-  const { pattern, postedSchedule, upcomingCollabs, timezone = "UTC" } = inputs;
+  const { pattern, postedSchedule, upcomingCollabs, timezone = "UTC", lastStream } = inputs;
 
   if (pattern.sampleSize === 0 && postedSchedule.length === 0) {
     return { status: "no_data" };
@@ -79,8 +85,24 @@ export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
 
   return {
     status: "ok",
-    summary: { topDays, medianHour, tz: timezone, topGame, isEstimate, hasPostedSchedule },
+    summary: {
+      topDays,
+      medianHour,
+      tz: timezone,
+      topGame,
+      isEstimate,
+      hasPostedSchedule,
+      hourDistribution: pattern.hourDistribution,
+      dayFrequency: pattern.dayFrequency,
+    },
     collabs: upcomingCollabs,
+    lastStream: lastStream
+      ? {
+          startedAt: lastStream.startedAt.toISOString(),
+          gameName: lastStream.gameName,
+          durationSec: lastStream.durationSec,
+        }
+      : null,
     generatedAt: new Date().toISOString(),
   };
 }
