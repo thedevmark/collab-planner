@@ -1,7 +1,6 @@
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const HOURS_PER_DAY = 24;
 const DEFAULT_DURATION_HOURS = 3;
-const MAX_SESSION_HOURS = 12;
 
 const DAY_NAME_TO_INDEX: Record<string, number> = {
   Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
@@ -41,7 +40,7 @@ export interface StreamingPattern {
   displayName: string;
   /** Days of week sorted by frequency */
   typicalDays: string[];
-  /** Typical start hour in UTC */
+  /** Typical start hour in the timezone passed to analyzePatterns */
   startHours: { earliest: number; latest: number; median: number };
   /** Average session length in hours */
   avgDurationHours: number;
@@ -87,8 +86,7 @@ function analyzeFromHistory(
   displayName: string,
   sessions: StreamSession[],
   scheduleHints: ScheduleHint[],
-  // ADD timezone param to signature only; body unchanged in this task
-  _timezone: string
+  timezone: string
 ): StreamingPattern {
   const dayCounts = new Array(7).fill(0);
   const hourCounts = new Array(HOURS_PER_DAY).fill(0);
@@ -98,17 +96,19 @@ function analyzeFromHistory(
 
   for (const s of sessions) {
     const weight = recencyWeight(s.startTime);
-    addWindowWeight(dayCounts, hourCounts, s.startTime, s.endTime, weight);
-    startHours.push(s.startTime.getUTCHours());
+    const { dayIndex, hour } = partsInTz(s.startTime, timezone);
+    dayCounts[dayIndex] += weight;
+    hourCounts[hour] += weight;
+    startHours.push(hour);
     if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 1;
     totalSec += s.durationSec;
   }
 
-  // Blend in future schedule hints at reduced weight so explicit schedules can
-  // pull suggestions without overwhelming observed behavior.
   for (const h of scheduleHints) {
     const weight = h.isRecurring ? 0.9 : 0.65;
-    addWindowWeight(dayCounts, hourCounts, h.startTime, h.endTime, weight);
+    const { dayIndex, hour } = partsInTz(h.startTime, timezone);
+    dayCounts[dayIndex] += weight;
+    hourCounts[hour] += weight;
   }
 
   const smoothedHourCounts = smoothCircular(hourCounts);
@@ -145,7 +145,7 @@ function analyzeFromHistory(
   const daysStr = sortedDays.slice(0, 3).join(", ") || "weekends";
   const gamesStr = topGames.slice(0, 3).join(", ") || "various games";
   const summary =
-    `${displayName} typically streams on ${daysStr} around ${formatHour(medianHour)} UTC ` +
+    `${displayName} typically streams on ${daysStr} around ${formatHour(medianHour)} ${timezone} ` +
     `for ~${avgDurationHours}h. Most played: ${gamesStr}. (${n} streams analyzed)`;
 
   return {
@@ -170,17 +170,20 @@ function analyzeFromSchedule(
   displayName: string,
   hints: ScheduleHint[],
   sessions: StreamSession[],
-  // ADD timezone param to signature only; body unchanged in this task
-  _timezone: string
+  timezone: string
 ): StreamingPattern {
   const dayCounts = new Array(7).fill(0);
   const hourCounts = new Array(HOURS_PER_DAY).fill(0);
   const gameCounts: Record<string, number> = {};
   const durations: number[] = [];
+  const hours: number[] = [];
 
   for (const h of hints) {
     const weight = h.isRecurring ? 2 : 1.2;
-    addWindowWeight(dayCounts, hourCounts, h.startTime, h.endTime, weight);
+    const { dayIndex, hour } = partsInTz(h.startTime, timezone);
+    dayCounts[dayIndex] += weight;
+    hourCounts[hour] += weight;
+    hours.push(hour);
     if (h.gameName) gameCounts[h.gameName] = (gameCounts[h.gameName] ?? 0) + weight;
     const dur = (h.endTime.getTime() - h.startTime.getTime()) / 3600000;
     if (dur > 0) durations.push(dur);
@@ -201,7 +204,7 @@ function analyzeFromSchedule(
     .sort((a, b) => b.count - a.count)
     .map((d) => d.day);
 
-  const hours = hints.map((h) => h.startTime.getUTCHours()).sort((a, b) => a - b);
+  hours.sort((a, b) => a - b);
   const medianHour = hours[Math.floor(hours.length / 2)] ?? 20;
   const avgDurationHours =
     durations.length > 0
@@ -216,7 +219,7 @@ function analyzeFromSchedule(
   const daysStr = sortedDays.slice(0, 3).join(", ") || "weekends";
   const gamesStr = topGames.slice(0, 3).join(", ") || "various games";
   const summary =
-    `${displayName} has a posted schedule: ${daysStr} around ${formatHour(medianHour)} UTC ` +
+    `${displayName} has a posted schedule: ${daysStr} around ${formatHour(medianHour)} ${timezone} ` +
     `for ~${avgDurationHours}h. Games: ${gamesStr}. (from Twitch schedule)`;
 
   return {
@@ -284,31 +287,6 @@ function recencyWeight(date: Date): number {
   return 0.35 + 0.65 * Math.exp(-ageDays / 45);
 }
 
-function addWindowWeight(
-  dayCounts: number[],
-  hourCounts: number[],
-  start: Date,
-  end: Date,
-  weight: number
-) {
-  const safeEnd = end > start
-    ? end
-    : new Date(start.getTime() + DEFAULT_DURATION_HOURS * 3600 * 1000);
-
-  const cursor = new Date(start);
-  cursor.setUTCMinutes(0, 0, 0);
-
-  const limit = Math.min(
-    MAX_SESSION_HOURS,
-    Math.max(1, Math.ceil((safeEnd.getTime() - cursor.getTime()) / 3600000))
-  );
-
-  for (let i = 0; i < limit; i++) {
-    dayCounts[cursor.getUTCDay()] += weight;
-    hourCounts[cursor.getUTCHours()] += weight;
-    cursor.setUTCHours(cursor.getUTCHours() + 1);
-  }
-}
 
 function smoothCircular(values: number[]): number[] {
   return values.map((_, index) => {
