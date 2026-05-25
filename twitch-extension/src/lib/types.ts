@@ -8,6 +8,7 @@ export type PanelResponse =
         medianHour: number;        // in tz below
         tz: string;                // IANA timezone used for binning
         topGame: string | null;
+        topGames: string[];
         isEstimate: boolean;
         hasPostedSchedule: boolean;
         hourDistribution: number[];   // length 24, values 0-1

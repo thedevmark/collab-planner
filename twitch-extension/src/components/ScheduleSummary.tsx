@@ -6,8 +6,8 @@ interface Props {
   summary: Summary;
 }
 
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+const DAY_NAMES_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAY_NAMES_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function clockParts(hour: number): { h: number; ampm: "AM" | "PM" } {
   return { h: hour % 12 || 12, ampm: hour >= 12 ? "PM" : "AM" };
@@ -24,74 +24,83 @@ function tzLongName(tz: string): string {
 }
 
 /**
- * Detect bimodal / wide-spread hour distributions so we can show a range
- * ("~7-11 PM") instead of a single point when the streamer's hours vary.
- * Returns the median ± half-IQR width of the active hour mass, or null
- * if the distribution is tight (1-2 hour spread).
+ * Find the next likely live datetime by combining topDays + medianHour.
+ * Uses the viewer's local clock for "today" detection — close-enough since
+ * the countdown is in days, not minutes. Returns the next active day +
+ * days-away count, plus a friendly relative label ("Tonight" / "Tomorrow" /
+ * weekday name).
  */
-function hourRange(hourDistribution: number[]): { from: number; to: number } | null {
-  const active = hourDistribution
-    .map((v, i) => ({ v, i }))
-    .filter((x) => x.v > 0.25);
-  if (active.length < 4) return null;
-  const hours = active.map((a) => a.i).sort((a, b) => a - b);
-  const q1 = hours[Math.floor(hours.length * 0.25)];
-  const q3 = hours[Math.floor(hours.length * 0.75)];
-  if (q3 - q1 < 2) return null;
-  return { from: q1, to: q3 };
+function nextLikelyLive(topDays: string[], medianHour: number): {
+  dayLabel: string;
+  fullDay: string;
+  daysAway: number;
+  relative: string;
+} | null {
+  if (topDays.length === 0) return null;
+
+  const activeDows = topDays
+    .map((d) => DAY_NAMES_SHORT.indexOf(d))
+    .filter((i) => i !== -1);
+  if (activeDows.length === 0) return null;
+
+  const now = new Date();
+  const todayDow = now.getDay();
+  const currentHour = now.getHours();
+
+  for (let i = 0; i < 7; i++) {
+    const checkDow = (todayDow + i) % 7;
+    if (!activeDows.includes(checkDow)) continue;
+    // If today's slot has already passed, skip to next
+    if (i === 0 && currentHour >= medianHour) continue;
+
+    const dayLabel = DAY_NAMES_SHORT[checkDow];
+    const fullDay = DAY_NAMES_FULL[checkDow];
+    let relative: string;
+    if (i === 0) {
+      const hoursAway = medianHour - currentHour;
+      relative = hoursAway <= 2 ? "soon" : hoursAway <= 6 ? `in ${hoursAway}h` : "tonight";
+    } else if (i === 1) {
+      relative = "tomorrow";
+    } else {
+      relative = `in ${i} days`;
+    }
+
+    return { dayLabel, fullDay, daysAway: i, relative };
+  }
+
+  // Fallback: should never reach (we iterated all 7 days)
+  return null;
 }
 
 export function ScheduleSummary({ summary }: Props) {
-  const { topDays, medianHour, tz, isEstimate, hasPostedSchedule, hourDistribution } = summary;
-
+  const { topDays, medianHour, tz, isEstimate, hasPostedSchedule } = summary;
   const { h, ampm } = clockParts(medianHour);
-  const range = hourRange(hourDistribution);
   const tzName = tzLongName(tz);
-
-  const contextLine = topDays.length > 0 ? topDays.join(" · ") : "Various days";
+  const next = nextLikelyLive(topDays, medianHour);
 
   return (
     <div className="schedule">
-      <div className="schedule-days-context">
-        {contextLine}
+      <div className="schedule-label">
+        {isEstimate ? "Estimated next live" : "Next likely live"}
         {hasPostedSchedule && (
           <span className="schedule-posted" title="Has posted Twitch schedule">●</span>
         )}
       </div>
 
+      {next && (
+        <div className="schedule-day">
+          {next.fullDay}
+          <span className="schedule-day-rel">· {next.relative}</span>
+        </div>
+      )}
+
       <div className="schedule-hero">
-        {range ? (
-          <>
-            <span className="schedule-hero-num">~{clockParts(range.from).h}</span>
-            <span className="schedule-hero-dash">–</span>
-            <span className="schedule-hero-num">{clockParts(range.to).h}</span>
-            <span className="schedule-hero-ampm">{clockParts(range.to).ampm}</span>
-          </>
-        ) : (
-          <>
-            <span className="schedule-hero-num">~{h}</span>
-            <span className="schedule-hero-ampm">{ampm}</span>
-          </>
-        )}
+        <span className="schedule-hero-tilde">~</span>
+        <span className="schedule-hero-num">{h}</span>
+        <span className="schedule-hero-ampm">{ampm}</span>
       </div>
 
-      <div className="schedule-sub">
-        {tzName}{isEstimate && " · estimated"}
-      </div>
-
-      <div className="schedule-week">
-        {DAY_LETTERS.map((letter, i) => {
-          const isActive = topDays.includes(DAY_NAMES[i]);
-          return (
-            <span
-              key={i}
-              className={isActive ? "schedule-week-active" : "schedule-week-dim"}
-            >
-              {letter}
-            </span>
-          );
-        })}
-      </div>
+      <div className="schedule-sub">{tzName}</div>
     </div>
   );
 }

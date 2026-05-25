@@ -18,16 +18,21 @@ function relativeTime(iso: string): string {
 
 function durationLabel(durationSec: number): string {
   const hours = Math.round(durationSec / 3600);
-  return `${hours}h`;
+  return `${hours}h duration`;
 }
 
+/**
+ * Last-live one-liner. Game name is intentionally omitted — the
+ * "Recently played" thumbnails above already convey games this streamer
+ * plays; repeating the game here is redundant.
+ */
 export function LastLive({ lastStream }: Props) {
   if (!lastStream) return null;
   const when = relativeTime(lastStream.startedAt);
-  const game = lastStream.gameName ?? "";
   const dur = lastStream.durationSec > 0 ? durationLabel(lastStream.durationSec) : "";
-  const parts: string[] = [`Last live: ${when}`];
-  if (game) parts.push(game);
-  if (dur) parts.push(dur);
-  return <div className="last-live">{parts.join(" · ")}</div>;
+  return (
+    <div className="last-live">
+      Last live: {when}{dur && <> · {dur}</>}
+    </div>
+  );
 }

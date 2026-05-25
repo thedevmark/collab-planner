@@ -9,8 +9,9 @@ import { pickTextColor } from "./lib/contrast";
 import { ScheduleSummary } from "./components/ScheduleSummary";
 import { CollabsList } from "./components/CollabsList";
 import { PoweredByFooter } from "./components/PoweredByFooter";
-// Heatmap + LastLive components removed from default panel render (0.8.0)
-// — kept on disk in case we want them in an opt-in config view later.
+import { Heatmap } from "./components/Heatmap";
+import { LastLive } from "./components/LastLive";
+import { RecentGames } from "./components/RecentGames";
 
 const WARMING_RETRY_MS = 5_000;
 
@@ -49,6 +50,7 @@ function Panel() {
             medianHour: 23, // ~7PM ET
             tz: "America/New_York",
             topGame: "Apex Legends",
+            topGames: ["Apex Legends", "Just Chatting", "Marvel Rivals", "League of Legends"],
             isEstimate: false,
             hasPostedSchedule: true,
             // Realistic concentrated evening pattern — peak at 22-24 UTC.
@@ -57,7 +59,7 @@ function Panel() {
             dayFrequency: [1.0, 0.8, 0.3, 0.9, 0.4, 0.3, 0.6],
             avgDurationHours: 4,
           },
-          lastStream: { startedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(), gameName: "Apex Legends", durationSec: 4 * 3600 },
+          lastStream: { startedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(), gameName: "Apex Legends", durationSec: 5 * 3600 },
           collabs:
             previewMode === "empty"
               ? []
@@ -68,6 +70,20 @@ function Panel() {
                     partners: [
                       { username: "alice", displayName: "Alice", avatarUrl: "" },
                       { username: "bob", displayName: "Bob", avatarUrl: "" },
+                    ],
+                  },
+                  {
+                    startsAt: nextDayAt(2, 20, 0),
+                    gameName: "Marvel Rivals",
+                    partners: [{ username: "carl", displayName: "Carl", avatarUrl: "" }],
+                  },
+                  {
+                    startsAt: nextDayAt(4, 19, 0),
+                    gameName: null,
+                    partners: [
+                      { username: "dora", displayName: "Dora", avatarUrl: "" },
+                      { username: "evan", displayName: "Evan", avatarUrl: "" },
+                      { username: "fran", displayName: "Fran", avatarUrl: "" },
                     ],
                   },
                 ],
@@ -132,6 +148,14 @@ function Panel() {
   return (
     <>
       <ScheduleSummary summary={state.data.summary} />
+      <Heatmap
+        topDays={state.data.summary.topDays}
+        medianHour={state.data.summary.medianHour}
+        avgDurationHours={state.data.summary.avgDurationHours}
+        dayFrequency={state.data.summary.dayFrequency}
+      />
+      {config.showGame && <RecentGames games={state.data.summary.topGames} />}
+      <LastLive lastStream={state.data.lastStream} />
       {config.showCollabs && <CollabsList collabs={state.data.collabs} format={state.fmt} />}
       <PoweredByFooter campaign="panel_footer" />
     </>
