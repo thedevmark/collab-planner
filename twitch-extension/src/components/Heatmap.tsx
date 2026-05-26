@@ -11,7 +11,7 @@ import type { PanelResponse } from "../lib/types";
 type Summary = Extract<PanelResponse, { status: "ok" }>["summary"];
 
 interface Props {
-  perDay: Summary["perDay"];
+  perDay: Summary["perDay"] | undefined;
   tz: string;
 }
 
@@ -46,7 +46,9 @@ export function Heatmap({ perDay, tz }: Props) {
     return () => clearInterval(id);
   }, []);
 
-  if (perDay.length === 0) return null;
+  // Defensive: backend rolling deploys may serve the old payload shape with
+  // no perDay field. Render nothing rather than crash the whole panel.
+  if (!perDay || perDay.length === 0) return null;
 
   const { startHour, endHour } = computeAxisRange(perDay);
   const spanH = endHour - startHour;
