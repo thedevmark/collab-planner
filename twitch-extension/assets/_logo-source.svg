@@ -30,6 +30,12 @@
       <stop offset="0%" stop-color="#5eead4"/>
       <stop offset="100%" stop-color="#0d9488"/>
     </linearGradient>
+    <!-- Brushed-metal gradient for the desk-flip-calendar binder rings -->
+    <linearGradient id="ring-metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e4e4e7"/>
+      <stop offset="40%" stop-color="#a1a1aa"/>
+      <stop offset="100%" stop-color="#3f3f46"/>
+    </linearGradient>
     <clipPath id="badge-clip">
       <circle cx="50" cy="50" r="50"/>
     </clipPath>
@@ -37,6 +43,12 @@
       <feGaussianBlur stdDeviation="1.5"/>
       <feOffset dx="1" dy="2"/>
       <feComponentTransfer><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="ring-shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="0.6"/>
+      <feOffset dx="0.5" dy="1"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
       <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
     <filter id="inset-shadow" x="-50%" y="-50%" width="200%" height="200%">
@@ -55,15 +67,34 @@
     <polygon points="100,40 100,100 40,100" fill="#000"/>
   </g>
 
-  <!-- Binder rings -->
-  <rect x="31" y="20" width="4" height="9" rx="1.5" fill="#2a1a44"/>
-  <rect x="65" y="20" width="4" height="9" rx="1.5" fill="#2a1a44"/>
-
   <!-- Calendar body with shadow -->
   <g filter="url(#cal-shadow)">
     <rect x="20" y="26" width="60" height="54" rx="5" fill="url(#cal-body)"/>
     <!-- Header band -->
     <path d="M 20 31 a 5 5 0 0 1 5 -5 h 50 a 5 5 0 0 1 5 5 v 8 h -60 z" fill="url(#cal-header)"/>
+  </g>
+
+  <!-- Desk-flip-calendar binder rings: 5 metallic loops wrapping the top edge.
+       Drawn AFTER the calendar body so they sit visibly OVER the header band,
+       with the top half rising above into the badge and the bottom half
+       dropping behind the top of the calendar. -->
+  <g filter="url(#ring-shadow)">
+    <!-- Bottom half of each ring (behind/inside the header band, dimmer) -->
+    <g fill="none" stroke="#1a0e2e" stroke-width="1.8" opacity="0.55" stroke-linecap="round">
+      <path d="M 26 26 A 3 4.5 0 0 0 32 26"/>
+      <path d="M 38 26 A 3 4.5 0 0 0 44 26"/>
+      <path d="M 50 26 A 3 4.5 0 0 0 56 26"/>
+      <path d="M 62 26 A 3 4.5 0 0 0 68 26"/>
+      <path d="M 74 26 A 3 4.5 0 0 0 80 26"/>
+    </g>
+    <!-- Top half of each ring (the visible metallic loop above the calendar) -->
+    <g fill="none" stroke="url(#ring-metal)" stroke-width="1.8" stroke-linecap="round">
+      <path d="M 26 26 A 3 4.5 0 0 1 32 26"/>
+      <path d="M 38 26 A 3 4.5 0 0 1 44 26"/>
+      <path d="M 50 26 A 3 4.5 0 0 1 56 26"/>
+      <path d="M 62 26 A 3 4.5 0 0 1 68 26"/>
+      <path d="M 74 26 A 3 4.5 0 0 1 80 26"/>
+    </g>
   </g>
 
   <!-- Date grid: 4 cols × 3 rows, gap 2, cell ~10×8 -->
