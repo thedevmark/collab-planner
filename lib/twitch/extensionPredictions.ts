@@ -29,6 +29,13 @@ export type PanelResponse =
         dayFrequency: number[];
         /** Typical session length in hours (used to size calendar event blocks). */
         avgDurationHours: number;
+        /** Per-day-of-week stream pattern. See StreamingPattern.perDay. */
+        perDay: Array<{
+          dow: number;
+          startHour: number;
+          durationHours: number;
+          confidence: "high" | "low";
+        }>;
         /** Broadcaster's Twitch profile image URL, or null if unknown. */
         broadcasterAvatar: string | null;
         /** Broadcaster's display name, or null if unknown. */
@@ -110,6 +117,7 @@ export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
       hourDistribution: pattern.hourDistribution,
       dayFrequency: pattern.dayFrequency,
       avgDurationHours: pattern.avgDurationHours,
+      perDay: pattern.perDay,
       broadcasterAvatar,
       broadcasterName,
     },

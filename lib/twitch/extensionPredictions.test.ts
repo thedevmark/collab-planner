@@ -155,3 +155,46 @@ describe("shapeConnectedPanelResponse", () => {
     });
   });
 });
+
+describe("shapeConnectedPanelResponse perDay", () => {
+  function pattern(perDay: StreamingPattern["perDay"]): StreamingPattern {
+    return {
+      friendId: 1,
+      displayName: "Test",
+      typicalDays: ["Sunday", "Monday", "Wednesday"],
+      startHours: { earliest: 15, latest: 19, median: 19 },
+      avgDurationHours: 4,
+      topGames: ["Apex Legends"],
+      confidence: "strong",
+      summary: "summary",
+      inferredWindows: [],
+      dayFrequency: [1, 1, 0, 1, 0, 0, 0],
+      hourDistribution: new Array(24).fill(0),
+      consistency: 1,
+      sampleSize: 12,
+      perDay,
+    };
+  }
+
+  it("passes perDay through to the summary", () => {
+    const result = shapeConnectedPanelResponse({
+      pattern: pattern([
+        { dow: 0, startHour: 15, durationHours: 4, confidence: "high" },
+        { dow: 1, startHour: 19, durationHours: 4, confidence: "high" },
+        { dow: 3, startHour: 19, durationHours: 4, confidence: "high" },
+      ]),
+      postedSchedule: [],
+      upcomingCollabs: [],
+      timezone: "America/New_York",
+      lastStream: null,
+    });
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.summary.perDay).toEqual([
+        { dow: 0, startHour: 15, durationHours: 4, confidence: "high" },
+        { dow: 1, startHour: 19, durationHours: 4, confidence: "high" },
+        { dow: 3, startHour: 19, durationHours: 4, confidence: "high" },
+      ]);
+    }
+  });
+});
