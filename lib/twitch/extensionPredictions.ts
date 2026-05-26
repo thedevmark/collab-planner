@@ -41,11 +41,6 @@ export type PanelResponse =
         /** Broadcaster's display name, or null if unknown. */
         broadcasterName: string | null;
       };
-      collabs: Array<{
-        startsAt: string;
-        gameName: string | null;
-        partners: Array<{ username: string; displayName: string; avatarUrl: string }>;
-      }>;
       lastStream: { startedAt: string; gameName: string | null; durationSec: number } | null;
       /** Set when the broadcaster is live right now. Panel UI takes over the hero with a LIVE state. */
       liveNow: { startedAt: string; gameName: string | null; title: string | null } | null;
@@ -59,16 +54,9 @@ interface PostedSlot {
   end: Date;
 }
 
-interface CollabInput {
-  startsAt: string;
-  gameName: string | null;
-  partners: Array<{ username: string; displayName: string; avatarUrl: string }>;
-}
-
 interface Inputs {
   pattern: StreamingPattern;
   postedSchedule: PostedSlot[];
-  upcomingCollabs: CollabInput[];
   timezone?: string;
   lastStream: { startedAt: Date; gameName: string | null; durationSec: number } | null;
   broadcasterAvatar?: string | null;
@@ -91,7 +79,7 @@ function shortenDays(longDays: string[]): string[] {
 }
 
 export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
-  const { pattern, postedSchedule, upcomingCollabs, timezone = "UTC", lastStream, broadcasterAvatar = null, broadcasterName = null, liveNow = null } = inputs;
+  const { pattern, postedSchedule, timezone = "UTC", lastStream, broadcasterAvatar = null, broadcasterName = null, liveNow = null } = inputs;
 
   if (pattern.sampleSize === 0 && postedSchedule.length === 0) {
     return { status: "no_data" };
@@ -121,7 +109,6 @@ export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
       broadcasterAvatar,
       broadcasterName,
     },
-    collabs: upcomingCollabs,
     lastStream: lastStream
       ? {
           startedAt: lastStream.startedAt.toISOString(),

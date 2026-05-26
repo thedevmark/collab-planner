@@ -94,7 +94,7 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
     return { status: "no_data" };
   }
 
-  const [history, segments, eventParticipants, helixRecent, helixLive] = await Promise.all([
+  const [history, segments, helixRecent, helixLive] = await Promise.all([
     prisma.streamHistory.findMany({
       where: { friendId: friend.id },
       orderBy: { startTime: "desc" },
@@ -104,21 +104,6 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
       where: { friendId: friend.id, startTime: { gte: new Date() } },
       orderBy: { startTime: "asc" },
       take: 25,
-    }),
-    prisma.eventParticipant.findMany({
-      where: {
-        friendId: friend.id,
-        event: { startTime: { gte: new Date() }, status: { in: ["planned", "confirmed"] } },
-      },
-      include: {
-        event: {
-          include: {
-            participants: { include: { friend: true } },
-          },
-        },
-      },
-      orderBy: { event: { startTime: "asc" } },
-      take: 5,
     }),
     // streamHistory can lag the actual broadcast cadence if the sync job is behind.
     // Pull the latest VOD from Helix in parallel so "last live" stays fresh.
@@ -141,18 +126,6 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
   }));
 
   const pattern = analyzePatterns(friend.id, friend.displayName, sessions, hints, timezone);
-
-  const collabs = eventParticipants.map((p) => ({
-    startsAt: p.event.startTime.toISOString(),
-    gameName: p.event.gameName || null,
-    partners: p.event.participants
-      .filter((pp) => pp.friendId !== friend.id)
-      .map((pp) => ({
-        username: pp.friend.username,
-        displayName: pp.friend.displayName,
-        avatarUrl: pp.friend.avatarUrl,
-      })),
-  }));
 
   // Prefer Helix latest (fresh) over our streamHistory (may lag). If both exist,
   // pick whichever started later. Try to enrich gameName by matching the Helix
@@ -193,7 +166,6 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
   return shapeConnectedPanelResponse({
     pattern,
     postedSchedule: segments.map((s) => ({ start: s.startTime, end: s.endTime })),
-    upcomingCollabs: collabs,
     timezone,
     lastStream,
     broadcasterAvatar: friend.avatarUrl || null,
@@ -332,7 +304,6 @@ async function computeUnconnectedNoCache(twitchId: string, timezone: string): Pr
   return shapeConnectedPanelResponse({
     pattern,
     postedSchedule: hints.map((h) => ({ start: h.startTime, end: h.endTime })),
-    upcomingCollabs: [],
     timezone,
     lastStream: lastSession
       ? { startedAt: lastSession.startTime, gameName: lastSession.gameName || null, durationSec: lastSession.durationSec }

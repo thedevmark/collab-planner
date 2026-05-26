@@ -66,7 +66,6 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
   }, [initialRaw]);
 
   const [tz, setTz] = useState(initial.tz);
-  const [showCollabs, setShowCollabs] = useState(initial.showCollabs);
   const [showGame, setShowGame] = useState(initial.showGame);
   const [accentColor, setAccentColor] = useState(initial.accentColor);
   const [hexInput, setHexInput] = useState(initial.accentColor);
@@ -128,7 +127,6 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
     return {
       v: 1,
       tz,
-      showCollabs,
       showGame,
       accentColor,
     };
@@ -171,16 +169,6 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
           </optgroup>
         </select>
         <small>Separate from your Collab Planner timezone.</small>
-      </label>
-
-      <label className="checkbox">
-        <input type="checkbox" checked={showCollabs} onChange={(e) => setShowCollabs(e.target.checked)} />
-        <span>Show upcoming collabs</span>
-        <span
-          className="info-tip"
-          data-tip="Lists your planned collabs (with partner names and the game) below the schedule. Pulls from Collab Planner."
-          aria-label="What does this do?"
-        >ⓘ</span>
       </label>
 
       <label className="checkbox">

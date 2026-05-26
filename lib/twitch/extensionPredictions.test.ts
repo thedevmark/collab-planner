@@ -16,6 +16,7 @@ const basePattern: StreamingPattern = {
   hourDistribution: new Array(24).fill(0.3),
   consistency: 1,
   sampleSize: 25,
+  perDay: [],
 };
 
 describe("shapeConnectedPanelResponse", () => {
@@ -23,7 +24,7 @@ describe("shapeConnectedPanelResponse", () => {
     const resp = shapeConnectedPanelResponse({
       pattern: basePattern,
       postedSchedule: [],
-      upcomingCollabs: [],
+      // upcomingCollabs removed
       timezone: "UTC",
       lastStream: null,
     });
@@ -43,7 +44,7 @@ describe("shapeConnectedPanelResponse", () => {
       postedSchedule: [
         { start: new Date("2026-05-26T20:00:00Z"), end: new Date("2026-05-26T23:00:00Z") },
       ],
-      upcomingCollabs: [],
+      // upcomingCollabs removed
       timezone: "UTC",
       lastStream: null,
     });
@@ -56,7 +57,7 @@ describe("shapeConnectedPanelResponse", () => {
     const resp = shapeConnectedPanelResponse({
       pattern: small,
       postedSchedule: [],
-      upcomingCollabs: [],
+      // upcomingCollabs removed
       timezone: "UTC",
       lastStream: null,
     });
@@ -69,7 +70,7 @@ describe("shapeConnectedPanelResponse", () => {
     const resp = shapeConnectedPanelResponse({
       pattern: est,
       postedSchedule: [],
-      upcomingCollabs: [],
+      // upcomingCollabs removed
       timezone: "UTC",
       lastStream: null,
     });
@@ -77,31 +78,12 @@ describe("shapeConnectedPanelResponse", () => {
     expect(resp.summary.isEstimate).toBe(true);
   });
 
-  it("includes collabs in the response", () => {
-    const resp = shapeConnectedPanelResponse({
-      pattern: basePattern,
-      postedSchedule: [],
-      upcomingCollabs: [
-        {
-          startsAt: "2026-05-30T20:00:00.000Z",
-          gameName: "Apex Legends",
-          partners: [{ username: "alice", displayName: "Alice", avatarUrl: "" }],
-        },
-      ],
-      timezone: "UTC",
-      lastStream: null,
-    });
-    if (resp.status !== "ok") throw new Error("expected ok");
-    expect(resp.collabs).toHaveLength(1);
-    expect(resp.collabs[0].partners[0].username).toBe("alice");
-  });
-
   it("returns no_data when sampleSize is 0 and no posted schedule", () => {
     const empty: StreamingPattern = { ...basePattern, sampleSize: 0, inferredWindows: [] };
     const resp = shapeConnectedPanelResponse({
       pattern: empty,
       postedSchedule: [],
-      upcomingCollabs: [],
+      // upcomingCollabs removed
       timezone: "UTC",
       lastStream: null,
     });
@@ -113,7 +95,7 @@ describe("shapeConnectedPanelResponse", () => {
     const resp = shapeConnectedPanelResponse({
       pattern: noGames,
       postedSchedule: [],
-      upcomingCollabs: [],
+      // upcomingCollabs removed
       timezone: "UTC",
       lastStream: null,
     });
@@ -125,7 +107,7 @@ describe("shapeConnectedPanelResponse", () => {
     const resp = shapeConnectedPanelResponse({
       pattern: basePattern,
       postedSchedule: [],
-      upcomingCollabs: [],
+      // upcomingCollabs removed
       timezone: "America/New_York",
       lastStream: null,
     });
@@ -137,7 +119,7 @@ describe("shapeConnectedPanelResponse", () => {
     const resp = shapeConnectedPanelResponse({
       pattern: basePattern,
       postedSchedule: [],
-      upcomingCollabs: [],
+      // upcomingCollabs removed
       timezone: "UTC",
       lastStream: {
         startedAt: new Date("2026-05-20T22:00:00Z"),
@@ -184,7 +166,7 @@ describe("shapeConnectedPanelResponse perDay", () => {
         { dow: 3, startHour: 19, durationHours: 4, confidence: "high" },
       ]),
       postedSchedule: [],
-      upcomingCollabs: [],
+      // upcomingCollabs removed
       timezone: "America/New_York",
       lastStream: null,
     });

@@ -21,7 +21,6 @@ describe("parseConfig", () => {
     const cfg: ExtConfigV1 = {
       v: 1,
       tz: "America/New_York",
-      showCollabs: false,
       showGame: false,
       accentColor: "#FF6600",
     };
@@ -47,10 +46,9 @@ describe("parseConfig", () => {
     expect(parseConfig(JSON.stringify({ v: 1, accentColor: "#GGGGGG" })).accentColor).toEqual(DEFAULT_CONFIG.accentColor);
   });
 
-it("coerces showCollabs / showGame to booleans", () => {
-    const raw = JSON.stringify({ v: 1, showCollabs: 0, showGame: "yes" });
+it("coerces showGame to booleans", () => {
+    const raw = JSON.stringify({ v: 1, showGame: "yes" });
     const parsed = parseConfig(raw);
-    expect(parsed.showCollabs).toBe(false);
     expect(parsed.showGame).toBe(true);
   });
 });

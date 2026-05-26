@@ -63,7 +63,6 @@ export async function GET(
   const response = shapeConnectedPanelResponse({
     pattern,
     postedSchedule: segments.map((s) => ({ start: s.startTime, end: s.endTime })),
-    upcomingCollabs: [],
     timezone,
     lastStream: null,
   });

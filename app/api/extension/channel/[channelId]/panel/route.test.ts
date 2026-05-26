@@ -128,7 +128,6 @@ describe("GET /api/extension/channel/[channelId]/panel", () => {
           broadcasterAvatar: null,
           broadcasterName: null,
         },
-        collabs: [],
         lastStream: null,
         liveNow: null,
         generatedAt: "x",
@@ -183,7 +182,6 @@ describe("GET /api/extension/channel/[channelId]/panel", () => {
         broadcasterName: null,
         // NOTE: perDay intentionally absent — this is the old shape
       },
-      collabs: [],
       lastStream: null,
       liveNow: null,
       generatedAt: new Date().toISOString(),

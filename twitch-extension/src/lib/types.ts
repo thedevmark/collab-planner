@@ -23,11 +23,6 @@ export type PanelResponse =
         broadcasterAvatar: string | null;  // Twitch profile image URL
         broadcasterName: string | null;    // Twitch display name
       };
-      collabs: Array<{
-        startsAt: string;
-        gameName: string | null;
-        partners: Array<{ username: string; displayName: string; avatarUrl: string }>;
-      }>;
       lastStream: { startedAt: string; gameName: string | null; durationSec: number } | null;
       liveNow: { startedAt: string; gameName: string | null; title: string | null } | null;
       generatedAt: string;

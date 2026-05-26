@@ -12,7 +12,6 @@
 export type ExtConfigV1 = {
   v: 1;
   tz: string;
-  showCollabs: boolean;
   showGame: boolean;
   accentColor: string;
 };
@@ -20,7 +19,6 @@ export type ExtConfigV1 = {
 export const DEFAULT_CONFIG: ExtConfigV1 = {
   v: 1,
   tz: "UTC",
-  showCollabs: true,
   showGame: true,
   accentColor: "#9146FF",
 };
@@ -68,7 +66,6 @@ export function parseConfig(content: string | null | undefined): ExtConfigV1 {
   return {
     v: 1,
     tz,
-    showCollabs: coerceBool(r.showCollabs, DEFAULT_CONFIG.showCollabs),
     showGame: coerceBool(r.showGame, DEFAULT_CONFIG.showGame),
     accentColor,
   };

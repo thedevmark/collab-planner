@@ -1,7 +1,7 @@
 {
   "name": "Schedule Forecast by Collab Planner",
-  "version": "1.1.1",
-  "description": "Surfaces this streamer's most likely upcoming live times based on broadcast history, plus any scheduled collabs they've planned.",
+  "version": "1.2.0",
+  "description": "Predicts when this streamer goes live based on their broadcast history. One thing, done well.",
   "views": {
     "panel": {
       "viewerUrl": "panel.html",

@@ -7,7 +7,6 @@ import { resolveViewerLocale, resolveViewerTimeZone, type FormatOptions } from "
 import { parseConfig, DEFAULT_CONFIG, type ExtConfigV1 } from "./lib/configSchema";
 import { pickTextColor } from "./lib/contrast";
 import { ScheduleSummary } from "./components/ScheduleSummary";
-import { CollabsList } from "./components/CollabsList";
 import { PoweredByFooter } from "./components/PoweredByFooter";
 import { Heatmap } from "./components/Heatmap";
 import { LiveNowHero } from "./components/LiveNowHero";
@@ -75,53 +74,6 @@ function Panel() {
                   title: "ranked grind to masters w/ friends",
                 }
               : null,
-          collabs:
-            previewMode === "empty"
-              ? []
-              : [
-                  {
-                    startsAt: nextDayAt(6, 18, 0),
-                    gameName: "Fortnite",
-                    partners: [
-                      {
-                        username: "koryzma",
-                        displayName: "Koryzma",
-                        avatarUrl:
-                          "https://static-cdn.jtvnw.net/jtv_user_pictures/32f841b7-5ed9-4da5-81e0-75e54fb0c36c-profile_image-300x300.png",
-                      },
-                      {
-                        username: "a1exzandra",
-                        displayName: "a1exzandra",
-                        avatarUrl:
-                          "https://static-cdn.jtvnw.net/jtv_user_pictures/90421d89-eaf5-4daa-9ed4-492a216d557f-profile_image-300x300.png",
-                      },
-                    ],
-                  },
-                  {
-                    startsAt: nextDayAt(2, 20, 0),
-                    gameName: "Phasmophobia",
-                    partners: [
-                      {
-                        username: "definitelynotmadi",
-                        displayName: "definitelynotmadi",
-                        avatarUrl:
-                          "https://static-cdn.jtvnw.net/jtv_user_pictures/650518e3-c3d6-4ca0-8391-73fb83b4c22c-profile_image-300x300.png",
-                      },
-                    ],
-                  },
-                  {
-                    startsAt: nextDayAt(4, 19, 0),
-                    gameName: null,
-                    partners: [
-                      {
-                        username: "dangerdork",
-                        displayName: "DANGERDORK",
-                        avatarUrl:
-                          "https://static-cdn.jtvnw.net/jtv_user_pictures/32aa3abd-3e67-4cb8-a81e-b48e61d68a88-profile_image-300x300.jpeg",
-                      },
-                    ],
-                  },
-                ],
           generatedAt: new Date().toISOString(),
         };
         setState({ kind: "ok", data: mock, fmt });
@@ -188,25 +140,9 @@ function Panel() {
         <ScheduleSummary summary={state.data.summary} />
       )}
       <Heatmap perDay={state.data.summary.perDay} tz={state.data.summary.tz} />
-      {config.showCollabs && (
-        <CollabsList
-          collabs={state.data.collabs}
-          format={state.fmt}
-          broadcasterName={state.data.summary.broadcasterName}
-        />
-      )}
       <PoweredByFooter campaign="panel_footer" generatedAt={state.data.generatedAt} />
     </>
   );
-}
-
-// Preview-mode helper: ISO timestamp for the next given weekday at H:MM local.
-function nextDayAt(targetDow: number, hour: number, minute: number): string {
-  const d = new Date();
-  const diff = (targetDow - d.getDay() + 7) % 7 || 7;
-  d.setDate(d.getDate() + diff);
-  d.setHours(hour, minute, 0, 0);
-  return d.toISOString();
 }
 
 const root = document.getElementById("root");
