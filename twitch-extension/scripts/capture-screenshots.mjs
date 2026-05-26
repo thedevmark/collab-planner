@@ -34,9 +34,11 @@ function renderSvgPng(svg) {
 }
 
 // ── Interface accent + orby chill background ─────────────────────────
-// Interface accent uses the broadcaster's Twitch profile color (#1D4470)
-// across all panel mockups, version chips, and slide accents.
-const INTERFACE_ACCENT = "#1D4470";
+// Sea cyan #2EC4B6 reads brighter against the dark orby bg and pops in
+// the Twitch dashboard preview. The "your Twitch color" swatch on slide
+// 2 still uses the real broadcaster blue (#1D4470) to demo personalization.
+const INTERFACE_ACCENT = "#2EC4B6";
+const TWITCH_PROFILE_BLUE = "#1D4470";
 
 // Background: purple presence halved, sea-green/cyan boosted so the
 // page feels less Twitch-purple-by-default and more your-brand.
@@ -218,10 +220,10 @@ const overviewSvg = `<?xml version="1.0" encoding="UTF-8"?>
 
   <!-- Headline on the left -->
   <text x="60" y="120" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="${INTERFACE_ACCENT}" letter-spacing="0.14em">SCHEDULE FORECAST</text>
-  <text x="60" y="220" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="800" fill="#efeff1" letter-spacing="-2">when they're</text>
-  <text x="60" y="290" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-2">next live.</text>
-  <text x="60" y="370" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">built from your real broadcast history.</text>
-  <text x="60" y="396" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">works on every channel.</text>
+  <text x="60" y="220" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="800" fill="#efeff1" letter-spacing="-2">Predicts when</text>
+  <text x="60" y="290" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-2">they go live.</text>
+  <text x="60" y="370" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">Built from your real broadcast history.</text>
+  <text x="60" y="396" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#adadb8">Works on every channel.</text>
 
   <!-- Panel showcase on the right -->
   <g transform="translate(560, 80)">
@@ -242,81 +244,168 @@ console.log("wrote screenshot-1.png");
 // First slot is the broadcaster's own Twitch profile color (the
 // auto-detected default when they click "use my Twitch color").
 const colorChips = [
-  { hex: INTERFACE_ACCENT, name: "your Twitch color" },
+  { hex: TWITCH_PROFILE_BLUE, name: "your Twitch color" },
   { hex: "#9146FF", name: "Twitch Purple" },
   { hex: "#FF6600", name: "Sunset" },
   { hex: "#2EC4B6", name: "Sea" },
   { hex: "#FF3F8C", name: "Pink" },
   { hex: "#F1C40F", name: "Gold" },
 ];
-// Simplified swatches — just the color + the hero number shown in that
-// color + the name + hex. Lets the COLOR be the focal point, not the
-// surrounding panel chrome.
-// Layout: 6 swatches × 140w + 5 gaps × 16w = 920 used → 52px margin each side
+// Mini panel mockups — show eyebrow + hero + support + mini calendar in
+// each color. Demonstrates how the chosen accent cascades through the real
+// rendered surface (minus collabs, which would dominate the swatch).
+const ACTIVE_DAYS = [1, 3, 6]; // Mon, Wed, Sat — matches the demo schedule
 const colorCardsSvg = colorChips.map((c, i) => {
   const x = i * 156;
+
+  // 7 days × 4 hour rows; cells in active columns get the swatch color
+  const cellsSvg = [0, 1, 2, 3]
+    .map((row) =>
+      [0, 1, 2, 3, 4, 5, 6]
+        .map((col) => {
+          const cx = col * 16;
+          const cy = row * 12;
+          const active = ACTIVE_DAYS.includes(col);
+          const fill = active ? c.hex : "rgba(255,255,255,0.05)";
+          const opacity = active ? 0.85 : 1;
+          return `<rect x="${cx}" y="${cy}" width="14" height="10" rx="2" fill="${fill}" fill-opacity="${opacity}"/>`;
+        })
+        .join("")
+    )
+    .join("");
+
+  // Header letters — active days highlighted in the swatch color
+  const dayLetters = ["S", "M", "T", "W", "T", "F", "S"]
+    .map((letter, col) => {
+      const cx = col * 16 + 7;
+      const fill = ACTIVE_DAYS.includes(col) ? c.hex : "#3a3a3d";
+      return `<text x="${cx}" fill="${fill}">${letter}</text>`;
+    })
+    .join("");
+
   return `<g transform="translate(${x}, 0)">
-    <rect width="140" height="220" rx="14" fill="${c.hex}" fill-opacity="0.10" stroke="${c.hex}" stroke-opacity="0.4" stroke-width="1"/>
-    <text x="70" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="800" fill="${c.hex}" letter-spacing="-0.04em" text-anchor="middle">~11<tspan font-size="20">PM</tspan></text>
-    <text x="70" y="160" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#efeff1" text-anchor="middle">${c.name}</text>
-    <text x="70" y="186" font-family="ui-monospace, Consolas, monospace" font-size="11" font-weight="500" fill="#6b6b75" text-anchor="middle">${c.hex}</text>
+    <rect width="140" height="280" rx="14" fill="${c.hex}" fill-opacity="0.08" stroke="${c.hex}" stroke-opacity="0.4" stroke-width="1"/>
+
+    <!-- Eyebrow -->
+    <text x="14" y="26" font-family="Segoe UI, Arial, sans-serif" font-size="8" font-weight="700" fill="#6b6b75" letter-spacing="0.12em">NEXT LIKELY LIVE</text>
+
+    <!-- Hero -->
+    <text x="14" y="66" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="800" fill="${c.hex}" letter-spacing="-0.04em">Tonight</text>
+
+    <!-- Support -->
+    <text x="14" y="86" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#adadb8">around <tspan fill="#efeff1" font-weight="700">7 PM</tspan></text>
+
+    <!-- Mini calendar header -->
+    <g transform="translate(14, 110)" font-family="Segoe UI, Arial, sans-serif" font-size="7" font-weight="700" letter-spacing="0.06em" text-anchor="middle">
+      ${dayLetters}
+    </g>
+
+    <!-- Mini calendar cells -->
+    <g transform="translate(14, 122)">
+      ${cellsSvg}
+    </g>
+
+    <!-- Color name + hex -->
+    <text x="70" y="232" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#efeff1" text-anchor="middle">${c.name}</text>
+    <text x="70" y="252" font-family="ui-monospace, Consolas, monospace" font-size="10" font-weight="500" fill="#6b6b75" text-anchor="middle">${c.hex}</text>
   </g>`;
 }).join("");
 const colorsSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
   <defs>${ORBY_DEFS}</defs>
   ${ORBY_BG_1024}
-  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="${INTERFACE_ACCENT}" letter-spacing="0.12em">YOUR COLOR.</text>
-  <text x="60" y="180" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="#efeff1" letter-spacing="-1.8">pick a color or pull</text>
+  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="${INTERFACE_ACCENT}" letter-spacing="0.12em">YOUR COLOR</text>
+  <text x="60" y="180" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="#efeff1" letter-spacing="-1.8">Pick a color or pull</text>
   <text x="60" y="240" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="${INTERFACE_ACCENT}" letter-spacing="-1.8">yours from Twitch.</text>
-  <text x="60" y="320" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">one click. cascades through every chip, block, button.</text>
-  <g transform="translate(52, 460)">${colorCardsSvg}</g>
+  <text x="60" y="320" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">One click. Cascades through every chip, block, button.</text>
+  <g transform="translate(44, 440)">${colorCardsSvg}</g>
 </svg>`;
 writeFileSync(path.join(outDir, "screenshot-2.png"), renderSvgPng(colorsSvg));
 console.log("wrote screenshot-2.png");
 
-// ── 3. No-signup — title top, 3 horizontal stage cards bottom ──────
-const noSignupSvg = `<?xml version="1.0" encoding="UTF-8"?>
+// ── 3. Personal intro — "hey I'm Mark, here's why this exists" ──────
+// Fetch Mark's Twitch avatar so it embeds as a data URI (resvg can't pull
+// remote URLs — needs the bytes inline).
+console.log("fetching Mark's avatar…");
+const avatarUrl =
+  "https://static-cdn.jtvnw.net/jtv_user_pictures/54c170ef-e1d0-463d-adda-922e751ef6b8-profile_image-300x300.png";
+const avatarBuf = Buffer.from(await (await fetch(avatarUrl)).arrayBuffer());
+const avatarDataUri = `data:image/png;base64,${avatarBuf.toString("base64")}`;
+
+const toolsetTools = [
+  "ForgetMeNot",
+  "Stream Scenes",
+  "ChatBox",
+  "Song Requests",
+  "Clipline",
+  "BRB Player",
+  "Death Counter",
+  "Emote Rain",
+];
+// Lay out chips in a single row, centered. Each chip ~110w + 12 gap.
+const chipW = 110;
+const chipGap = 12;
+const chipsTotalW = toolsetTools.length * chipW + (toolsetTools.length - 1) * chipGap;
+const chipsStartX = (1024 - chipsTotalW) / 2;
+const toolChipsSvg = toolsetTools
+  .map((name, i) => {
+    const x = i * (chipW + chipGap);
+    return `<g transform="translate(${x}, 0)">
+      <rect width="${chipW}" height="30" rx="6" fill="#18181b" stroke="${INTERFACE_ACCENT}" stroke-opacity="0.35" stroke-width="1"/>
+      <text x="${chipW / 2}" y="20" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#adadb8" text-anchor="middle">${name}</text>
+    </g>`;
+  })
+  .join("");
+
+const introSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
-  <defs>${ORBY_DEFS}</defs>
+  <defs>
+    ${ORBY_DEFS}
+    <clipPath id="avatar-clip">
+      <circle cx="110" cy="110" r="110"/>
+    </clipPath>
+    <filter id="avatar-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="14"/>
+      <feOffset dx="0" dy="10" result="off"/>
+      <feFlood flood-color="#000000" flood-opacity="0.55"/>
+      <feComposite in2="off" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
   ${ORBY_BG_1024}
 
-  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#2ec4b6" letter-spacing="0.12em">NO SIGNUP NEEDED</text>
-  <text x="60" y="180" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="#efeff1" letter-spacing="-1.8">works the second</text>
-  <text x="60" y="240" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="#efeff1" letter-spacing="-1.8">you install it.</text>
-  <text x="60" y="320" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#adadb8">predictions built from your channel's public broadcast history. no setup.</text>
+  <!-- Eyebrow -->
+  <text x="60" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="${INTERFACE_ACCENT}" letter-spacing="0.14em">MADE BY DEUTSCHMARK</text>
 
-  <!-- 3 horizontal stage cards across the bottom -->
-  <g transform="translate(140, 470)">
-    <g transform="translate(0, 0)">
-      <rect width="220" height="220" rx="14" fill="#18181b" stroke="#2a2a2e" stroke-width="1"/>
-      <circle cx="110" cy="80" r="36" fill="${INTERFACE_ACCENT}" fill-opacity="0.18" stroke="${INTERFACE_ACCENT}" stroke-width="1.5"/>
-      <text x="110" y="90" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="${INTERFACE_ACCENT}" text-anchor="middle">1</text>
-      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#efeff1" text-anchor="middle">install</text>
-      <text x="110" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">on your channel</text>
-      <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">from the Twitch dashboard</text>
-    </g>
-    <text x="245" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#6b6b75" text-anchor="middle">→</text>
-    <g transform="translate(272, 0)">
-      <rect width="220" height="220" rx="14" fill="#2ec4b6" fill-opacity="0.08" stroke="#2ec4b6" stroke-width="1.5"/>
-      <circle cx="110" cy="80" r="36" fill="#2ec4b6" fill-opacity="0.2" stroke="#2ec4b6" stroke-width="1.5"/>
-      <text x="110" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" fill="#2ec4b6" text-anchor="middle">✓</text>
-      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#efeff1" text-anchor="middle">panel is live</text>
-      <text x="110" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">predictions from your</text>
-      <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#adadb8" text-anchor="middle">broadcast history</text>
-    </g>
-    <text x="517" y="125" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#6b6b75" text-anchor="middle">→</text>
-    <g transform="translate(544, 0)">
-      <rect width="220" height="220" rx="14" fill="#18181b" stroke="#6b6b75" stroke-width="1" stroke-dasharray="5 5"/>
-      <circle cx="110" cy="80" r="36" fill="#18181b" stroke="#6b6b75" stroke-width="1.5"/>
-      <text x="110" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#6b6b75" text-anchor="middle">+</text>
-      <text x="110" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#adadb8" text-anchor="middle">sign in</text>
-      <text x="110" y="168" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#6b6b75" text-anchor="middle">(optional)</text>
-      <text x="110" y="188" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#6b6b75" text-anchor="middle">for collabs + sync</text>
-    </g>
+  <!-- Avatar circle (left) -->
+  <g transform="translate(60, 150)" filter="url(#avatar-shadow)">
+    <circle cx="110" cy="110" r="113" fill="none" stroke="${INTERFACE_ACCENT}" stroke-width="2" stroke-opacity="0.4"/>
+    <image href="${avatarDataUri}" x="0" y="0" width="220" height="220" clip-path="url(#avatar-clip)"/>
   </g>
+
+  <!-- Right column: name + bio + pull-quote + link -->
+  <g>
+    <text x="320" y="200" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="#efeff1" letter-spacing="-1.6">Hey, I'm Mark.</text>
+
+    <text x="320" y="252" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#adadb8">I stream. I built this because the tools I needed</text>
+    <text x="320" y="278" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#adadb8">were paywalled, subscription-locked, or designed</text>
+    <text x="320" y="304" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#adadb8">to upsell me. So I made my own. For everyone.</text>
+
+    <!-- Pull quote -->
+    <text x="320" y="380" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="${INTERFACE_ACCENT}" font-style="italic">"Free. Not free-tier free. Just free."</text>
+
+    <!-- Footer link -->
+    <text x="320" y="442" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#6b6b75" letter-spacing="0.02em">Schedule Forecast is one of 19 free tools at</text>
+    <text x="320" y="470" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" fill="#efeff1">toolset.deutschmark.online <tspan fill="${INTERFACE_ACCENT}">↗</tspan></text>
+  </g>
+
+  <!-- Eyebrow above chip row -->
+  <text x="60" y="620" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#6b6b75" letter-spacing="0.16em">ALSO IN THE TOOLSET</text>
+
+  <!-- Tool chip strip -->
+  <g transform="translate(${chipsStartX}, 645)">${toolChipsSvg}</g>
 </svg>`;
-writeFileSync(path.join(outDir, "screenshot-3.png"), renderSvgPng(noSignupSvg));
+writeFileSync(path.join(outDir, "screenshot-3.png"), renderSvgPng(introSvg));
 console.log("wrote screenshot-3.png");
 
 // ── 4. Empty / no_data states — bonus, not for dashboard ──────────────

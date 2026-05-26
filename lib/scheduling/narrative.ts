@@ -1,23 +1,33 @@
-import { useEffect, useState, type ReactNode } from "react";
-import type { PanelResponse } from "../lib/types";
-
-type Summary = Extract<PanelResponse, { status: "ok" }>["summary"];
-
-interface Props {
-  summary: Summary;
-}
+// Shared narrative builder for the streaming-pattern surface.
+//
+// Used by:
+//   - app/friends/[id]/StreamingPatternCard.tsx
+//
+// Pure data — no React, no DOM. Each renderer composes the eyebrow → hero →
+// support → secondary tiers in its own idiom (Tailwind in-app, CSS classes
+// in the extension).
+//
+// NOTE: The twitch-extension panel (twitch-extension/src/components/
+// ScheduleSummary.tsx) currently inlines an equivalent variant builder.
+// When updating the variant cases here, mirror the change there too until
+// the two surfaces share a build pipeline.
 
 const DAY_NAMES_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const DAY_NAMES_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function formatHour12(hour: number): string {
+// A typical-day stream that starts later than the median is still "going live
+// soon" — not skipped forward to the next active day. 3h covers the right half
+// of a typical start-time distribution.
+const TODAY_GRACE_HOURS = 3;
+
+export function formatHour12(hour: number): string {
   const h = ((hour % 24) + 24) % 24;
   const h12 = h % 12 || 12;
   return `${h12} ${h >= 12 ? "PM" : "AM"}`;
 }
 
-/** Comma-joined day list with an Oxford "&": ["Sun","Mon"] → "Sundays & Mondays". */
-function formatDayList(topDays: string[]): string {
+/** Comma-joined day list with "&": ["Sun","Mon"] → "Sundays & Mondays". */
+export function formatDayList(topDays: string[]): string {
   if (topDays.length === 0) return "";
   const full = topDays
     .map((d) => DAY_NAMES_FULL[DAY_NAMES_SHORT.indexOf(d)])
@@ -27,7 +37,7 @@ function formatDayList(topDays: string[]): string {
   return `${full.slice(0, -1).map((d) => `${d}s`).join(", ")} & ${full[full.length - 1]}s`;
 }
 
-function tzDisplayNames(tz: string): { short: string; long: string } {
+export function tzDisplayNames(tz: string): { short: string; long: string } {
   try {
     const now = new Date();
     const shortFmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "short" });
@@ -40,20 +50,13 @@ function tzDisplayNames(tz: string): { short: string; long: string } {
   }
 }
 
-// A typical-day stream that starts later than the median is still "going live
-// soon" — not skipped forward to the next active day. 3h covers the right half
-// of a typical start-time distribution.
-const TODAY_GRACE_HOURS = 3;
-
-/** Find the precise Date of the next likely live slot (viewer's local clock). */
-function nextLikelyLiveDate(topDays: string[], medianHour: number): Date | null {
+export function nextLikelyLiveDate(topDays: string[], medianHour: number, now: Date = new Date()): Date | null {
   if (topDays.length === 0) return null;
   const activeDows = topDays
     .map((d) => DAY_NAMES_SHORT.indexOf(d))
     .filter((i) => i !== -1);
   if (activeDows.length === 0) return null;
 
-  const now = new Date();
   const graceMs = TODAY_GRACE_HOURS * 3600_000;
   for (let i = 0; i < 14; i++) {
     const candidate = new Date(now);
@@ -65,8 +68,7 @@ function nextLikelyLiveDate(topDays: string[], medianHour: number): Date | null 
   return null;
 }
 
-/** Format hh:mm style countdown ("4h 23m", "47m", "2d 3h"). */
-function formatCountdown(target: Date | null, nowMs: number): string {
+export function formatCountdown(target: Date | null, nowMs: number): string {
   if (!target) return "";
   const diffMs = target.getTime() - nowMs;
   if (diffMs <= 0) return "any min";
@@ -79,12 +81,17 @@ function formatCountdown(target: Date | null, nowMs: number): string {
   return `${mins}m`;
 }
 
-function nextLikelyRelative(topDays: string[], medianHour: number): { dayLabel: string; fullDay: string; relative: string } | null {
+export type RelativeWindow = {
+  dayLabel: string;
+  fullDay: string;
+  relative: string;
+};
+
+export function nextLikelyRelative(topDays: string[], medianHour: number, now: Date = new Date()): RelativeWindow | null {
   if (topDays.length === 0) return null;
   const activeDows = topDays.map((d) => DAY_NAMES_SHORT.indexOf(d)).filter((i) => i !== -1);
   if (activeDows.length === 0) return null;
 
-  const now = new Date();
   const todayDow = now.getDay();
   const currentHour = now.getHours();
 
@@ -108,44 +115,66 @@ function nextLikelyRelative(topDays: string[], medianHour: number): { dayLabel: 
   return null;
 }
 
-type HeroTone = "accent" | "dim" | "live";
+export type SchedulePatternKey =
+  | "no-pattern"
+  | "imminent"
+  | "today"
+  | "tomorrow"
+  | "future";
 
-interface Variant {
+export type HeroTone = "accent" | "dim" | "live";
+
+export type ScheduleVariantData = {
+  key: SchedulePatternKey;
   eyebrow: string;
   hero: string;
-  heroTone?: HeroTone;
-  support: ReactNode;
-  secondary?: ReactNode;
-}
+  heroTone: HeroTone;
+  parts: {
+    fullDay?: string;
+    dayList?: string;
+    start?: string;
+    end?: string;
+    relative?: string;
+    tzShort: string;
+    tzLong: string;
+  };
+};
 
-function buildVariant(args: {
+export function buildScheduleVariantData(args: {
   topDays: string[];
   medianHour: number;
   avgDurationHours: number;
-  next: ReturnType<typeof nextLikelyRelative>;
-  countdown: string;
-  tzShort: string;
-  tzLong: string;
-}): Variant {
-  const { topDays, medianHour, avgDurationHours, next, countdown, tzShort, tzLong } = args;
+  tz: string;
+  now?: Date;
+  nowMs?: number;
+}): ScheduleVariantData {
+  const { topDays, medianHour, avgDurationHours, tz, now = new Date(), nowMs = Date.now() } = args;
+  const tzNames = tzDisplayNames(tz);
+  const next = nextLikelyRelative(topDays, medianHour, now);
+  const nextDate = nextLikelyLiveDate(topDays, medianHour, now);
+  const countdown = formatCountdown(nextDate, nowMs);
   const start = formatHour12(medianHour);
   const end = formatHour12(medianHour + Math.max(1, Math.round(avgDurationHours)));
-  const tz = <span className="prose-tz" title={tzLong}>{tzShort}</span>;
+  const dayList = formatDayList(topDays);
+  const baseParts = { tzShort: tzNames.short, tzLong: tzNames.long };
 
   if (!next) {
     return {
+      key: "no-pattern",
       eyebrow: "Next likely live",
       hero: "—",
       heroTone: "dim",
-      support: "No regular streaming pattern yet.",
+      parts: baseParts,
     };
   }
 
   if (next.relative === "any minute") {
     return {
+      key: "imminent",
       eyebrow: "Usually live",
       hero: "Right now",
-      support: <><strong>{next.fullDay}s</strong> · <strong>{start} to {end}</strong> {tz}</>,
+      heroTone: "accent",
+      parts: { ...baseParts, fullDay: next.fullDay, start, end },
     };
   }
 
@@ -155,66 +184,29 @@ function buildVariant(args: {
     (next.relative.startsWith("in ") && !next.relative.includes("day"))
   ) {
     return {
+      key: "today",
       eyebrow: "Tonight's stream in",
       hero: countdown || next.relative,
-      support: <>Usually <strong>{next.fullDay}s</strong> around <strong>{start}</strong> {tz}.</>,
+      heroTone: "accent",
+      parts: { ...baseParts, fullDay: next.fullDay, start },
     };
   }
 
   if (next.relative === "tomorrow") {
     return {
+      key: "tomorrow",
       eyebrow: "Next stream",
       hero: "Tomorrow",
-      support: <><strong>{next.fullDay}</strong> around <strong>{start}</strong> {tz}.</>,
-      secondary: <>Usually {formatDayList(topDays)}.</>,
+      heroTone: "accent",
+      parts: { ...baseParts, fullDay: next.fullDay, start, dayList },
     };
   }
 
   return {
+    key: "future",
     eyebrow: "Next likely live",
     hero: next.fullDay,
-    support: <><strong>{next.relative}</strong> · around <strong>{start}</strong> {tz}.</>,
-    secondary: <>Usually {formatDayList(topDays)}.</>,
+    heroTone: "accent",
+    parts: { ...baseParts, fullDay: next.fullDay, start, dayList, relative: next.relative },
   };
-}
-
-export function ScheduleSummary({ summary }: Props) {
-  const { topDays, medianHour, avgDurationHours, tz, isEstimate, hasPostedSchedule } = summary;
-  const tzNames = tzDisplayNames(tz);
-  const next = nextLikelyRelative(topDays, medianHour);
-  const nextDate = nextLikelyLiveDate(topDays, medianHour);
-
-  // Re-render once a minute so the countdown stays current
-  const [nowMs, setNowMs] = useState(Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNowMs(Date.now()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-  const countdown = formatCountdown(nextDate, nowMs);
-
-  const v = buildVariant({
-    topDays,
-    medianHour,
-    avgDurationHours,
-    next,
-    countdown,
-    tzShort: tzNames.short,
-    tzLong: tzNames.long,
-  });
-
-  const eyebrowText = isEstimate ? `${v.eyebrow} (est.)` : v.eyebrow;
-
-  return (
-    <div className="schedule">
-      <div className="schedule-eyebrow">
-        {eyebrowText}
-        {hasPostedSchedule && (
-          <span className="schedule-posted" title="Has posted Twitch schedule">●</span>
-        )}
-      </div>
-      <div className={`schedule-hero schedule-hero-${v.heroTone ?? "accent"}`}>{v.hero}</div>
-      <div className="schedule-support">{v.support}</div>
-      {v.secondary && <div className="schedule-secondary">{v.secondary}</div>}
-    </div>
-  );
 }

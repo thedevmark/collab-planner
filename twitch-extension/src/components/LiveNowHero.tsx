@@ -6,8 +6,6 @@ type LiveNow = NonNullable<OkResponse["liveNow"]>;
 
 interface Props {
   liveNow: LiveNow;
-  broadcasterAvatar: string | null;
-  broadcasterName: string | null;
 }
 
 function formatElapsed(startedAtMs: number, nowMs: number): string {
@@ -19,7 +17,7 @@ function formatElapsed(startedAtMs: number, nowMs: number): string {
   return `${mins}m`;
 }
 
-export function LiveNowHero({ liveNow, broadcasterAvatar, broadcasterName }: Props) {
+export function LiveNowHero({ liveNow }: Props) {
   const startedAtMs = new Date(liveNow.startedAt).getTime();
   const [nowMs, setNowMs] = useState(Date.now());
   useEffect(() => {
@@ -27,26 +25,27 @@ export function LiveNowHero({ liveNow, broadcasterAvatar, broadcasterName }: Pro
     return () => clearInterval(id);
   }, []);
 
+  const elapsed = formatElapsed(startedAtMs, nowMs);
+
   return (
     <div className="schedule live-hero">
-      <div className="schedule-toprow">
-        <div className="schedule-toprow-left">
-          <div className="live-tag">
-            <span className="live-dot" aria-hidden />
-            <span className="live-label">LIVE NOW</span>
-          </div>
-          <div className="live-elapsed">{formatElapsed(startedAtMs, nowMs)}</div>
-        </div>
-        {broadcasterAvatar && (
-          <div className="schedule-broadcaster">
-            <img className="schedule-avatar" src={broadcasterAvatar} alt="" loading="lazy" />
-            {broadcasterName && <div className="schedule-broadcaster-name">{broadcasterName}</div>}
-          </div>
+      <div className="schedule-eyebrow live-eyebrow">
+        <span className="live-dot" aria-hidden />
+        Live now
+      </div>
+      <div className="schedule-hero schedule-hero-live">{elapsed}</div>
+      <div className="schedule-support">
+        {liveNow.gameName ? (
+          <>Streaming <strong>{liveNow.gameName}</strong>.</>
+        ) : (
+          <>Live right now.</>
         )}
       </div>
-
-      {liveNow.gameName && <div className="live-game">{liveNow.gameName}</div>}
-      {liveNow.title && <div className="live-title" title={liveNow.title}>{liveNow.title}</div>}
+      {liveNow.title && (
+        <div className="schedule-secondary live-title" title={liveNow.title}>
+          {liveNow.title}
+        </div>
+      )}
     </div>
   );
 }

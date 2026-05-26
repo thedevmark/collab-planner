@@ -20,8 +20,8 @@ function formatHourLabel(hour: number): string {
 // Show a focused window around the typical stream — 1h padding above the
 // start, the duration itself, then 1h padding below the typical end. This
 // keeps cells tall enough to read AND keeps the calendar compact.
-const HOURS_BEFORE = 1;
-const HOURS_AFTER = 1;
+const HOURS_BEFORE = 0;
+const HOURS_AFTER = 0;
 
 export function Heatmap({ topDays, medianHour, avgDurationHours, dayFrequency }: Props) {
   if (topDays.length === 0) return null;

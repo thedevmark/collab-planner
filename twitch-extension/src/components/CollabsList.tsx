@@ -11,7 +11,7 @@ interface Props {
   broadcasterName: string | null;
 }
 
-const MAX_SHOWN = 3;
+const MAX_SHOWN = 2;
 const ART_W = 48;
 const ART_H = 64;
 const PLAN_BASE = "https://collab.deutschmark.online/plan";

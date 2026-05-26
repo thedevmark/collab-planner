@@ -10,7 +10,6 @@ import { ScheduleSummary } from "./components/ScheduleSummary";
 import { CollabsList } from "./components/CollabsList";
 import { PoweredByFooter } from "./components/PoweredByFooter";
 import { Heatmap } from "./components/Heatmap";
-import { LastLive } from "./components/LastLive";
 import { LiveNowHero } from "./components/LiveNowHero";
 import { NoDataSkeleton } from "./components/NoDataSkeleton";
 
@@ -47,18 +46,18 @@ function Panel() {
         const mock: Extract<PanelResponse, { status: "ok" }> = {
           status: "ok",
           summary: {
-            topDays: ["Sun", "Tue", "Mon"],
-            medianHour: 23, // ~7PM ET
+            topDays: ["Mon", "Wed", "Sat"],
+            medianHour: 19, // 7 PM local
             tz: "America/New_York",
             topGame: "Fortnite",
             topGames: ["Fortnite", "Just Chatting", "League of Legends"],
             isEstimate: false,
             hasPostedSchedule: true,
-            // Realistic concentrated evening pattern — peak at 22-24 UTC.
-            // Range detector stays quiet (IQR < 2h) so hero renders single time.
-            hourDistribution: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.6, 1.0, 0.8],
-            dayFrequency: [1.0, 0.8, 0.3, 0.9, 0.4, 0.3, 0.6],
-            avgDurationHours: 4,
+            // Spread evening hours: ramps up 6-8 PM, peaks 8-10, tails to midnight.
+            hourDistribution: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.4, 0.9, 1.0, 0.9, 0.6, 0.3],
+            // Mon + Wed + Sat are the regulars; everything else background noise.
+            dayFrequency: [0.2, 1.0, 0.2, 0.9, 0.3, 0.2, 0.8],
+            avgDurationHours: 5,
             broadcasterAvatar: "https://static-cdn.jtvnw.net/jtv_user_pictures/54c170ef-e1d0-463d-adda-922e751ef6b8-profile_image-300x300.png",
             broadcasterName: "thedeutschmark",
           },
@@ -95,7 +94,7 @@ function Panel() {
                   },
                   {
                     startsAt: nextDayAt(2, 20, 0),
-                    gameName: "Content Warning",
+                    gameName: "Phasmophobia",
                     partners: [
                       {
                         username: "definitelynotmadi",
@@ -179,11 +178,7 @@ function Panel() {
   return (
     <>
       {state.data.liveNow ? (
-        <LiveNowHero
-          liveNow={state.data.liveNow}
-          broadcasterAvatar={state.data.summary.broadcasterAvatar}
-          broadcasterName={state.data.summary.broadcasterName}
-        />
+        <LiveNowHero liveNow={state.data.liveNow} />
       ) : (
         <ScheduleSummary summary={state.data.summary} />
       )}
@@ -193,7 +188,6 @@ function Panel() {
         avgDurationHours={state.data.summary.avgDurationHours}
         dayFrequency={state.data.summary.dayFrequency}
       />
-      <LastLive lastStream={state.data.lastStream} />
       {config.showCollabs && (
         <CollabsList
           collabs={state.data.collabs}

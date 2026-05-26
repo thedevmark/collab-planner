@@ -9,13 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, ArrowLeft, Clock, Edit2, Check, X, Trash2, History, TrendingUp, Users2, Star, MessageSquare } from "lucide-react";
+import { RefreshCw, ArrowLeft, Clock, Edit2, Check, X, Trash2, History, Users2, Star, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
+import { StreamingPatternCard } from "./StreamingPatternCard";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // Common Twitch schedule-slot placeholder strings. Streamers often leave
 // these untouched on their schedule slots and it makes the UI look bad.
@@ -89,45 +88,22 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
       medianHour: number;
       tz: string;
       topGame: string | null;
+      topGames?: string[];
       isEstimate: boolean;
       hasPostedSchedule: boolean;
+      avgDurationHours?: number;
     };
   }>(friend ? `/api/friends/${friend.id}/pattern` : null, fetcher);
 
-  const pattern = (() => {
-    if (!patternResponse || patternResponse.status !== "ok" || !patternResponse.summary) {
-      return {
-        topDays: [] as string[],
-        typicalTime: "",
-        topGames: [] as string[],
-        avgHours: 0,
-        total: 0,
-        source: "estimated" as const,
-      };
-    }
-    const s = patternResponse.summary;
-    const h = s.medianHour % 12 || 12;
-    const typicalTime = `~${h}${s.medianHour >= 12 ? "PM" : "AM"}`;
-    const historyLen: number = friend?.streamHistory?.length ?? 0;
-    const avgHours = historyLen > 0
-      ? Math.round((friend.streamHistory.reduce((a: number, x: { durationSec: number }) => a + x.durationSec, 0) / historyLen / 3600) * 10) / 10
-      : 0;
-    const source = s.isEstimate
-      ? ("estimated" as const)
-      : s.hasPostedSchedule && historyLen >= 3
-        ? ("mixed" as const)
-        : historyLen >= 3
-          ? ("history" as const)
-          : ("schedule" as const);
-    return {
-      topDays: s.topDays.slice(0, 3),
-      typicalTime,
-      topGames: s.topGame ? [s.topGame] : [],
-      avgHours,
-      total: historyLen,
-      source,
-    };
+  const patternSummary = patternResponse?.status === "ok" ? patternResponse.summary ?? null : null;
+  const historyLen: number = friend?.streamHistory?.length ?? 0;
+  const patternSource: "estimated" | "schedule" | "history" | "mixed" = (() => {
+    if (!patternSummary || patternSummary.isEstimate) return "estimated";
+    if (patternSummary.hasPostedSchedule && historyLen >= 3) return "mixed";
+    if (historyLen >= 3) return "history";
+    return "schedule";
   })();
+  const topGamesList = patternSummary?.topGames ?? (patternSummary?.topGame ? [patternSummary.topGame] : []);
   const upcomingSegments = friend.scheduleSegments?.filter((s: any) => new Date(s.endTime) > new Date()) ?? [];
   const collabPartners = collabData?.summary?.partners ?? [];
   const collabSignals = collabData?.signals ?? [];
@@ -219,59 +195,26 @@ export default function FriendDetailPage({ params }: { params: Promise<{ id: str
       </Card>
 
       <div className="grid grid-cols-2 gap-6">
-        {/* Streaming pattern */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Streaming Pattern
-              <Badge variant={pattern.source === "estimated" ? "outline" : "success"} className="text-xs ml-auto">
-                {pattern.source === "estimated" ? "estimated" : pattern.source === "schedule" ? "from schedule" : pattern.source === "mixed" ? `${pattern.total} streams + schedule` : `${pattern.total} streams`}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {pattern.source === "estimated" ? (
-              <p className="text-sm text-muted-foreground py-2">No stream history or schedule found for this streamer yet.</p>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Typical streaming days</p>
-                  <div className="flex gap-1">
-                    {DAYS.map((d) => (
-                      <span key={d} className="text-xs px-1.5 py-0.5 rounded font-medium"
-                        style={pattern.topDays.includes(d)
-                          ? { backgroundColor: accentColor, color: "#fff" }
-                          : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }}>
-                        {d}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Usual start time</p>
-                    <p className="font-medium">{pattern.typicalTime}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Avg session</p>
-                    <p className="font-medium">{pattern.avgHours}h</p>
-                  </div>
-                </div>
-                {pattern.topGames.length > 0 && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Most played games</p>
-                    <div className="flex flex-wrap gap-1">
-                      {pattern.topGames.map((g) => (
-                        <Badge key={g} variant="outline" className="text-xs">{g}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
+        {/* Streaming pattern — eyebrow → hero → support → secondary
+            (mirrors the Twitch extension's panel surface) */}
+        <div className="space-y-3">
+          <StreamingPatternCard
+            summary={patternSummary}
+            accentColor={accentColor}
+            source={patternSource}
+            totalStreams={historyLen}
+          />
+          {topGamesList.length > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Most played games</p>
+              <div className="flex flex-wrap gap-1">
+                {topGamesList.map((g) => (
+                  <Badge key={g} variant="outline" className="text-xs">{g}</Badge>
+                ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          )}
+        </div>
 
         {/* Collab Analysis */}
         <Card>

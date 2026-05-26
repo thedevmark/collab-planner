@@ -1,23 +1,18 @@
-// Empty-state shown when the broadcaster has no analyzable history yet.
-// Mirrors the live panel's bones but with em-dashes for every metric — so the
-// surface reads as "data slot, currently empty" rather than "something broke".
+// Empty state — same eyebrow/hero/support shape as the live & schedule
+// surfaces, just with a dim em-dash hero so it reads as "intentionally blank,
+// not broken."
 
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 
 export function NoDataSkeleton() {
   return (
     <>
-      <div className="schedule skeleton">
-        <div className="schedule-toprow">
-          <div className="schedule-toprow-left">
-            <div className="schedule-label">Next likely live</div>
-            <div className="schedule-countdown skeleton-chip">—</div>
-          </div>
-        </div>
-        <div className="schedule-day">—</div>
-        <div className="schedule-hero">
-          <span className="schedule-hero-num">—</span>
-          <span className="schedule-hero-ampm">—</span>
+      <div className="schedule">
+        <div className="schedule-eyebrow">Predictions pending</div>
+        <div className="schedule-hero schedule-hero-dim">—</div>
+        <div className="schedule-support">Not enough broadcast history yet.</div>
+        <div className="schedule-secondary">
+          Once there are a few streams, this slot turns into a live-by-day forecast.
         </div>
       </div>
 
@@ -37,8 +32,6 @@ export function NoDataSkeleton() {
           </div>
         </div>
       </div>
-
-      <div className="skeleton-note">Not enough broadcast history yet.</div>
     </>
   );
 }
