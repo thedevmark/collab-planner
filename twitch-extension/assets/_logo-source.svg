@@ -74,27 +74,12 @@
     <path d="M 20 31 a 5 5 0 0 1 5 -5 h 50 a 5 5 0 0 1 5 5 v 8 h -60 z" fill="url(#cal-header)"/>
   </g>
 
-  <!-- Desk-flip-calendar binder rings: 5 metallic loops wrapping the top edge.
-       Drawn AFTER the calendar body so they sit visibly OVER the header band,
-       with the top half rising above into the badge and the bottom half
-       dropping behind the top of the calendar. -->
+  <!-- Desk-flip-calendar binder rings: two vertical capsules sticking up
+       through the calendar header. Viewed head-on so they read as solid
+       metallic loops, not perspective ellipses. -->
   <g filter="url(#ring-shadow)">
-    <!-- Bottom half of each ring (behind/inside the header band, dimmer) -->
-    <g fill="none" stroke="#1a0e2e" stroke-width="1.8" opacity="0.55" stroke-linecap="round">
-      <path d="M 26 26 A 3 4.5 0 0 0 32 26"/>
-      <path d="M 38 26 A 3 4.5 0 0 0 44 26"/>
-      <path d="M 50 26 A 3 4.5 0 0 0 56 26"/>
-      <path d="M 62 26 A 3 4.5 0 0 0 68 26"/>
-      <path d="M 74 26 A 3 4.5 0 0 0 80 26"/>
-    </g>
-    <!-- Top half of each ring (the visible metallic loop above the calendar) -->
-    <g fill="none" stroke="url(#ring-metal)" stroke-width="1.8" stroke-linecap="round">
-      <path d="M 26 26 A 3 4.5 0 0 1 32 26"/>
-      <path d="M 38 26 A 3 4.5 0 0 1 44 26"/>
-      <path d="M 50 26 A 3 4.5 0 0 1 56 26"/>
-      <path d="M 62 26 A 3 4.5 0 0 1 68 26"/>
-      <path d="M 74 26 A 3 4.5 0 0 1 80 26"/>
-    </g>
+    <rect x="32" y="14" width="5" height="14" rx="2.5" fill="url(#ring-metal)"/>
+    <rect x="63" y="14" width="5" height="14" rx="2.5" fill="url(#ring-metal)"/>
   </g>
 
   <!-- Date grid: 4 cols × 3 rows, gap 2, cell ~10×8 -->
