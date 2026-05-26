@@ -34,7 +34,7 @@ export function computeAxisRange(perDay: PerDayEntry[]): AxisRange {
   const latestEnd = Math.max(...high.map((d) => d.startHour + d.durationHours));
 
   let startHour = earliestStart - PAD_BEFORE;
-  let endHour = latestEnd + PAD_AFTER;
+  const endHour = latestEnd + PAD_AFTER;
 
   // Only enforce the minimum span for same-day schedules (endHour <= 24).
   // Past-midnight streams (endHour > 24) already represent an unusual span
