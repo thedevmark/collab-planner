@@ -50,3 +50,77 @@ describe("analyzePatterns with timezone", () => {
     expect(p.startHours.median).toBe(23);
   });
 });
+
+describe("analyzePatterns perDay", () => {
+  function makeMixedSchedule(): StreamSession[] {
+    // 4 weeks of: Sun 3pm-7pm + Mon 7pm-11pm + Wed 7pm-11pm. UTC binning.
+    // Plus a single one-off Friday 9pm stream (low confidence — only 1 session).
+    const sessions: StreamSession[] = [];
+    const sun = new Date("2026-01-04T15:00:00Z"); // Sun 3pm UTC, hour=15
+    for (let w = 0; w < 4; w++) {
+      const weekMs = w * 7 * 86_400_000;
+      // Sun 3pm
+      sessions.push({
+        startTime: new Date(sun.getTime() + weekMs),
+        endTime: new Date(sun.getTime() + weekMs + 4 * 3600_000),
+        gameName: "Apex Legends",
+        durationSec: 4 * 3600,
+      });
+      // Mon 7pm (Sun + 1 day + 4h)
+      const mon = new Date(sun.getTime() + weekMs + 86_400_000 + 4 * 3600_000);
+      sessions.push({
+        startTime: mon,
+        endTime: new Date(mon.getTime() + 4 * 3600_000),
+        gameName: "Apex Legends",
+        durationSec: 4 * 3600,
+      });
+      // Wed 7pm (Sun + 3 days + 4h)
+      const wed = new Date(sun.getTime() + weekMs + 3 * 86_400_000 + 4 * 3600_000);
+      sessions.push({
+        startTime: wed,
+        endTime: new Date(wed.getTime() + 4 * 3600_000),
+        gameName: "Apex Legends",
+        durationSec: 4 * 3600,
+      });
+    }
+    // One-off Friday 9pm in the first week only
+    const fri = new Date(sun.getTime() + 5 * 86_400_000 + 6 * 3600_000); // Fri 21:00
+    sessions.push({
+      startTime: fri,
+      endTime: new Date(fri.getTime() + 3 * 3600_000),
+      gameName: "Just Chatting",
+      durationSec: 3 * 3600,
+    });
+    return sessions;
+  }
+
+  it("returns high-confidence entries for days with N >= 3 streams", () => {
+    const p = analyzePatterns(1, "Test", makeMixedSchedule(), [], "UTC");
+    const sun = p.perDay.find((d) => d.dow === 0);
+    const mon = p.perDay.find((d) => d.dow === 1);
+    const wed = p.perDay.find((d) => d.dow === 3);
+    expect(sun).toEqual({ dow: 0, startHour: 15, durationHours: 4, confidence: "high" });
+    expect(mon).toEqual({ dow: 1, startHour: 19, durationHours: 4, confidence: "high" });
+    expect(wed).toEqual({ dow: 3, startHour: 19, durationHours: 4, confidence: "high" });
+  });
+
+  it("returns low-confidence entries for days with 1-2 streams", () => {
+    const p = analyzePatterns(1, "Test", makeMixedSchedule(), [], "UTC");
+    const fri = p.perDay.find((d) => d.dow === 5);
+    expect(fri).toEqual({ dow: 5, startHour: 21, durationHours: 3, confidence: "low" });
+  });
+
+  it("omits days with zero streams", () => {
+    const p = analyzePatterns(1, "Test", makeMixedSchedule(), [], "UTC");
+    expect(p.perDay.find((d) => d.dow === 2)).toBeUndefined(); // Tue
+    expect(p.perDay.find((d) => d.dow === 4)).toBeUndefined(); // Thu
+    expect(p.perDay.find((d) => d.dow === 6)).toBeUndefined(); // Sat
+  });
+
+  it("uses the timezone for binning", () => {
+    // Same fixture, but Tokyo (UTC+9) shifts 15:00 UTC Sun → 00:00 Mon JST
+    const p = analyzePatterns(1, "Test", makeMixedSchedule(), [], "Asia/Tokyo");
+    const monEntry = p.perDay.find((d) => d.dow === 1 && d.startHour === 0);
+    expect(monEntry?.confidence).toBe("high");
+  });
+});

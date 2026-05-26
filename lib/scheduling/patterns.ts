@@ -21,6 +21,36 @@ function partsInTz(date: Date, timeZone: string): { dayIndex: number; hour: numb
   return { dayIndex: DAY_NAME_TO_INDEX[weekday] ?? 0, hour };
 }
 
+function computePerDay(
+  sessions: StreamSession[],
+  timezone: string
+): StreamingPattern["perDay"] {
+  // Group session start hours + durations by dow.
+  const byDow = new Map<number, { hours: number[]; durations: number[] }>();
+  for (const s of sessions) {
+    const { dayIndex, hour } = partsInTz(s.startTime, timezone);
+    const durationHours = s.durationSec / 3600;
+    const bucket = byDow.get(dayIndex) ?? { hours: [], durations: [] };
+    bucket.hours.push(hour);
+    bucket.durations.push(durationHours);
+    byDow.set(dayIndex, bucket);
+  }
+
+  function median(values: number[]): number {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  }
+
+  return Array.from(byDow.entries())
+    .map(([dow, { hours, durations }]) => ({
+      dow,
+      startHour: median(hours),
+      durationHours: Math.max(1, Math.round(median(durations))),
+      confidence: (hours.length >= 3 ? "high" : "low") as "high" | "low",
+    }))
+    .sort((a, b) => a.dow - b.dow);
+}
+
 export interface StreamSession {
   startTime: Date;
   endTime: Date;
@@ -60,6 +90,17 @@ export interface StreamingPattern {
   consistency: number;
   /** Number of sessions analyzed */
   sampleSize: number;
+  /**
+   * Per-day-of-week stream pattern. One entry per dow with at least one
+   * historical stream. confidence === "high" means N >= 3 streams,
+   * "low" means 1-2 streams. Days with zero streams are omitted.
+   */
+  perDay: Array<{
+    dow: number;             // 0=Sun..6=Sat
+    startHour: number;       // 0-23, in the timezone passed to analyzePatterns
+    durationHours: number;
+    confidence: "high" | "low";
+  }>;
 }
 
 export function analyzePatterns(
@@ -148,6 +189,8 @@ function analyzeFromHistory(
     `${displayName} typically streams on ${daysStr} around ${formatHour(medianHour)} ${timezone} ` +
     `for ~${avgDurationHours}h. Most played: ${gamesStr}. (${n} streams analyzed)`;
 
+  const perDay = computePerDay(sessions, timezone);
+
   return {
     friendId,
     displayName,
@@ -162,6 +205,7 @@ function analyzeFromHistory(
     hourDistribution,
     consistency,
     sampleSize: n,
+    perDay,
   };
 }
 
@@ -222,6 +266,16 @@ function analyzeFromSchedule(
     `${displayName} has a posted schedule: ${daysStr} around ${formatHour(medianHour)} ${timezone} ` +
     `for ~${avgDurationHours}h. Games: ${gamesStr}. (from Twitch schedule)`;
 
+  // Treat each schedule hint as one "session" for perDay purposes. All
+  // schedule-derived entries are low-confidence by definition.
+  const synthetic: StreamSession[] = hints.map((h) => ({
+    startTime: h.startTime,
+    endTime: h.endTime,
+    gameName: h.gameName,
+    durationSec: Math.max(3600, (h.endTime.getTime() - h.startTime.getTime()) / 1000),
+  }));
+  const perDay = computePerDay(synthetic, timezone);
+
   return {
     friendId,
     displayName,
@@ -236,6 +290,7 @@ function analyzeFromSchedule(
     hourDistribution,
     consistency: circularStdDev(hours),
     sampleSize: hints.length,
+    perDay,
   };
 }
 
@@ -264,6 +319,7 @@ function estimatedPattern(friendId: number, displayName: string): StreamingPatte
     hourDistribution,
     consistency: 4,
     sampleSize: 0,
+    perDay: [],
   };
 }
 
