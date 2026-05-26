@@ -1,88 +1,120 @@
-// Week calendar (iOS-style) — Apple Calendar week-view aesthetic.
+// Horizontal per-day timeline. Seven rows (Sun-Sat), one strip each.
+// Stream pills sit at each day's typical start hour spanning its typical
+// duration. A vertical NOW needle drops across all rows.
+//
 // File name kept for git history; intent is "calendar," not heatmap.
 
-const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+import { useEffect, useState } from "react";
+import { computeAxisRange } from "../lib/calendarAxis";
+import type { PanelResponse } from "../lib/types";
+
+type Summary = Extract<PanelResponse, { status: "ok" }>["summary"];
 
 interface Props {
-  topDays: string[];
-  medianHour: number;
-  avgDurationHours: number;
-  dayFrequency: number[];
+  perDay: Summary["perDay"];
+  tz: string;
 }
 
-function formatHourLabel(hour: number): string {
-  const h = ((hour % 24) + 24) % 24;
-  const h12 = h % 12 || 12;
-  return `${h12}${h >= 12 ? "p" : "a"}`;
+const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+
+function fmtHour(h: number): string {
+  const hr = ((h % 24) + 24) % 24;
+  const h12 = hr % 12 || 12;
+  return `${h12}${hr >= 12 ? "p" : "a"}`;
 }
 
-// Show a focused window around the typical stream — 1h padding above the
-// start, the duration itself, then 1h padding below the typical end. This
-// keeps cells tall enough to read AND keeps the calendar compact.
-const HOURS_BEFORE = 0;
-const HOURS_AFTER = 0;
+/** Hours in the streamer's timezone, derived from a wall-clock string. */
+function nowHourInTz(tz: string): number {
+  const fmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false });
+  const parts = fmt.formatToParts(new Date());
+  const h = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+  const m = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
+  return (h === 24 ? 0 : h) + m / 60;
+}
 
-export function Heatmap({ topDays, medianHour, avgDurationHours, dayFrequency }: Props) {
-  if (topDays.length === 0) return null;
+function nowDowInTz(tz: string): number {
+  const fmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" });
+  const w = fmt.formatToParts(new Date()).find((p) => p.type === "weekday")?.value ?? "Sun";
+  return ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[w] ?? 0;
+}
 
-  const duration = Math.max(1, Math.round(avgDurationHours));
-  const visibleHours = HOURS_BEFORE + duration + HOURS_AFTER;
-  const startHourOffset = medianHour - HOURS_BEFORE;
+export function Heatmap({ perDay, tz }: Props) {
+  // Re-render every minute so the NOW needle slides.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
-  const hourRows = Array.from({ length: visibleHours }, (_, i) => {
-    return ((startHourOffset + i) % 24 + 24) % 24;
-  });
+  if (perDay.length === 0) return null;
+
+  const { startHour, endHour } = computeAxisRange(perDay);
+  const spanH = endHour - startHour;
+  const todayDow = nowDowInTz(tz);
+  const nowH = nowHourInTz(tz);
+  const nowInRange = nowH >= startHour && nowH < endHour;
+  const nowPct = nowInRange ? ((nowH - startHour) / spanH) * 100 : -1;
+
+  // Build axis tick labels every 2 hours, including the start.
+  const ticks: Array<{ hour: number; pct: number }> = [];
+  for (let h = Math.ceil(startHour / 2) * 2; h < endHour; h += 2) {
+    ticks.push({ hour: h, pct: ((h - startHour) / spanH) * 100 });
+  }
 
   return (
     <div className="weekcal">
-      <div className="weekcal-header">
-        <span className="weekcal-corner" />
-        {DAY_LETTERS.map((letter, i) => {
-          const isActive = topDays.includes(DAY_NAMES[i]);
+      <div className="weekcal-eyebrow">WEEKLY SCHEDULE</div>
+      <div className="weekcal-rows">
+        {DAY_LETTERS.map((letter, dow) => {
+          const entry = perDay.find((d) => d.dow === dow);
+          const isToday = dow === todayDow;
           return (
-            <span
-              key={i}
-              className={`weekcal-day-label ${isActive ? "weekcal-day-label-active" : ""}`}
-            >
-              {letter}
-            </span>
+            <div key={dow} className={`weekcal-row ${isToday ? "weekcal-row-today" : ""}`}>
+              <span className={`weekcal-day ${isToday ? "weekcal-day-today" : entry ? "weekcal-day-active" : "weekcal-day-empty"}`}>
+                {letter}
+              </span>
+              <div className="weekcal-strip">
+                {ticks.map((t) => (
+                  <span
+                    key={t.hour}
+                    className="weekcal-gridline"
+                    style={{ left: `${t.pct}%` }}
+                  />
+                ))}
+                {entry && (
+                  <span
+                    className={`weekcal-pill weekcal-pill-${entry.confidence}`}
+                    style={{
+                      left: `${((entry.startHour - startHour) / spanH) * 100}%`,
+                      width: `${(entry.durationHours / spanH) * 100}%`,
+                    }}
+                    title={`${fmtHour(entry.startHour)}–${fmtHour(entry.startHour + entry.durationHours)}${entry.confidence === "low" ? " (low confidence)" : ""}`}
+                  >
+                    <span className="weekcal-pill-label">
+                      {fmtHour(entry.startHour)}–{fmtHour(entry.startHour + entry.durationHours)}
+                    </span>
+                  </span>
+                )}
+              </div>
+            </div>
           );
         })}
       </div>
-
-      <div className="weekcal-body">
-        {hourRows.map((hour, rowIdx) => (
-          <div className="weekcal-row" key={rowIdx}>
-            <span className="weekcal-hour-label">{formatHourLabel(hour)}</span>
-            {DAY_NAMES.map((dayName, dayIdx) => {
-              const isActive = topDays.includes(dayName);
-              const inBlock = isActive
-                && rowIdx >= HOURS_BEFORE
-                && rowIdx < HOURS_BEFORE + duration;
-              const isFirstRow = rowIdx === HOURS_BEFORE;
-              const isLastRow = rowIdx === HOURS_BEFORE + duration - 1;
-              const opacity = isActive
-                ? Math.min(1, 0.6 + 0.4 * (dayFrequency[dayIdx] ?? 0))
-                : 1;
-              return (
-                <span
-                  key={dayIdx}
-                  className={[
-                    "weekcal-cell",
-                    inBlock ? "weekcal-cell-on" : "",
-                    inBlock && isFirstRow ? "weekcal-cell-top" : "",
-                    inBlock && isLastRow ? "weekcal-cell-bottom" : "",
-                  ].filter(Boolean).join(" ")}
-                  style={inBlock ? { opacity } : undefined}
-                  title={isActive && isFirstRow
-                    ? `${dayName} ${formatHourLabel(medianHour)} — ${duration}h`
-                    : undefined}
-                />
-              );
-            })}
-          </div>
-        ))}
+      <div className="weekcal-axis">
+        <span className="weekcal-axis-corner" />
+        <div className="weekcal-axis-track">
+          {ticks.map((t) => (
+            <span key={t.hour} className="weekcal-axis-tick" style={{ left: `${t.pct}%` }}>
+              {fmtHour(t.hour)}
+            </span>
+          ))}
+          {nowInRange && (
+            <>
+              <span className="weekcal-now-line" style={{ left: `${nowPct}%` }} />
+              <span className="weekcal-now-chip" style={{ left: `${nowPct}%` }}>NOW</span>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -187,12 +187,7 @@ function Panel() {
       ) : (
         <ScheduleSummary summary={state.data.summary} />
       )}
-      <Heatmap
-        topDays={state.data.summary.topDays}
-        medianHour={state.data.summary.medianHour}
-        avgDurationHours={state.data.summary.avgDurationHours}
-        dayFrequency={state.data.summary.dayFrequency}
-      />
+      <Heatmap perDay={state.data.summary.perDay} tz={state.data.summary.tz} />
       {config.showCollabs && (
         <CollabsList
           collabs={state.data.collabs}
