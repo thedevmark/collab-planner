@@ -91,11 +91,7 @@ export function Heatmap({ perDay, tz }: Props) {
                       width: `${(entry.durationHours / spanH) * 100}%`,
                     }}
                     title={`${fmtHour(entry.startHour)}–${fmtHour(entry.startHour + entry.durationHours)}${entry.confidence === "low" ? " (low confidence)" : ""}`}
-                  >
-                    <span className="weekcal-pill-label">
-                      {fmtHour(entry.startHour)}–{fmtHour(entry.startHour + entry.durationHours)}
-                    </span>
-                  </span>
+                  />
                 )}
               </div>
             </div>
@@ -113,7 +109,7 @@ export function Heatmap({ perDay, tz }: Props) {
           {nowInRange && (
             <>
               <span className="weekcal-now-line" style={{ left: `${nowPct}%` }} />
-              <span className="weekcal-now-chip" style={{ left: `${nowPct}%` }}>NOW</span>
+              <span className="weekcal-now-chip" style={{ left: `${nowPct}%` }} />
             </>
           )}
         </div>

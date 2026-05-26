@@ -78,8 +78,8 @@
        through the calendar header. Viewed head-on so they read as solid
        metallic loops, not perspective ellipses. -->
   <g filter="url(#ring-shadow)">
-    <rect x="32" y="14" width="5" height="14" rx="2.5" fill="url(#ring-metal)"/>
-    <rect x="63" y="14" width="5" height="14" rx="2.5" fill="url(#ring-metal)"/>
+    <rect x="32" y="17" width="5" height="14" rx="2.5" fill="url(#ring-metal)"/>
+    <rect x="63" y="17" width="5" height="14" rx="2.5" fill="url(#ring-metal)"/>
   </g>
 
   <!-- Date grid: 4 cols × 3 rows, gap 2, cell ~10×8 -->
