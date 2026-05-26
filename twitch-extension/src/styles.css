@@ -62,15 +62,25 @@ body {
   margin: 0 0 3px;
   word-spacing: -0.04em;
 }
-/* Accent-colored hero needs to stay readable against the dark panel bg
-   for ANY user-chosen accent. text-shadow gives a soft dark halo,
-   -webkit-text-stroke a hairline outline. Works for everything from
-   pale yellow to deep navy. */
+/* Accent-colored hero: solid color fill (so any user-chosen accent
+   renders correctly) but with a vertical gradient overlay + drop
+   shadow + hairline stroke so it doesn't read flat. The stroke under
+   the fill (paint-order: stroke fill) protects readability against
+   any background regardless of accent choice. */
 .schedule-hero-accent {
   color: var(--accent);
-  text-shadow: 0 0 12px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(0, 0, 0, 0.65);
-  -webkit-text-stroke: 0.4px rgba(0, 0, 0, 0.4);
-  paint-order: stroke fill;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 80%, #fff) 0%,
+    var(--accent) 55%,
+    color-mix(in srgb, var(--accent) 88%, #000) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter:
+    drop-shadow(0 1px 0 rgba(0, 0, 0, 0.45))
+    drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
 }
 .schedule-hero-dim    { color: #3a3a3d; }
 .schedule-hero-live   { color: #ff5c5c; }
