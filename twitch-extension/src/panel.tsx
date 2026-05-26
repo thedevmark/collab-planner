@@ -58,6 +58,11 @@ function Panel() {
             // Mon + Wed + Sat are the regulars; everything else background noise.
             dayFrequency: [0.2, 1.0, 0.2, 0.9, 0.3, 0.2, 0.8],
             avgDurationHours: 5,
+            perDay: [
+              { dow: 1, startHour: 19, durationHours: 5, confidence: "high" },
+              { dow: 3, startHour: 19, durationHours: 5, confidence: "high" },
+              { dow: 6, startHour: 18, durationHours: 5, confidence: "high" },
+            ],
             broadcasterAvatar: "https://static-cdn.jtvnw.net/jtv_user_pictures/54c170ef-e1d0-463d-adda-922e751ef6b8-profile_image-300x300.png",
             broadcasterName: "thedeutschmark",
           },
