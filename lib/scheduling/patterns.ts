@@ -21,14 +21,30 @@ function partsInTz(date: Date, timeZone: string): { dayIndex: number; hour: numb
   return { dayIndex: DAY_NAME_TO_INDEX[weekday] ?? 0, hour };
 }
 
+const DAY_NAME_TO_INDEX_FULL: Record<string, number> = {
+  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
+};
+
 function computePerDay(
   sessions: StreamSession[],
+  typicalDays: string[],
   timezone: string
 ): StreamingPattern["perDay"] {
+  // Only consider days the streamer is *currently* known for, derived from
+  // the recency-weighted typicalDays. This prevents stale historical days
+  // (e.g. an old W/T/F pattern) from showing up in the calendar when the
+  // streamer has since moved to Mon/Wed/Sun. The calendar should match the
+  // schedule-summary copy line for line.
+  const allowedDows = new Set(
+    typicalDays.map((d) => DAY_NAME_TO_INDEX_FULL[d]).filter((i) => i !== undefined)
+  );
+  if (allowedDows.size === 0) return [];
+
   // Group session start hours + durations by dow.
   const byDow = new Map<number, { hours: number[]; durations: number[] }>();
   for (const s of sessions) {
     const { dayIndex, hour } = partsInTz(s.startTime, timezone);
+    if (!allowedDows.has(dayIndex)) continue;
     const durationHours = s.durationSec / 3600;
     const bucket = byDow.get(dayIndex) ?? { hours: [], durations: [] };
     bucket.hours.push(hour);
@@ -189,7 +205,7 @@ function analyzeFromHistory(
     `${displayName} typically streams on ${daysStr} around ${formatHour(medianHour)} ${timezone} ` +
     `for ~${avgDurationHours}h. Most played: ${gamesStr}. (${n} streams analyzed)`;
 
-  const perDay = computePerDay(sessions, timezone);
+  const perDay = computePerDay(sessions, sortedDays.slice(0, 3), timezone);
 
   return {
     friendId,
@@ -274,7 +290,7 @@ function analyzeFromSchedule(
     gameName: h.gameName,
     durationSec: Math.max(3600, (h.endTime.getTime() - h.startTime.getTime()) / 1000),
   }));
-  const perDay = computePerDay(synthetic, timezone);
+  const perDay = computePerDay(synthetic, sortedDays.slice(0, 3), timezone);
 
   return {
     friendId,

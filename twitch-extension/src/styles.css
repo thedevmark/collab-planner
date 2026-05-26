@@ -15,7 +15,7 @@ body {
    natural heights; the footer uses margin-top: auto to push itself
    to the bottom, eliminating dead space when content is sparse. */
 #root {
-  padding: 14px;
+  padding: 10px 12px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -53,12 +53,12 @@ body {
 
 /* The hero — answer the "when" question at 44px scale */
 .schedule-hero {
-  font-size: 44px;
+  font-size: 38px;
   font-weight: 800;
   letter-spacing: -0.025em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  margin: 2px 0 8px;
+  margin: 0 0 4px;
   word-spacing: -0.04em;
 }
 .schedule-hero-accent { color: var(--accent); }
@@ -604,8 +604,8 @@ body {
 
 /* ── Week calendar — horizontal timeline layout ────────────────────── */
 .weekcal {
-  margin-top: 16px;
-  padding-top: 14px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid #2a2a2e;
   font-family: var(--font-mono, Consolas, "JetBrains Mono", monospace);
   color: #6b6b75;
@@ -616,19 +616,19 @@ body {
   color: #6b6b75;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .weekcal-rows {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 .weekcal-row {
   display: grid;
-  grid-template-columns: 18px 1fr;
-  gap: 8px;
+  grid-template-columns: 16px 1fr;
+  gap: 6px;
   align-items: center;
-  min-height: 22px;
+  min-height: 18px;
 }
 .weekcal-day {
   font-size: 11px;
@@ -646,7 +646,7 @@ body {
 }
 .weekcal-strip {
   position: relative;
-  height: 20px;
+  height: 16px;
   background: rgba(255, 255, 255, 0.02);
   border-radius: 3px;
   overflow: hidden;
@@ -693,14 +693,14 @@ body {
 }
 .weekcal-axis {
   display: grid;
-  grid-template-columns: 18px 1fr;
-  gap: 8px;
-  margin-top: 6px;
+  grid-template-columns: 16px 1fr;
+  gap: 6px;
+  margin-top: 3px;
 }
 .weekcal-axis-corner { }
 .weekcal-axis-track {
   position: relative;
-  height: 14px;
+  height: 12px;
 }
 .weekcal-axis-tick {
   position: absolute;
@@ -713,7 +713,7 @@ body {
 }
 .weekcal-now-line {
   position: absolute;
-  top: -160px; /* extends up through all 7 day rows */
+  top: -141px; /* 7 rows × 18 min-height + 6 × 2 gap + 3 axis margin = 141 */
   bottom: 0;
   width: 1.5px;
   background: #ff5266;
@@ -721,7 +721,7 @@ body {
 }
 .weekcal-now-chip {
   position: absolute;
-  top: -178px;
+  top: -157px;
   transform: translateX(-50%);
   background: #ff5266;
   color: #fff;

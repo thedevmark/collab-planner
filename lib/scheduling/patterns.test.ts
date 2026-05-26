@@ -104,16 +104,19 @@ describe("analyzePatterns perDay", () => {
     expect(wed).toEqual({ dow: 3, startHour: 19, durationHours: 4, confidence: "high" });
   });
 
-  it("returns low-confidence entries for days with 1-2 streams", () => {
+  it("filters perDay to typicalDays so non-pattern days don't render", () => {
+    // Fri has 1 stream — not in topDays (Sun/Mon/Wed are top 3), so excluded.
     const p = analyzePatterns(1, "Test", makeMixedSchedule(), [], "UTC");
-    const fri = p.perDay.find((d) => d.dow === 5);
-    expect(fri).toEqual({ dow: 5, startHour: 21, durationHours: 3, confidence: "low" });
+    expect(p.perDay.find((d) => d.dow === 5)).toBeUndefined(); // Fri excluded
+    // Sun, Mon, Wed are all present (they're in typicalDays)
+    expect(p.perDay.map((d) => d.dow).sort()).toEqual([0, 1, 3]);
   });
 
-  it("omits days with zero streams", () => {
+  it("omits days that are not in typicalDays", () => {
     const p = analyzePatterns(1, "Test", makeMixedSchedule(), [], "UTC");
     expect(p.perDay.find((d) => d.dow === 2)).toBeUndefined(); // Tue
     expect(p.perDay.find((d) => d.dow === 4)).toBeUndefined(); // Thu
+    expect(p.perDay.find((d) => d.dow === 5)).toBeUndefined(); // Fri (one-off)
     expect(p.perDay.find((d) => d.dow === 6)).toBeUndefined(); // Sat
   });
 
