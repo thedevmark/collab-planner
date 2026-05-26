@@ -602,97 +602,133 @@ body {
   vertical-align: middle;
 }
 
-/* ── Week calendar — Apple Calendar week-view aesthetic ────────────── */
+/* ── Week calendar — horizontal timeline layout ────────────────────── */
 .weekcal {
   margin-top: 16px;
   padding-top: 14px;
   border-top: 1px solid #2a2a2e;
-  font-size: 10px;
+  font-family: var(--font-mono, Consolas, "JetBrains Mono", monospace);
   color: #6b6b75;
 }
-.weekcal-header {
-  display: grid;
-  grid-template-columns: 26px repeat(7, 1fr);
-  gap: 3px;
-  margin-bottom: 4px;
-  align-items: baseline;
-}
-.weekcal-corner { width: 26px; }
-.weekcal-day-label {
-  text-align: center;
-  font-size: 11px;
+.weekcal-eyebrow {
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #3a3a3d;
+  color: #6b6b75;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  transition: color 200ms ease;
+  margin-bottom: 8px;
 }
-.weekcal-day-label-active {
-  color: var(--accent);
-}
-
-.weekcal-body {
+.weekcal-rows {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 4px;
 }
 .weekcal-row {
   display: grid;
-  grid-template-columns: 26px repeat(7, 1fr);
-  gap: 3px;
-  align-items: stretch;
-  min-height: 18px;
-}
-.weekcal-hour-label {
-  font-size: 9px;
-  font-weight: 600;
-  color: #6b6b75;
-  text-align: right;
-  padding-right: 6px;
-  letter-spacing: 0.02em;
-  align-self: center;
-  line-height: 1;
-}
-.weekcal-cell {
-  background: rgba(255, 255, 255, 0.02);
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  grid-template-columns: 18px 1fr;
+  gap: 8px;
+  align-items: center;
   min-height: 22px;
-  display: block;
 }
-.weekcal-row:first-child .weekcal-cell {
-  border-top-color: rgba(255, 255, 255, 0.08);
+.weekcal-day {
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.02em;
 }
-
-/* Stream event blocks — soft accent with subtle gradient + inner highlight */
-.weekcal-cell-on {
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.0) 60%),
-    var(--accent);
-  border-top-color: transparent !important;
+.weekcal-day-empty { color: #3a3a3d; }
+.weekcal-day-active { color: #efeff1; }
+.weekcal-day-today {
+  color: #fff;
+  background: var(--accent);
+  border-radius: 3px;
+  padding: 1px 0;
+}
+.weekcal-strip {
   position: relative;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 3px;
+  overflow: hidden;
 }
-.weekcal-cell-on::after {
-  content: "";
+.weekcal-gridline {
   position: absolute;
-  inset: 0;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  border-right: 1px solid rgba(0, 0, 0, 0.15);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.04);
   pointer-events: none;
 }
-.weekcal-cell-top {
-  border-top-left-radius: 5px;
-  border-top-right-radius: 5px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+.weekcal-pill {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  overflow: hidden;
 }
-.weekcal-cell-bottom {
-  border-bottom-left-radius: 5px;
-  border-bottom-right-radius: 5px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+.weekcal-pill-high {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0) 60%),
+    var(--accent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(0,0,0,0.3);
 }
-.weekcal-cell-top.weekcal-cell-bottom {
-  border-radius: 5px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 1px 3px rgba(0, 0, 0, 0.35);
+.weekcal-pill-low {
+  background: transparent;
+  border: 1px dashed var(--accent);
+  opacity: 0.7;
+}
+.weekcal-pill-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.4);
+}
+.weekcal-pill-low .weekcal-pill-label {
+  color: var(--accent);
+  text-shadow: none;
+}
+.weekcal-axis {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+.weekcal-axis-corner { }
+.weekcal-axis-track {
+  position: relative;
+  height: 14px;
+}
+.weekcal-axis-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 8px;
+  font-weight: 700;
+  color: #6b6b75;
+  letter-spacing: 0.04em;
+}
+.weekcal-now-line {
+  position: absolute;
+  top: -160px; /* extends up through all 7 day rows */
+  bottom: 0;
+  width: 1.5px;
+  background: #ff5266;
+  pointer-events: none;
+}
+.weekcal-now-chip {
+  position: absolute;
+  top: -178px;
+  transform: translateX(-50%);
+  background: #ff5266;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 2px 5px;
+  border-radius: 2px;
 }
 
