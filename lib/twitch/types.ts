@@ -74,6 +74,21 @@ export interface TwitchFollowedChannel {
   followed_at: string;
 }
 
+export interface TwitchStream {
+  id: string;
+  user_id: string;
+  user_login: string;
+  user_name: string;
+  game_id: string;
+  game_name: string;
+  type: "live" | "";
+  title: string;
+  viewer_count: number;
+  started_at: string;
+  language: string;
+  thumbnail_url: string;
+}
+
 export interface TwitchTokenResponse {
   access_token: string;
   refresh_token?: string;

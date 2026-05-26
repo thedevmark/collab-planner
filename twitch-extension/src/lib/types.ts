@@ -23,6 +23,7 @@ export type PanelResponse =
         partners: Array<{ username: string; displayName: string; avatarUrl: string }>;
       }>;
       lastStream: { startedAt: string; gameName: string | null; durationSec: number } | null;
+      liveNow: { startedAt: string; gameName: string | null; title: string | null } | null;
       generatedAt: string;
     }
   | { status: "warming" }

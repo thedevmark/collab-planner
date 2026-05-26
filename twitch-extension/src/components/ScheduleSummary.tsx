@@ -14,13 +14,16 @@ function clockParts(hour: number): { h: number; ampm: "AM" | "PM" } {
   return { h: hour % 12 || 12, ampm: hour >= 12 ? "PM" : "AM" };
 }
 
-function tzLongName(tz: string): string {
+function tzDisplayNames(tz: string): { short: string; long: string } {
   try {
-    const fmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "long" });
-    const parts = fmt.formatToParts(new Date());
-    return parts.find((p) => p.type === "timeZoneName")?.value ?? tz;
+    const now = new Date();
+    const shortFmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "short" });
+    const longFmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "long" });
+    const short = shortFmt.formatToParts(now).find((p) => p.type === "timeZoneName")?.value ?? tz;
+    const long = longFmt.formatToParts(now).find((p) => p.type === "timeZoneName")?.value ?? tz;
+    return { short, long };
   } catch {
-    return tz;
+    return { short: tz, long: tz };
   }
 }
 
@@ -86,7 +89,7 @@ function nextLikelyRelative(topDays: string[], medianHour: number): { dayLabel: 
 export function ScheduleSummary({ summary }: Props) {
   const { topDays, medianHour, tz, isEstimate, hasPostedSchedule, broadcasterAvatar, broadcasterName } = summary;
   const { h, ampm } = clockParts(medianHour);
-  const tzName = tzLongName(tz);
+  const tzNames = tzDisplayNames(tz);
   const next = nextLikelyRelative(topDays, medianHour);
   const nextDate = nextLikelyLiveDate(topDays, medianHour);
 
@@ -128,12 +131,10 @@ export function ScheduleSummary({ summary }: Props) {
       )}
 
       <div className="schedule-hero">
-        <span className="schedule-hero-tilde">~</span>
         <span className="schedule-hero-num">{h}</span>
         <span className="schedule-hero-ampm">{ampm}</span>
+        <span className="schedule-hero-tz" title={tzNames.long}>{tzNames.short}</span>
       </div>
-
-      <div className="schedule-sub">{tzName}</div>
     </div>
   );
 }

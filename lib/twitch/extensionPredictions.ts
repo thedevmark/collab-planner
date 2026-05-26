@@ -40,6 +40,8 @@ export type PanelResponse =
         partners: Array<{ username: string; displayName: string; avatarUrl: string }>;
       }>;
       lastStream: { startedAt: string; gameName: string | null; durationSec: number } | null;
+      /** Set when the broadcaster is live right now. Panel UI takes over the hero with a LIVE state. */
+      liveNow: { startedAt: string; gameName: string | null; title: string | null } | null;
       generatedAt: string;
     }
   | { status: "warming" }
@@ -64,6 +66,7 @@ interface Inputs {
   lastStream: { startedAt: Date; gameName: string | null; durationSec: number } | null;
   broadcasterAvatar?: string | null;
   broadcasterName?: string | null;
+  liveNow?: { startedAt: Date; gameName: string | null; title: string | null } | null;
 }
 
 /** Convert StreamingPattern's full day names (e.g. "Sunday") to short ones (e.g. "Sun"). */
@@ -81,7 +84,7 @@ function shortenDays(longDays: string[]): string[] {
 }
 
 export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
-  const { pattern, postedSchedule, upcomingCollabs, timezone = "UTC", lastStream, broadcasterAvatar = null, broadcasterName = null } = inputs;
+  const { pattern, postedSchedule, upcomingCollabs, timezone = "UTC", lastStream, broadcasterAvatar = null, broadcasterName = null, liveNow = null } = inputs;
 
   if (pattern.sampleSize === 0 && postedSchedule.length === 0) {
     return { status: "no_data" };
@@ -116,6 +119,13 @@ export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
           startedAt: lastStream.startedAt.toISOString(),
           gameName: lastStream.gameName,
           durationSec: lastStream.durationSec,
+        }
+      : null,
+    liveNow: liveNow
+      ? {
+          startedAt: liveNow.startedAt.toISOString(),
+          gameName: liveNow.gameName,
+          title: liveNow.title,
         }
       : null,
     generatedAt: new Date().toISOString(),

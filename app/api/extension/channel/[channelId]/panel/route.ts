@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { verifyExtensionJwt, ExtensionJwtError } from "@/lib/twitch/extensionJwt";
 import { shapeConnectedPanelResponse, type PanelResponse } from "@/lib/twitch/extensionPredictions";
 import { analyzePatterns, type StreamSession, type ScheduleHint } from "@/lib/scheduling/patterns";
-import { getRecentBroadcasts, getBroadcasterSchedule, parseDuration, getUserById } from "@/lib/twitch/client";
+import { getRecentBroadcasts, getBroadcasterSchedule, parseDuration, getUserById, getStreamByUserId } from "@/lib/twitch/client";
 
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -94,7 +94,7 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
     return { status: "no_data" };
   }
 
-  const [history, segments, eventParticipants, helixRecent] = await Promise.all([
+  const [history, segments, eventParticipants, helixRecent, helixLive] = await Promise.all([
     prisma.streamHistory.findMany({
       where: { friendId: friend.id },
       orderBy: { startTime: "desc" },
@@ -123,6 +123,7 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
     // streamHistory can lag the actual broadcast cadence if the sync job is behind.
     // Pull the latest VOD from Helix in parallel so "last live" stays fresh.
     getRecentBroadcasts(twitchId, 5).catch(() => []),
+    getStreamByUserId(twitchId).catch(() => null),
   ]);
 
   const sessions: StreamSession[] = history.map((s) => ({
@@ -197,6 +198,13 @@ async function buildConnectedPayload(userId: string, twitchId: string, timezone:
     lastStream,
     broadcasterAvatar: friend.avatarUrl || null,
     broadcasterName: friend.displayName || null,
+    liveNow: helixLive
+      ? {
+          startedAt: new Date(helixLive.started_at),
+          gameName: helixLive.game_name || null,
+          title: helixLive.title || null,
+        }
+      : null,
   });
 }
 
@@ -205,20 +213,32 @@ async function handleUnconnected(twitchId: string, timezone: string): Promise<Ne
   // twitchId, so mixing TZ results into one row would serve wrong values.
   // Non-UTC is rare on launch day; revisit if it becomes a perf issue.
   if (timezone !== "UTC") {
-    return json(await computeUnconnectedNoCache(twitchId, timezone));
+    const fresh = await computeUnconnectedNoCache(twitchId, timezone);
+    return json(await withLiveNow(twitchId, fresh));
   }
 
   const now = new Date();
 
-  const cached = await prisma.extensionPredictionCache.findUnique({
-    where: { twitchId },
-  });
+  const [cached, live] = await Promise.all([
+    prisma.extensionPredictionCache.findUnique({ where: { twitchId } }),
+    getStreamByUserId(twitchId).catch(() => null),
+  ]);
 
   if (cached && cached.expiresAt > now) {
     if (cached.payload === null) {
       return json({ status: "warming" });
     }
-    return json(cached.payload as PanelResponse, {
+    const payload = cached.payload as PanelResponse;
+    // Live-now is too volatile to cache for 24h — overlay a fresh value on read.
+    const withLive: PanelResponse = payload.status === "ok"
+      ? {
+          ...payload,
+          liveNow: live
+            ? { startedAt: live.started_at, gameName: live.game_name || null, title: live.title || null }
+            : null,
+        }
+      : payload;
+    return json(withLive, {
       headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=300" },
     });
   }
@@ -246,6 +266,22 @@ async function handleUnconnected(twitchId: string, timezone: string): Promise<Ne
   }));
 
   return json({ status: "warming" });
+}
+
+/**
+ * Overlay a fresh liveNow value on top of a previously-computed (possibly cached)
+ * payload. Used for unconnected channels where the rest of the payload is cached
+ * for 24h but liveNow needs to reflect the broadcaster's current state.
+ */
+async function withLiveNow(twitchId: string, payload: PanelResponse): Promise<PanelResponse> {
+  if (payload.status !== "ok") return payload;
+  const live = await getStreamByUserId(twitchId).catch(() => null);
+  return {
+    ...payload,
+    liveNow: live
+      ? { startedAt: live.started_at, gameName: live.game_name || null, title: live.title || null }
+      : null,
+  };
 }
 
 async function computeUnconnectedNoCache(twitchId: string, timezone: string): Promise<PanelResponse> {

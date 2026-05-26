@@ -65,7 +65,7 @@ body {
   border-radius: 6px;
 }
 .schedule-broadcaster-name {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: #efeff1;
   letter-spacing: 0.01em;
@@ -82,12 +82,12 @@ body {
   text-transform: uppercase;
   color: #6b6b75;
 }
+/* Neutral chip — accent reserved for the hero numeral + plan-with-me CTA */
 .schedule-countdown {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-text);
+  color: #efeff1;
+  background: #2a2a2e;
   padding: 2px 8px;
   border-radius: 10px;
   font-variant-numeric: tabular-nums;
@@ -102,7 +102,7 @@ body {
 
 /* Day name + relative countdown — the "context" line */
 .schedule-day {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: #efeff1;
   margin-top: 2px;
@@ -125,43 +125,96 @@ body {
   font-weight: 800;
   letter-spacing: -0.04em;
   font-feature-settings: "tnum" 1;
-}
-.schedule-hero-tilde {
-  font-size: 22px;
-  font-weight: 600;
-  margin-right: 2px;
-  opacity: 0.5;
-  vertical-align: 14px;
+  gap: 4px;
 }
 .schedule-hero-num {
   font-size: 56px;
 }
 .schedule-hero-ampm {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
-  margin-left: 4px;
   opacity: 0.85;
 }
-
-/* TZ sub-line */
-.schedule-sub {
-  font-size: 11px;
+.schedule-hero-tz {
+  font-size: 10px;
+  font-weight: 600;
   color: #6b6b75;
-  margin-top: 4px;
-  font-weight: 400;
+  letter-spacing: 0.08em;
+  margin-left: 6px;
+  align-self: baseline;
+  text-transform: uppercase;
+  cursor: help;
 }
 
-/* ── Collab list — header + stacked rows ────────────────────────── */
+/* ── Live now hero — replaces ScheduleSummary when the streamer is live ── */
+.live-hero { gap: 8px; }
+.live-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 12px;
+  background: rgba(231, 60, 60, 0.12);
+  border: 1px solid rgba(231, 60, 60, 0.35);
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e73c3c;
+  box-shadow: 0 0 0 0 rgba(231, 60, 60, 0.7);
+  animation: live-pulse 1.8s ease-out infinite;
+}
+@keyframes live-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(231, 60, 60, 0.7); }
+  70%  { box-shadow: 0 0 0 8px rgba(231, 60, 60, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(231, 60, 60, 0); }
+}
+.live-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #ff8a8a;
+}
+.live-elapsed {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #efeff1;
+  font-feature-settings: "tnum" 1;
+  line-height: 1;
+  margin-top: 4px;
+}
+.live-game {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: 4px;
+}
+.live-title {
+  font-size: 12px;
+  color: #adadb8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.35;
+}
+
+/* ── Collab list — the headline surface of the panel ────────────── */
 .collab-list {
-  margin-top: 18px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #2a2a2e;
 }
 .collab-list-label {
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #6b6b75;
-  margin-bottom: 8px;
+  color: #efeff1;
+  margin-bottom: 10px;
 }
 .collab-list-rows {
   list-style: none;
@@ -169,23 +222,59 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
+
+/* Row: box art on the left, when/who/game stacked on the right */
 .collab-row {
-  font-size: 12px;
-  color: #adadb8;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 10px;
+  align-items: stretch;
   line-height: 1.3;
+}
+.collab-row-art {
+  display: block;
+  border-radius: 5px;
+  overflow: hidden;
+  background: #2a2a2e;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  transition: box-shadow 120ms ease;
+}
+.collab-row-art:hover {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--accent);
+}
+.collab-row-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.collab-row-art-empty {
+  background: linear-gradient(135deg, #1f1f23, #2a2a2e);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.collab-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 .collab-row-when {
   color: #efeff1;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  font-variant-numeric: tabular-nums;
+}
+.collab-row-when-sep {
+  color: #3a3a3d;
+  font-weight: 400;
+  margin: 0 1px;
 }
 .collab-row-who {
   color: #adadb8;
+  font-size: 13px;
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
@@ -200,19 +289,36 @@ body {
   margin-right: 4px;
 }
 .collab-row-game {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: #efeff1;
+  color: #6b6b75;
+  font-size: 10px;
   font-weight: 500;
-}
-.collab-row-sep {
-  color: #3a3a3d;
+  letter-spacing: 0.01em;
 }
 .collab-list-more {
-  margin-top: 6px;
-  font-size: 11px;
+  margin-top: 4px;
+  font-size: 10px;
   color: #6b6b75;
+  padding-left: 58px;
+}
+
+/* Empty state — small, but the CTA part pops in the accent color */
+.collab-empty {
+  display: block;
+  font-size: 13px;
+  color: #6b6b75;
+  text-decoration: none;
+  padding: 2px 0;
+  line-height: 1.4;
+}
+.collab-empty-cta {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+  transition: filter 120ms ease;
+}
+.collab-empty:hover .collab-empty-cta {
+  filter: brightness(1.15);
+  text-decoration: underline;
 }
 
 /* Avatar + @username link to the partner's Twitch profile */
@@ -250,31 +356,21 @@ body {
 .collab-partner-name {
   line-height: 1;
 }
-.collab-partner-more {
-  color: #6b6b75;
-  font-size: 11px;
-  margin-left: 2px;
-}
-.collab-teaser-game {
-  color: #adadb8;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.collab-teaser-game-sep {
-  color: #3a3a3d;
-  margin: 0 2px;
-}
-.collab-teaser-game-name {
-  color: #efeff1;
-  font-weight: 500;
-}
 
 /* ── Footer — minimal, no border ────────────────────────────────── */
 .powered-by {
   margin-top: 16px;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
   font-size: 10px;
+}
+.powered-by-tick {
+  color: #3a3a3d;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  cursor: help;
 }
 .powered-by a {
   color: #6b6b75;
@@ -283,6 +379,19 @@ body {
 }
 .powered-by a:hover {
   color: #adadb8;
+}
+
+/* ── Skeleton state (no_data) — same bones, em-dash content ────── */
+.skeleton .schedule-hero { color: #3a3a3d; }
+.skeleton-chip { color: #6b6b75 !important; background: #1f1f23 !important; }
+.skeleton .schedule-day { color: #3a3a3d; }
+.skeleton .weekcal-day-label { color: #3a3a3d; }
+.skeleton-note {
+  margin-top: 16px;
+  font-size: 10px;
+  color: #6b6b75;
+  letter-spacing: 0.04em;
+  text-align: center;
 }
 
 /* ── States ───────────────────────────────────────────────────── */
@@ -586,6 +695,8 @@ body {
 /* ── Week calendar — Apple Calendar week-view aesthetic ────────────── */
 .weekcal {
   margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #2a2a2e;
   font-size: 10px;
   color: #6b6b75;
 }
@@ -675,67 +786,9 @@ body {
     0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
-/* ── Recent games — box art row ────────────────────────────────── */
-.recent-games {
-  margin-top: 18px;
-}
-.recent-games-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #6b6b75;
-  margin-bottom: 8px;
-}
-.recent-games-row {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 2px;
-}
-.recent-games-row::-webkit-scrollbar { display: none; }
-.recent-game {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 4px;
-  text-decoration: none;
-  color: #efeff1;
-  transition: transform 120ms ease;
-}
-.recent-game:hover { transform: translateY(-1px); }
-.recent-game:hover .recent-game-art-wrap { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--accent); }
-.recent-game-art-wrap {
-  display: block;
-  border-radius: 5px;
-  overflow: hidden;
-  background: #2a2a2e;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  transition: box-shadow 120ms ease;
-}
-.recent-game-art {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: opacity 200ms ease;
-}
-.recent-game-name {
-  font-size: 10px;
-  font-weight: 500;
-  color: #adadb8;
-  width: 78px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
-}
-
 /* ── Last live (previous stream info) ──────────────────────────── */
 .last-live {
   margin-top: 8px;
-  font-size: 11px;
+  font-size: 10px;
   color: #6b6b75;
 }

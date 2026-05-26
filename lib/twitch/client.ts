@@ -7,6 +7,7 @@ import type {
   TwitchChannel,
   TwitchFollower,
   TwitchFollowedChannel,
+  TwitchStream,
 } from "./types";
 
 const TWITCH_API = "https://api.twitch.tv/helix";
@@ -84,6 +85,17 @@ export async function getUsersByLogins(logins: string[]): Promise<TwitchUser[]> 
   }
 
   return users;
+}
+
+/**
+ * Returns the live stream for a user if they're currently broadcasting,
+ * or null if offline. Helix returns an empty `data` array for offline users
+ * rather than a 404.
+ */
+export async function getStreamByUserId(userId: string): Promise<TwitchStream | null> {
+  const data = await twitchFetch<{ data: TwitchStream[] }>(`/streams?user_id=${userId}`);
+  const stream = data.data?.[0];
+  return stream && stream.type === "live" ? stream : null;
 }
 
 export async function getBroadcasterSchedule(broadcasterId: string): Promise<TwitchSchedule | null> {

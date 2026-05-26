@@ -76,9 +76,9 @@
     <rect x="64" y="43"  width="10" height="8" rx="1.5"/>
     <!-- row 2 -->
     <rect x="25" y="54"  width="10" height="8" rx="1.5"/>
-    <rect x="38" y="54"  width="10" height="8" rx="1.5"/>
-    <!-- highlighted "predicted" cell at row 2, col 3 -->
-    <rect x="51" y="54"  width="10" height="8" rx="1.5" fill="url(#inset)"/>
+    <!-- highlighted "predicted" cell at row 2, col 2 -->
+    <rect x="38" y="54"  width="10" height="8" rx="1.5" fill="url(#inset)"/>
+    <rect x="51" y="54"  width="10" height="8" rx="1.5"/>
     <rect x="64" y="54"  width="10" height="8" rx="1.5"/>
     <!-- row 3 -->
     <rect x="25" y="65"  width="10" height="8" rx="1.5"/>

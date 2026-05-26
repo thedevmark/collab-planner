@@ -11,7 +11,8 @@ import { CollabsList } from "./components/CollabsList";
 import { PoweredByFooter } from "./components/PoweredByFooter";
 import { Heatmap } from "./components/Heatmap";
 import { LastLive } from "./components/LastLive";
-import { RecentGames } from "./components/RecentGames";
+import { LiveNowHero } from "./components/LiveNowHero";
+import { NoDataSkeleton } from "./components/NoDataSkeleton";
 
 const WARMING_RETRY_MS = 5_000;
 
@@ -49,8 +50,8 @@ function Panel() {
             topDays: ["Sun", "Tue", "Mon"],
             medianHour: 23, // ~7PM ET
             tz: "America/New_York",
-            topGame: "Apex Legends",
-            topGames: ["Apex Legends", "Just Chatting", "Fortnite", "League of Legends"],
+            topGame: "Fortnite",
+            topGames: ["Fortnite", "Just Chatting", "League of Legends"],
             isEstimate: false,
             hasPostedSchedule: true,
             // Realistic concentrated evening pattern — peak at 22-24 UTC.
@@ -61,31 +62,59 @@ function Panel() {
             broadcasterAvatar: "https://static-cdn.jtvnw.net/jtv_user_pictures/54c170ef-e1d0-463d-adda-922e751ef6b8-profile_image-300x300.png",
             broadcasterName: "thedeutschmark",
           },
-          lastStream: { startedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(), gameName: "Apex Legends", durationSec: 5 * 3600 },
+          lastStream: { startedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(), gameName: "Fortnite", durationSec: 5 * 3600 },
+          liveNow:
+            previewMode === "live"
+              ? {
+                  startedAt: new Date(Date.now() - 2 * 3600_000 - 14 * 60_000).toISOString(),
+                  gameName: "Fortnite",
+                  title: "ranked grind to masters w/ friends",
+                }
+              : null,
           collabs:
             previewMode === "empty"
               ? []
               : [
                   {
                     startsAt: nextDayAt(6, 18, 0),
-                    gameName: "Apex Legends",
+                    gameName: "Fortnite",
                     partners: [
-                      { username: "alice", displayName: "Alice", avatarUrl: "" },
-                      { username: "bob", displayName: "Bob", avatarUrl: "" },
+                      {
+                        username: "koryzma",
+                        displayName: "Koryzma",
+                        avatarUrl:
+                          "https://static-cdn.jtvnw.net/jtv_user_pictures/32f841b7-5ed9-4da5-81e0-75e54fb0c36c-profile_image-300x300.png",
+                      },
+                      {
+                        username: "a1exzandra",
+                        displayName: "a1exzandra",
+                        avatarUrl:
+                          "https://static-cdn.jtvnw.net/jtv_user_pictures/90421d89-eaf5-4daa-9ed4-492a216d557f-profile_image-300x300.png",
+                      },
                     ],
                   },
                   {
                     startsAt: nextDayAt(2, 20, 0),
-                    gameName: "Marvel Rivals",
-                    partners: [{ username: "carl", displayName: "Carl", avatarUrl: "" }],
+                    gameName: "Content Warning",
+                    partners: [
+                      {
+                        username: "definitelynotmadi",
+                        displayName: "definitelynotmadi",
+                        avatarUrl:
+                          "https://static-cdn.jtvnw.net/jtv_user_pictures/650518e3-c3d6-4ca0-8391-73fb83b4c22c-profile_image-300x300.png",
+                      },
+                    ],
                   },
                   {
                     startsAt: nextDayAt(4, 19, 0),
                     gameName: null,
                     partners: [
-                      { username: "dora", displayName: "Dora", avatarUrl: "" },
-                      { username: "evan", displayName: "Evan", avatarUrl: "" },
-                      { username: "fran", displayName: "Fran", avatarUrl: "" },
+                      {
+                        username: "dangerdork",
+                        displayName: "DANGERDORK",
+                        avatarUrl:
+                          "https://static-cdn.jtvnw.net/jtv_user_pictures/32aa3abd-3e67-4cb8-a81e-b48e61d68a88-profile_image-300x300.jpeg",
+                      },
                     ],
                   },
                 ],
@@ -142,24 +171,37 @@ function Panel() {
   if (state.kind === "no_data")
     return (
       <>
-        <p className="empty">No stream data yet.</p>
+        <NoDataSkeleton />
         <PoweredByFooter campaign="panel_empty" />
       </>
     );
 
   return (
     <>
-      <ScheduleSummary summary={state.data.summary} />
+      {state.data.liveNow ? (
+        <LiveNowHero
+          liveNow={state.data.liveNow}
+          broadcasterAvatar={state.data.summary.broadcasterAvatar}
+          broadcasterName={state.data.summary.broadcasterName}
+        />
+      ) : (
+        <ScheduleSummary summary={state.data.summary} />
+      )}
       <Heatmap
         topDays={state.data.summary.topDays}
         medianHour={state.data.summary.medianHour}
         avgDurationHours={state.data.summary.avgDurationHours}
         dayFrequency={state.data.summary.dayFrequency}
       />
-      {config.showGame && <RecentGames games={state.data.summary.topGames} />}
       <LastLive lastStream={state.data.lastStream} />
-      {config.showCollabs && <CollabsList collabs={state.data.collabs} format={state.fmt} />}
-      <PoweredByFooter campaign="panel_footer" />
+      {config.showCollabs && (
+        <CollabsList
+          collabs={state.data.collabs}
+          format={state.fmt}
+          broadcasterName={state.data.summary.broadcasterName}
+        />
+      )}
+      <PoweredByFooter campaign="panel_footer" generatedAt={state.data.generatedAt} />
     </>
   );
 }
