@@ -7,7 +7,8 @@ body {
   margin: 0;
   background: #18181b;
   color: #efeff1;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden; /* Hard-lock: panel must never scroll on any screen */
   display: flex;
   flex-direction: column;
 }
@@ -53,12 +54,12 @@ body {
 
 /* The hero — answer the "when" question at 44px scale */
 .schedule-hero {
-  font-size: 38px;
+  font-size: 34px;
   font-weight: 800;
   letter-spacing: -0.025em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  margin: 0 0 4px;
+  margin: 0 0 3px;
   word-spacing: -0.04em;
 }
 /* Accent-colored hero needs to stay readable against the dark panel bg
@@ -613,19 +614,19 @@ body {
 
 /* ── Week calendar — horizontal timeline layout ────────────────────── */
 .weekcal {
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: 6px;
+  padding-top: 8px;
   border-top: 1px solid #2a2a2e;
   font-family: var(--font-mono, Consolas, "JetBrains Mono", monospace);
   color: #6b6b75;
 }
 .weekcal-eyebrow {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  color: #6b6b75;
+  color: #adadb8;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .weekcal-rows {
   display: flex;
@@ -643,9 +644,10 @@ body {
   font-size: 11px;
   font-weight: 700;
   text-align: center;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
 }
-.weekcal-day-empty { color: #3a3a3d; }
+.weekcal-day-empty { color: #52525b; }
 .weekcal-day-active { color: #efeff1; }
 .weekcal-day-today {
   color: #fff;
@@ -690,25 +692,26 @@ body {
   display: grid;
   grid-template-columns: 16px 1fr;
   gap: 6px;
-  margin-top: 3px;
+  margin-top: 4px;
 }
 .weekcal-axis-corner { }
 .weekcal-axis-track {
   position: relative;
-  height: 12px;
+  height: 14px;
 }
 .weekcal-axis-tick {
   position: absolute;
   top: 0;
   transform: translateX(-50%);
-  font-size: 8px;
-  font-weight: 700;
-  color: #6b6b75;
-  letter-spacing: 0.04em;
+  font-size: 10px;
+  font-weight: 600;
+  color: #adadb8;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 .weekcal-now-line {
   position: absolute;
-  top: -141px; /* 7 rows × 18 min-height + 6 × 2 gap + 3 axis margin = 141 */
+  top: -142px; /* 7 rows × 18 min-height + 6 × 2 gap + 4 axis margin = 142 */
   bottom: 0;
   width: 1px;
   background: #ff5266;

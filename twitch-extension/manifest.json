@@ -1,6 +1,6 @@
 {
   "name": "Schedule Forecast by Collab Planner",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Predicts when this streamer goes live based on their broadcast history. One thing, done well.",
   "views": {
     "panel": {
