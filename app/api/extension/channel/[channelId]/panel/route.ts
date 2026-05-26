@@ -224,7 +224,23 @@ async function handleUnconnected(twitchId: string, timezone: string): Promise<Ne
     getStreamByUserId(twitchId).catch(() => null),
   ]);
 
-  if (cached && cached.expiresAt > now) {
+  function hasPerDay(p: unknown): boolean {
+    return (
+      typeof p === "object" &&
+      p !== null &&
+      "summary" in p &&
+      typeof (p as { summary: unknown }).summary === "object" &&
+      (p as { summary: { perDay?: unknown } }).summary !== null &&
+      Array.isArray((p as { summary: { perDay?: unknown } }).summary.perDay)
+    );
+  }
+
+  const cacheIsFresh =
+    cached &&
+    cached.expiresAt > now &&
+    (cached.payload === null /* sentinel/warming row */ || hasPerDay(cached.payload));
+
+  if (cacheIsFresh) {
     if (cached.payload === null) {
       return json({ status: "warming" });
     }

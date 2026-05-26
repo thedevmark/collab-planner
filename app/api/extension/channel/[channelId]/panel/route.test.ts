@@ -111,7 +111,28 @@ describe("GET /api/extension/channel/[channelId]/panel", () => {
     mockPrisma.profile.findUnique.mockResolvedValue(null);
     mockPrisma.extensionPredictionCache.findUnique.mockResolvedValue({
       twitchId: "12345",
-      payload: { status: "ok", predictions: [], collabs: [], generatedAt: "x" },
+      payload: {
+        status: "ok",
+        summary: {
+          topDays: [],
+          medianHour: 20,
+          tz: "UTC",
+          topGame: null,
+          topGames: [],
+          isEstimate: false,
+          hasPostedSchedule: false,
+          hourDistribution: new Array(24).fill(0),
+          dayFrequency: new Array(7).fill(0),
+          perDay: new Array(7).fill(0),
+          avgDurationHours: 2,
+          broadcasterAvatar: null,
+          broadcasterName: null,
+        },
+        collabs: [],
+        lastStream: null,
+        liveNow: null,
+        generatedAt: "x",
+      },
       computedAt: new Date(),
       expiresAt: new Date(Date.now() + 60_000),
     });
@@ -139,6 +160,52 @@ describe("GET /api/extension/channel/[channelId]/panel", () => {
     expect(res.status).toBe(204);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(res.headers.get("Access-Control-Allow-Headers")).toContain("Authorization");
+  });
+
+  it("treats cached payloads missing perDay as expired", async () => {
+    // Seed the mock with a cache row that has the OLD shape (no perDay field)
+    // but a future expiresAt — so without the shape check it would be served.
+    const futureExpiry = new Date(Date.now() + 3_600_000);
+    const oldShapePayload = {
+      status: "ok",
+      summary: {
+        topDays: ["Sun"],
+        medianHour: 19,
+        tz: "UTC",
+        topGame: null,
+        topGames: [],
+        isEstimate: false,
+        hasPostedSchedule: false,
+        hourDistribution: new Array(24).fill(0),
+        dayFrequency: new Array(7).fill(0),
+        avgDurationHours: 4,
+        broadcasterAvatar: null,
+        broadcasterName: null,
+        // NOTE: perDay intentionally absent — this is the old shape
+      },
+      collabs: [],
+      lastStream: null,
+      liveNow: null,
+      generatedAt: new Date().toISOString(),
+    };
+
+    mockPrisma.profile.findUnique.mockResolvedValue(null);
+    mockPrisma.extensionPredictionCache.findUnique.mockResolvedValue({
+      twitchId: "test-old-shape",
+      payload: oldShapePayload,
+      computedAt: new Date(),
+      expiresAt: futureExpiry,
+    });
+    mockPrisma.extensionPredictionCache.upsert.mockResolvedValue({});
+
+    const token = await makeToken("test-old-shape");
+    const req = makeReq("test-old-shape", token);
+    const res = await GET(req, { params: Promise.resolve({ channelId: "test-old-shape" }) });
+    const body = await res.json();
+
+    // A cache row without summary.perDay must NOT be served as "ok" —
+    // the route should treat it as expired and return "warming".
+    expect(body.status).toBe("warming");
   });
 });
 
