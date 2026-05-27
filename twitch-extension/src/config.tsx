@@ -87,7 +87,7 @@ function Config() {
     const previewMode = new URLSearchParams(window.location.search).get("preview");
     if (previewMode) {
       // Fake auth so the SettingsForm renders below the status strip
-      setAuthState({ channelId: "12345", clientId: "preview", token: "preview", userId: "u1" });
+      setAuthState({ channelId: "12345", clientId: "preview", token: "preview", helixToken: "", userId: "u1" });
       setConfigRaw(null);
     }
     if (previewMode === "connected") {

@@ -3,7 +3,12 @@
 export interface TwitchAuth {
   channelId: string;
   clientId: string;
+  /** Backend-bound JWT (what fetchPanel uses for our /api/extension/* endpoints). */
   token: string;
+  /** Twitch-issued JWT scoped to the channel that lets us call Helix DIRECTLY
+   *  from the panel iframe — skips a backend round-trip for volatile data like
+   *  "is the broadcaster live right now". May be empty for anonymous viewers. */
+  helixToken: string;
   userId: string;
 }
 

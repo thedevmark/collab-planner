@@ -299,7 +299,12 @@ async function computeUnconnectedNoCache(twitchId: string, timezone: string): Pr
   // catch, so any Helix failure would throw out of the background
   // compute and leave the cache stuck on the warming sentinel forever.
   const [videos, schedule, user] = await Promise.all([
-    getRecentBroadcasts(twitchId, 30).catch((err) => {
+    // Ask Helix for the MAX (100 VODs in a single page). For Partners /
+    // Prime / Turbo users with 60-day VOD retention this captures the
+    // entire window. Standard affiliates (14 days) and base users
+    // (7 days) will naturally return fewer. We want as much signal as
+    // possible — over-fetching is cheap, under-fetching loses precision.
+    getRecentBroadcasts(twitchId, 100).catch((err) => {
       console.warn(`[ext/panel] getRecentBroadcasts failed for ${twitchId}:`, err);
       return [];
     }),

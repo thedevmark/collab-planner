@@ -116,7 +116,7 @@ export function Heatmap({ perDay, tz, sampleSize, hasPostedSchedule, use24Hour =
           const isToday = dow === todayDow;
           return (
             <div key={dow} className={`weekcal-row ${isToday ? "weekcal-row-today" : ""}`}>
-              <span className={`weekcal-day ${isToday ? "weekcal-day-today" : entry ? "weekcal-day-active" : "weekcal-day-empty"}`}>
+              <span className={`weekcal-day ${isToday ? "weekcal-day-today" : ""}`}>
                 {letter}
               </span>
               <div className="weekcal-strip">

@@ -18,8 +18,8 @@ function formatElapsed(startedAtMs: number, nowMs: number): string {
   const totalMin = Math.floor(diff / 60_000);
   const hours = Math.floor(totalMin / 60);
   const mins = totalMin % 60;
-  if (hours > 0) return `${hours}h ${mins}m`;
-  return `${mins}m`;
+  const span = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  return `Live for ${span}`;
 }
 
 function nowDowInTz(tz: string): number {
@@ -86,12 +86,12 @@ const LATE_PHRASES = [
   "Catching up",
   "Off to a slow start",
 ];
-const ON_TIME_VERBS = [
-  "Streaming",
-  "Playing",
-  "Live with",
-  "Tonight:",
-  "Now playing",
+const ON_TIME_PHRASES = [
+  "Right on time",
+  "Locked in",
+  "On the air",
+  "Welcome in",
+  "Catch the show",
 ];
 
 function pickFromSeed<T>(arr: T[], seed: string): T {
@@ -101,50 +101,39 @@ function pickFromSeed<T>(arr: T[], seed: string): T {
 }
 
 function buildCopy(ctx: LiveContext, liveNow: LiveNow, name: string | null, use24Hour: boolean): LiveCopy {
-  const who = name ?? "this streamer";
-  const game = liveNow.gameName;
+  // Short eyebrows for live state — fits on one line on a 318px panel
+  // without wrap weirdness between inline fragments. Detail moves to
+  // the support sentence below.
   const seed = liveNow.startedAt;
+  const nameNode = name ? <span className="broadcaster-name">{name}</span> : null;
+  const whoSupport = nameNode ? <>{nameNode} </> : null;
 
   switch (ctx.kind) {
-    case "off_day": {
-      const phrase = pickFromSeed(OFF_DAY_PHRASES, seed);
+    case "off_day":
       return {
-        eyebrow: <>{who} is <strong>not usually live today</strong></>,
-        support: game
-          ? <>{phrase} — <strong>{game}</strong>.</>
-          : <>{phrase}.</>,
+        eyebrow: <>Live now</>,
+        support: <>{whoSupport}isn't usually on today. {pickFromSeed(OFF_DAY_PHRASES, seed)}.</>,
       };
-    }
-    case "early": {
-      const phrase = pickFromSeed(EARLY_PHRASES, seed);
+    case "early":
       return {
-        eyebrow: <>{who} is on <strong>early today</strong></>,
-        support: game
-          ? <>{phrase} — <strong>{game}</strong>.</>
-          : <>{phrase} — usually around <strong>{formatHour(ctx.usualHour, use24Hour)}</strong>.</>,
+        eyebrow: <>On early</>,
+        support: <>{whoSupport}usually starts around <strong>{formatHour(ctx.usualHour, use24Hour)}</strong>. {pickFromSeed(EARLY_PHRASES, seed)}.</>,
       };
-    }
-    case "late": {
-      const phrase = pickFromSeed(LATE_PHRASES, seed);
+    case "late":
       return {
-        eyebrow: <>{who} is <strong>running late</strong></>,
-        support: game
-          ? <>{phrase} — <strong>{game}</strong>.</>
-          : <>{phrase} — usually around <strong>{formatHour(ctx.usualHour, use24Hour)}</strong>.</>,
+        eyebrow: <>Running late</>,
+        support: <>{whoSupport}usually starts around <strong>{formatHour(ctx.usualHour, use24Hour)}</strong>. {pickFromSeed(LATE_PHRASES, seed)}.</>,
       };
-    }
-    case "on_time": {
-      const verb = pickFromSeed(ON_TIME_VERBS, seed);
+    case "on_time":
       return {
-        eyebrow: <>{who} is live <strong>right on time</strong></>,
-        support: game ? <>{verb} <strong>{game}</strong>.</> : <>Live now.</>,
+        eyebrow: <>On schedule</>,
+        support: <>{whoSupport}live right on time. {pickFromSeed(ON_TIME_PHRASES, seed)}.</>,
       };
-    }
     case "unknown":
     default:
       return {
         eyebrow: "Live now",
-        support: game ? <>Streaming <strong>{game}</strong>.</> : <>Live right now.</>,
+        support: <>Live right now.</>,
       };
   }
 }
@@ -160,7 +149,12 @@ export function LiveNowHero({ liveNow, summary, use24Hour = false }: Props) {
     <div className="schedule live-hero">
       <div className="schedule-eyebrow live-eyebrow">
         <span className="live-dot" aria-hidden />
-        {copy.eyebrow}
+        {/* Wrapping the eyebrow content in one span makes the flex
+            container see just [dot, text-block] — without it, each
+            child of the JSX fragment (text + <strong>) becomes its
+            own flex item with a 6px gap, which inserts a weird gap
+            between "is" and "not usually live today" on wrap. */}
+        <span className="live-eyebrow-text">{copy.eyebrow}</span>
       </div>
       <div className="schedule-hero schedule-hero-live">{elapsed}</div>
       <div className="schedule-support">{copy.support}</div>

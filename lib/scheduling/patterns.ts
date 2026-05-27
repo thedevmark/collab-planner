@@ -6,6 +6,25 @@ const DAY_NAME_TO_INDEX: Record<string, number> = {
   Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
 };
 
+/** Return every day-of-week (0..6) the session touches in the given tz.
+ *  A 10pm Fri → 3am Sat stream returns [5, 6] (Fri + Sat) so day-of-week
+ *  counts reflect both. Without this, the streamer who lives past
+ *  midnight invisibly stops "streaming" on the wrap day. */
+function dowsTouched(start: Date, end: Date, timeZone: string): number[] {
+  const dows = new Set<number>();
+  dows.add(partsInTz(start, timeZone).dayIndex);
+  dows.add(partsInTz(end, timeZone).dayIndex);
+  // Marathon coverage: for streams >24h, sample every 24h between to
+  // catch full days that aren't either the start day or the end day.
+  const durMs = end.getTime() - start.getTime();
+  if (durMs > 24 * 3600_000) {
+    for (let t = start.getTime() + 24 * 3600_000; t < end.getTime(); t += 24 * 3600_000) {
+      dows.add(partsInTz(new Date(t), timeZone).dayIndex);
+    }
+  }
+  return Array.from(dows);
+}
+
 function partsInTz(date: Date, timeZone: string): { dayIndex: number; hour: number; minute: number } {
   const fmt = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -163,8 +182,17 @@ function analyzeFromHistory(
 
   for (const s of sessions) {
     const weight = recencyWeight(s.startTime);
-    const { dayIndex, hour, minute } = partsInTz(s.startTime, timezone);
-    dayCounts[dayIndex] += weight;
+    const { hour, minute } = partsInTz(s.startTime, timezone);
+    // Day-of-week counts: credit every dow the stream touched, not
+    // just the start dow. A 10pm Fri → 3am Sat stream now contributes
+    // to both Fri and Sat dayCounts, which fixes the long-stream
+    // streamer who appeared to skip the wrap day.
+    for (const dow of dowsTouched(s.startTime, s.endTime, timezone)) {
+      dayCounts[dow] += weight;
+    }
+    // Hour counts + median start hour still use the START hour only —
+    // those answer "what time does the stream USUALLY START", not
+    // "what hours are touched".
     hourCounts[hour] += weight;
     startHours.push(hour);
     startMinutesOfDay.push(hour * 60 + minute);
@@ -262,8 +290,13 @@ function analyzeFromSchedule(
   const minutesOfDay: number[] = [];
   for (const h of hints) {
     const weight = h.isRecurring ? 2 : 1.2;
-    const { dayIndex, hour, minute } = partsInTz(h.startTime, timezone);
-    dayCounts[dayIndex] += weight;
+    const { hour, minute } = partsInTz(h.startTime, timezone);
+    // Same midnight-crossing logic as analyzeFromHistory — a
+    // recurring Twitch schedule slot that wraps midnight counts
+    // toward both days.
+    for (const dow of dowsTouched(h.startTime, h.endTime, timezone)) {
+      dayCounts[dow] += weight;
+    }
     hourCounts[hour] += weight;
     hours.push(hour);
     minutesOfDay.push(hour * 60 + minute);

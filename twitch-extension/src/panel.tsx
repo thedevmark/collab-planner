@@ -2,6 +2,7 @@ import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { awaitAuthorized, awaitConfiguration, type TwitchAuth } from "./lib/twitchExt";
 import { fetchPanel } from "./lib/api";
+import { fetchLiveStream } from "./lib/helix";
 import type { PanelResponse } from "./lib/types";
 import { resolveViewerLocale, resolveViewerTimeZone, type FormatOptions } from "./lib/format";
 import { parseConfig, DEFAULT_CONFIG, type ExtConfigV1 } from "./lib/configSchema";
@@ -25,6 +26,7 @@ function Panel() {
   >({ kind: "loading" });
 
   const [config, setConfig] = useState<ExtConfigV1>(DEFAULT_CONFIG);
+  const [auth, setAuth] = useState<TwitchAuth | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,16 +105,19 @@ function Panel() {
     }
 
     Promise.all([awaitAuthorized(), awaitConfiguration()])
-      .then(async ([auth, rawCfg]) => {
+      .then(async ([authResult, rawCfg]) => {
         const cfg = parseConfig(rawCfg);
         document.documentElement.style.setProperty("--accent", cfg.accentColor);
         document.documentElement.style.setProperty("--accent-text", pickTextColor(cfg.accentColor));
         setConfig(cfg);
+        // Surface auth to the live-poll effect — it needs channelId,
+        // helixToken, and clientId to hit Helix directly from the panel.
+        setAuth(authResult);
         const fmt: FormatOptions = {
           locale: resolveViewerLocale(undefined),
           timeZone: resolveViewerTimeZone(),
         };
-        return load(auth, fmt, cfg);
+        return load(authResult, fmt, cfg);
       })
       .catch((err) =>
         setState({ kind: "error", message: err instanceof Error ? err.message : "unknown" })
@@ -123,6 +128,30 @@ function Panel() {
       if (timer) clearTimeout(timer);
     };
   }, []);
+
+  // ── Live-now polling via the Helix token in the extension JWT ──
+  // Backend cache for unconnected channels is 24h; the initial payload
+  // has fresh liveNow but subsequent renders would go stale without
+  // this. Polling Helix directly from the panel keeps the LIVE
+  // indicator current within ~60s of the broadcaster going on/off air,
+  // and saves a backend round-trip per minute per viewer.
+  useEffect(() => {
+    if (!auth || !auth.helixToken || !auth.channelId) return;
+    let cancelled = false;
+    const poll = async () => {
+      const live = await fetchLiveStream(auth.channelId, auth.helixToken, auth.clientId);
+      if (cancelled) return;
+      setState((s) => {
+        if (s.kind !== "ok") return s;
+        return { ...s, data: { ...s.data, liveNow: live } };
+      });
+    };
+    const id = setInterval(poll, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [auth]);
 
   if (state.kind === "loading") return <LoadingHero />;
   if (state.kind === "warming") return <LoadingHero />;

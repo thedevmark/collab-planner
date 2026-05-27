@@ -25,6 +25,9 @@ body {
 }
 .powered-by {
   margin-top: auto !important;
+  /* Breathing room above the footer so the axis "12am" tick doesn't
+     visually crowd "as of 10:08 PM EST" below it. */
+  padding-top: 18px;
 }
 
 /* ── Next-live mini hero (top-right) ──────────────────────────────
@@ -94,6 +97,11 @@ body {
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 2px;
+  /* Defensive: ultra-long broadcaster names can't push the panel
+     past its budget. Hard-cap at 2 lines, ellipsis the rest. */
+  max-height: calc(17px * 1.2 * 2);
+  overflow: hidden;
+  word-break: break-word;
 }
 /* Broadcaster name in the eyebrow — same subtle white glow vocabulary
    as the NOW bar inside today's strip, so the two visually rhyme. */
@@ -120,16 +128,33 @@ body {
   font-variant-numeric: tabular-nums;
   margin: 0 0 4px;
   word-spacing: -0.04em;
+  /* Hero is always one line — never wrap, ellipsis if too long. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-/* Accent-colored hero: solid fill, no gradient. A subtle dark halo
-   keeps the text readable against the dark panel background for any
-   user-chosen accent (light or dark). Modern flat treatment. */
+/* Accent-colored hero: solid fill, no gradient. Subtle dark halo keeps
+   the text readable against the panel for ANY user-chosen accent (pale
+   yellow, neon green, deep navy). Stronger glow than the live hero
+   since this text is huge and needs to anchor against any background. */
 .schedule-hero-accent {
   color: var(--accent);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 0 8px rgba(0, 0, 0, 0.35);
 }
 .schedule-hero-dim    { color: #3a3a3d; }
-.schedule-hero-live   { color: #ff5c5c; }
+.schedule-hero-live {
+  /* The "Live for Xh Ym" hero uses the broadcaster's accent color so
+     it integrates with the rest of the panel instead of fighting the
+     palette with a hardcoded red. The live-dot in the eyebrow is the
+     only red signal; everything else honors the accent. Stronger halo
+     for any custom color choice. */
+  color: var(--accent);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 0 8px rgba(0, 0, 0, 0.35);
+}
 
 /* Support sentence — middle tier of the golden-ratio ramp. Sits
    between eyebrow (17) and hero (44) at ~27px. Tighter line-height to
@@ -140,6 +165,14 @@ body {
   color: #adadb8;
   line-height: 1.15;
   letter-spacing: -0.02em;
+  /* Defensive: hard cap at 2 lines + ellipsis. Even ridiculous TZ
+     names or future copy can never push the calendar off-screen. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
 }
 .schedule-support strong {
   color: #efeff1;
@@ -159,21 +192,32 @@ body {
   letter-spacing: 0.01em;
   line-height: 1.4;
   margin-top: 3px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Live now state ───────────────────────────────────────────────
-   The live-state copy carries more variable-length info (game title,
-   "early/late" qualifiers, broadcaster name in the eyebrow) than the
-   schedule states, so it can't inherit the 27px golden-ratio support
-   font without overflowing the 500px panel. Override to tighter sizes
-   that fit the actual content, plus give the support a line clamp so
-   ultra-long game names don't push the calendar off-screen. */
+   The live-state copy carries more variable-length info (broadcaster
+   name in the eyebrow, off-day phrases, "early/late" qualifiers) than
+   the schedule states, so it can't inherit the 27px golden-ratio
+   support font without overflowing the 500px panel. */
 .live-hero .schedule-eyebrow {
   font-size: 14px;
-  line-height: 1.25;
+  line-height: 1.3;
+  /* Dot anchors to the first line baseline; the rest wraps cleanly
+     below it without leaving an awkward centered gap on multi-line
+     eyebrows like "thedeutschmark is not usually live today". */
+  align-items: baseline;
+  /* The pulse ring around the live-dot would otherwise get clipped by
+     the eyebrow's overflow:hidden defense — give it breathing room. */
+  overflow: visible;
+  max-height: none;
 }
 .live-hero .schedule-hero {
-  font-size: 36px;
+  font-size: 32px;
 }
 .live-hero .schedule-support {
   font-size: 16px;
@@ -185,18 +229,49 @@ body {
   text-overflow: ellipsis;
 }
 .live-eyebrow { color: #ff8a8a; }
+/* Single flex item for the entire eyebrow sentence, so text flows
+   inline naturally (no flex-gap inserted between "is" and "<strong>"). */
+.live-eyebrow-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ── No-data skeleton ─────────────────────────────────────────────
+   Same eyebrow/hero/support shape as the live state, but the copy is
+   short status text — it can't inherit the 27px golden-ratio support
+   font without overflowing on a 318px panel. */
+.skeleton-schedule .schedule-eyebrow {
+  font-size: 13px;
+  line-height: 1.25;
+}
+.skeleton-schedule .schedule-hero {
+  font-size: 36px;
+}
+.skeleton-schedule .schedule-support {
+  font-size: 15px;
+  line-height: 1.35;
+}
+.skeleton-schedule .schedule-secondary {
+  font-size: 12px;
+  line-height: 1.35;
+}
 .live-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #ff5c5c;
-  box-shadow: 0 0 0 0 rgba(255, 92, 92, 0.7);
-  animation: live-pulse 1.8s ease-out infinite;
+  background: #d65555;
+  /* Pulse the dot's own opacity instead of an expanding box-shadow
+     ring. The ring kept getting clipped wherever an ancestor had
+     overflow: hidden, and looked bright/amateur. Opacity breathing
+     reads as a calm heartbeat that lives inside the dot itself. */
+  animation: live-pulse 2.8s ease-in-out infinite;
+  flex-shrink: 0;
+  align-self: center;
+  transform: translateY(-1px);
 }
 @keyframes live-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(255, 92, 92, 0.7); }
-  70%  { box-shadow: 0 0 0 8px rgba(255, 92, 92, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 92, 92, 0); }
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
 }
 .live-title {
   overflow: hidden;
@@ -509,7 +584,11 @@ body {
 .day-chip-active { background: var(--accent); color: var(--accent-text); }
 .cta { background: var(--accent); color: var(--accent-text); }
 .cta:hover { filter: brightness(0.88); }
-.powered-by a { color: var(--accent); }
+.powered-by a {
+  color: var(--accent);
+  /* Soft dark halo so the link stays legible regardless of accent choice. */
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
 
 /* ── Settings form (config view) ──────────────────────────────── */
 .settings-form {
@@ -805,6 +884,11 @@ body {
   border-top: 1px solid #2a2a2e;
   font-family: var(--font-mono, Consolas, "JetBrains Mono", monospace);
   color: #6b6b75;
+  /* Defensive: calendar can be compressed/hidden if everything above
+     ever blows out, instead of pushing the footer off-screen. */
+  min-height: 0;
+  flex-shrink: 1;
+  overflow: hidden;
 }
 .weekcal-eyebrow {
   font-size: 10px;
@@ -833,9 +917,8 @@ body {
   text-align: center;
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
+  color: #adadb8;
 }
-.weekcal-day-empty { color: #52525b; }
-.weekcal-day-active { color: #efeff1; }
 .weekcal-day-today {
   color: #fff;
   background: var(--accent);
@@ -896,6 +979,7 @@ body {
   grid-template-columns: 28px 1fr;
   gap: 6px;
   margin-top: 4px;
+  margin-bottom: 16px;
 }
 .weekcal-axis-corner { }
 .weekcal-axis-track {

@@ -2,15 +2,14 @@ import { describe, it, expect } from "vitest";
 import { analyzePatterns, type StreamSession } from "./patterns";
 
 describe("analyzePatterns with timezone", () => {
-  // Build a fixture: 12 sessions, all starting at 23:00 UTC on Sun/Mon/Wed.
-  // In UTC binning these are Sun/Mon/Wed at hour 23.
-  // In America/New_York (UTC-5 in winter), 23:00 UTC = 18:00 ET, still
-  // Sun/Mon/Wed at hour 18.
-  // In Asia/Tokyo (UTC+9), 23:00 UTC = 08:00 next day JST, so the days
-  // shift to Mon/Tue/Thu at hour 8.
+  // Build a fixture: 12 sessions starting 18:00 UTC on Sun/Mon/Wed, 4h
+  // each (ends 22:00 same UTC day — no midnight crossing).
+  // In UTC binning: Sun/Mon/Wed at hour 18.
+  // In America/New_York (UTC-5 in winter): 13:00 ET, still Sun/Mon/Wed.
+  // In Asia/Tokyo (UTC+9): 03:00 next day JST → Mon/Tue/Thu at hour 3.
   function makeSessions(): StreamSession[] {
     const sessions: StreamSession[] = [];
-    const baseSunday = new Date("2026-01-04T23:00:00Z"); // Sunday 23 UTC
+    const baseSunday = new Date("2026-01-04T18:00:00Z"); // Sunday 18 UTC
     for (let i = 0; i < 4; i++) {
       const weekOffset = i * 7 * 86_400_000;
       for (const dowOffset of [0, 1, 3]) { // Sun, Mon, Wed
@@ -30,24 +29,45 @@ describe("analyzePatterns with timezone", () => {
   it("bins days in America/New_York", () => {
     const p = analyzePatterns(1, "Test", makeSessions(), [], "America/New_York");
     expect(p.typicalDays.slice(0, 3).sort()).toEqual(["Monday", "Sunday", "Wednesday"]);
-    expect(p.startHours.median).toBe(18);
+    expect(p.startHours.median).toBe(13);
   });
 
   it("bins days in UTC (legacy default)", () => {
     const p = analyzePatterns(1, "Test", makeSessions(), [], "UTC");
     expect(p.typicalDays.slice(0, 3).sort()).toEqual(["Monday", "Sunday", "Wednesday"]);
-    expect(p.startHours.median).toBe(23);
+    expect(p.startHours.median).toBe(18);
   });
 
   it("shifts days when binning in Asia/Tokyo", () => {
     const p = analyzePatterns(1, "Test", makeSessions(), [], "Asia/Tokyo");
     expect(p.typicalDays.slice(0, 3).sort()).toEqual(["Monday", "Thursday", "Tuesday"]);
-    expect(p.startHours.median).toBe(8);
+    expect(p.startHours.median).toBe(3);
   });
 
   it("falls back to UTC when timezone arg is omitted", () => {
     const p = analyzePatterns(1, "Test", makeSessions(), []);
-    expect(p.startHours.median).toBe(23);
+    expect(p.startHours.median).toBe(18);
+  });
+
+  it("credits BOTH days when a session crosses midnight in the binning tz", () => {
+    // 4 weeks of 10pm Friday → 2am Saturday streams (UTC for simplicity).
+    // The streamer literally streamed both Fri and Sat hours each week,
+    // so dayCounts should credit BOTH days — without this fix, Saturday
+    // looked dead in the analyzer even though they streamed 4 hours of it.
+    const sessions: StreamSession[] = [];
+    const baseFriday = new Date("2026-01-02T22:00:00Z"); // Fri 22:00 UTC
+    for (let i = 0; i < 4; i++) {
+      const start = new Date(baseFriday.getTime() + i * 7 * 86_400_000);
+      const end = new Date(start.getTime() + 4 * 3600_000); // → Sat 02:00 UTC
+      sessions.push({ startTime: start, endTime: end, gameName: "x", durationSec: 4 * 3600 });
+    }
+    const p = analyzePatterns(1, "Test", sessions, [], "UTC");
+    // typicalDays should include BOTH Friday and Saturday despite all
+    // sessions starting on Friday.
+    expect(p.typicalDays).toContain("Friday");
+    expect(p.typicalDays).toContain("Saturday");
+    // startHours.median still tracks the START time, not the wrap.
+    expect(p.startHours.median).toBe(22);
   });
 });
 

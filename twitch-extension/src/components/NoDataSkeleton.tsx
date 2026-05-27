@@ -10,15 +10,11 @@ const DAY_LETTERS = ["Sun", "Mon", "Tue", "Wed", "Th", "Fri", "Sat"];
 export function NoDataSkeleton() {
   return (
     <>
-      <div className="schedule">
+      <div className="schedule skeleton-schedule">
         <div className="schedule-eyebrow">Forecast warming up</div>
         <div className="schedule-hero schedule-hero-dim">—</div>
-        <div className="schedule-support">
-          Crunching broadcast history. Try refreshing in a minute.
-        </div>
-        <div className="schedule-secondary">
-          Predictions appear automatically once there are 3+ recent streams to learn from.
-        </div>
+        <div className="schedule-support">Crunching broadcast history.</div>
+        <div className="schedule-secondary">Refresh in a minute.</div>
       </div>
 
       <div className="weekcal skeleton">
