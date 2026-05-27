@@ -249,8 +249,29 @@ async function handleUnconnected(twitchId: string, timezone: string): Promise<Ne
 
   // Fire-and-forget. We deliberately do not await — the viewer gets "warming"
   // immediately and the next request (after ~5s retry) gets the cached payload.
-  after(() => computeAndCacheUnconnected(twitchId, timezone).catch((err) => {
+  // If the bg compute throws (Helix down, DB hiccup, etc.) we write a short-TTL
+  // no_data row so the panel doesn't spin on the warming sentinel forever.
+  after(() => computeAndCacheUnconnected(twitchId, timezone).catch(async (err) => {
     console.error(`[ext/panel] background analysis failed for ${twitchId}:`, err);
+    try {
+      const errNow = new Date();
+      await prisma.extensionPredictionCache.upsert({
+        where: { twitchId },
+        create: {
+          twitchId,
+          payload: { status: "no_data" } as unknown as Prisma.InputJsonValue,
+          computedAt: errNow,
+          expiresAt: new Date(errNow.getTime() + 5 * 60_000), // 5-min error cache
+        },
+        update: {
+          payload: { status: "no_data" } as unknown as Prisma.InputJsonValue,
+          computedAt: errNow,
+          expiresAt: new Date(errNow.getTime() + 5 * 60_000),
+        },
+      });
+    } catch (cacheErr) {
+      console.error(`[ext/panel] failed to write error sentinel for ${twitchId}:`, cacheErr);
+    }
   }));
 
   return json({ status: "warming" });
@@ -273,8 +294,15 @@ async function withLiveNow(twitchId: string, payload: PanelResponse): Promise<Pa
 }
 
 async function computeUnconnectedNoCache(twitchId: string, timezone: string): Promise<PanelResponse> {
+  // Helix calls are best-effort — a single network blip or rate-limit
+  // shouldn't break the panel. Previously `getRecentBroadcasts` had no
+  // catch, so any Helix failure would throw out of the background
+  // compute and leave the cache stuck on the warming sentinel forever.
   const [videos, schedule, user] = await Promise.all([
-    getRecentBroadcasts(twitchId, 30),
+    getRecentBroadcasts(twitchId, 30).catch((err) => {
+      console.warn(`[ext/panel] getRecentBroadcasts failed for ${twitchId}:`, err);
+      return [];
+    }),
     getBroadcasterSchedule(twitchId).catch(() => null),
     getUserById(twitchId).catch(() => null),
   ]);

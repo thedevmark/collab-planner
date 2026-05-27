@@ -9,7 +9,11 @@ export class ExtensionJwtError extends Error {
 
 export interface ExtensionJwtClaims {
   channel_id: string;
-  user_id: string;
+  /** Only present when the viewer has clicked "Grant Permission" to
+   *  share their Twitch identity with the extension. Anonymous viewers
+   *  (the default for everyone visiting friend channels) have no
+   *  user_id — use opaque_user_id instead for any per-viewer logic. */
+  user_id: string | null;
   role: "broadcaster" | "moderator" | "viewer" | "external";
   exp: number;
   iat?: number;
@@ -48,11 +52,16 @@ export async function verifyExtensionJwt(
   }
 
   const channelId = String(payload.channel_id ?? "");
-  const userId = String(payload.user_id ?? "");
+  // Only channel_id and role are universally present. user_id is
+  // optional — anonymous viewers (most Twitch viewers, who never click
+  // "Grant Permission") legitimately have no user_id, only opaque_user_id.
+  // Requiring it here was rejecting every anonymous viewer with a 401,
+  // which is why friends couldn't see the panel.
+  const userId = payload.user_id != null ? String(payload.user_id) : null;
   const role = String(payload.role ?? "");
 
-  if (!channelId || !userId || !role) {
-    throw new ExtensionJwtError("missing required claims");
+  if (!channelId || !role) {
+    throw new ExtensionJwtError("missing required claims (channel_id or role)");
   }
 
   if (opts.expectChannelId && opts.expectChannelId !== channelId) {

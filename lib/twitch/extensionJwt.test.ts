@@ -27,6 +27,23 @@ describe("verifyExtensionJwt", () => {
     expect(claims.role).toBe("viewer");
   });
 
+  it("accepts an anonymous viewer JWT (no user_id, only opaque_user_id)", async () => {
+    // Twitch only includes user_id when the viewer has explicitly granted
+    // identity-sharing permission. Anonymous viewers (the default for
+    // virtually every viewer on every channel) have only opaque_user_id.
+    // Rejecting these JWTs is the bug that caused friends' panels to 401.
+    const token = await sign({
+      channel_id: "12345",
+      opaque_user_id: "U-anon-xyz",
+      role: "viewer",
+    });
+    const claims = await verifyExtensionJwt(token, BASE64_SECRET);
+    expect(claims.channel_id).toBe("12345");
+    expect(claims.user_id).toBeNull();
+    expect(claims.opaque_user_id).toBe("U-anon-xyz");
+    expect(claims.role).toBe("viewer");
+  });
+
   it("rejects a token signed with the wrong secret", async () => {
     const wrong = Buffer.from(new Uint8Array(64).fill(9)).toString("base64");
     const token = await sign({ channel_id: "12345", user_id: "opaque", role: "viewer" });
