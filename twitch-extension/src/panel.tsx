@@ -10,6 +10,7 @@ import { ScheduleSummary } from "./components/ScheduleSummary";
 import { PoweredByFooter } from "./components/PoweredByFooter";
 import { Heatmap } from "./components/Heatmap";
 import { LiveNowHero } from "./components/LiveNowHero";
+import { LoadingHero } from "./components/LoadingHero";
 import { NoDataSkeleton } from "./components/NoDataSkeleton";
 
 const WARMING_RETRY_MS = 5_000;
@@ -62,6 +63,8 @@ function Panel() {
               { dow: 3, startHour: 19, durationHours: 5, confidence: "high" },
               { dow: 6, startHour: 18, durationHours: 5, confidence: "high" },
             ],
+            sampleSize: 30,
+            medianMinute: 30,
             broadcasterAvatar: "https://static-cdn.jtvnw.net/jtv_user_pictures/54c170ef-e1d0-463d-adda-922e751ef6b8-profile_image-300x300.png",
             broadcasterName: "thedeutschmark",
           },
@@ -121,8 +124,8 @@ function Panel() {
     };
   }, []);
 
-  if (state.kind === "loading") return <p className="loading">Loading…</p>;
-  if (state.kind === "warming") return <p className="loading">Analyzing recent broadcasts…</p>;
+  if (state.kind === "loading") return <LoadingHero />;
+  if (state.kind === "warming") return <LoadingHero />;
   if (state.kind === "error") return <p className="error">Unable to load panel.</p>;
   if (state.kind === "no_data")
     return (
@@ -135,12 +138,25 @@ function Panel() {
   return (
     <>
       {state.data.liveNow ? (
-        <LiveNowHero liveNow={state.data.liveNow} />
+        <LiveNowHero liveNow={state.data.liveNow} summary={state.data.summary} use24Hour={config.use24Hour} />
       ) : (
-        <ScheduleSummary summary={state.data.summary} />
+        <ScheduleSummary summary={state.data.summary} use24Hour={config.use24Hour} />
       )}
-      <Heatmap perDay={state.data.summary.perDay} tz={state.data.summary.tz} />
-      <PoweredByFooter campaign="panel_footer" generatedAt={state.data.generatedAt} />
+      <Heatmap
+        perDay={state.data.summary.perDay}
+        tz={state.data.summary.tz}
+        sampleSize={state.data.summary.sampleSize}
+        hasPostedSchedule={state.data.summary.hasPostedSchedule}
+        use24Hour={config.use24Hour}
+        weekStartsMonday={config.weekStartsMonday}
+      />
+      <PoweredByFooter
+        campaign="panel_footer"
+        generatedAt={state.data.generatedAt}
+        hasPostedSchedule={state.data.summary.hasPostedSchedule}
+        tz={state.data.summary.tz}
+        use24Hour={config.use24Hour}
+      />
     </>
   );
 }

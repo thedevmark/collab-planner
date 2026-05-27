@@ -21,7 +21,8 @@ describe("parseConfig", () => {
     const cfg: ExtConfigV1 = {
       v: 1,
       tz: "America/New_York",
-      showGame: false,
+      use24Hour: true,
+      weekStartsMonday: true,
       accentColor: "#FF6600",
     };
     expect(parseConfig(serializeConfig(cfg))).toEqual(cfg);
@@ -46,9 +47,9 @@ describe("parseConfig", () => {
     expect(parseConfig(JSON.stringify({ v: 1, accentColor: "#GGGGGG" })).accentColor).toEqual(DEFAULT_CONFIG.accentColor);
   });
 
-it("coerces showGame to booleans", () => {
-    const raw = JSON.stringify({ v: 1, showGame: "yes" });
+it("coerces use24Hour to booleans", () => {
+    const raw = JSON.stringify({ v: 1, use24Hour: "yes" });
     const parsed = parseConfig(raw);
-    expect(parsed.showGame).toBe(true);
+    expect(parsed.use24Hour).toBe(true);
   });
 });

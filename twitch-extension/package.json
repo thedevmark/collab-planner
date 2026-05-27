@@ -1,6 +1,6 @@
 {
   "name": "collab-planner-twitch-extension",
-  "version": "1.2.4",
+  "version": "1.3.5",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "package": "node scripts/zip.mjs"
   },
   "dependencies": {
+    "@fontsource/space-grotesk": "^5.2.10",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },

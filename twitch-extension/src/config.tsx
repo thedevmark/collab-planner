@@ -8,7 +8,7 @@ import { SettingsForm } from "./components/SettingsForm";
 
 type State =
   | { kind: "loading" }
-  | { kind: "connected"; topDays: string[]; collabs: number }
+  | { kind: "connected"; topDays: string[] }
   | { kind: "warming" }
   | { kind: "no_data" }
   | { kind: "not_in_cp" }
@@ -64,8 +64,7 @@ function StatusStrip({ state }: { state: State }) {
     <>
       <h1>Collab Planner ✓</h1>
       <p>
-        Account detected. Streams {state.topDays.join(", ") || "various days"},{" "}
-        {state.collabs} upcoming collab{state.collabs === 1 ? "" : "s"}.
+        Account detected. Streams {state.topDays.join(", ") || "various days"}.
       </p>
       <p>
         <a className="cta" href={OPEN_DASH} target="_blank" rel="noopener noreferrer">
@@ -92,7 +91,7 @@ function Config() {
       setConfigRaw(null);
     }
     if (previewMode === "connected") {
-      setState({ kind: "connected", topDays: ["Sun", "Tue", "Mon"], collabs: 2 });
+      setState({ kind: "connected", topDays: ["Sun", "Tue", "Mon"] });
       return;
     }
     if (previewMode === "warming") {
@@ -114,7 +113,6 @@ function Config() {
             setState({
               kind: "connected",
               topDays: data.summary.topDays,
-              collabs: data.collabs.length,
             });
           } else if (data.status === "warming") {
             setState({ kind: "warming" });

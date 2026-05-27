@@ -66,7 +66,8 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
   }, [initialRaw]);
 
   const [tz, setTz] = useState(initial.tz);
-  const [showGame, setShowGame] = useState(initial.showGame);
+  const [use24Hour, setUse24Hour] = useState(initial.use24Hour);
+  const [weekStartsMonday, setWeekStartsMonday] = useState(initial.weekStartsMonday);
   const [accentColor, setAccentColor] = useState(initial.accentColor);
   const [hexInput, setHexInput] = useState(initial.accentColor);
   const [hexCopied, setHexCopied] = useState(false);
@@ -127,7 +128,8 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
     return {
       v: 1,
       tz,
-      showGame,
+      use24Hour,
+      weekStartsMonday,
       accentColor,
     };
   }
@@ -172,11 +174,21 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
       </label>
 
       <label className="checkbox">
-        <input type="checkbox" checked={showGame} onChange={(e) => setShowGame(e.target.checked)} />
-        <span>Show top game</span>
+        <input type="checkbox" checked={use24Hour} onChange={(e) => setUse24Hour(e.target.checked)} />
+        <span>24-hour time</span>
         <span
           className="info-tip"
-          data-tip="Shows your most-played recent game as a small chip below the schedule. Variety streamers may want this off."
+          data-tip="Display times as 19:00 instead of 7 PM throughout the panel."
+          aria-label="What does this do?"
+        >ⓘ</span>
+      </label>
+
+      <label className="checkbox">
+        <input type="checkbox" checked={weekStartsMonday} onChange={(e) => setWeekStartsMonday(e.target.checked)} />
+        <span>Week starts on Monday</span>
+        <span
+          className="info-tip"
+          data-tip="Calendar shows Mon–Sun instead of Sun–Sat. ISO 8601 / European convention."
           aria-label="What does this do?"
         >ⓘ</span>
       </label>
@@ -229,6 +241,32 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
       </button>
       {status === "saved" && <span className="saved-toast">Saved ✓</span>}
       {status === "error" && <span className="form-error">Couldn't save — try again.</span>}
+
+      {/* Roadmap surface — visible to broadcasters so they know what's
+          planned. Keep this list short; add items only after they're
+          designed enough to ship. */}
+      <div className="settings-roadmap">
+        <div className="settings-roadmap-label">Coming soon</div>
+        <ul>
+          <li>
+            <strong>Labels per forecasted stream</strong> — most schedules are
+            consistent (e.g. "Mondays: Apex ranked", "Wednesdays: Just
+            Chatting"). Two sources, in order of preference:
+            <ol>
+              <li>
+                <strong>Auto-pull from your posted Twitch schedule</strong> when
+                a matching slot exists. Free for broadcasters who already
+                maintain their Twitch schedule.
+              </li>
+              <li>
+                <strong>Override with a custom label per day</strong> right here
+                in settings. Wins when set, even if Twitch has a title for
+                that slot.
+              </li>
+            </ol>
+          </li>
+        </ul>
+      </div>
     </form>
   );
 }

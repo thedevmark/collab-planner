@@ -12,14 +12,18 @@
 export type ExtConfigV1 = {
   v: 1;
   tz: string;
-  showGame: boolean;
+  use24Hour: boolean;
+  /** Which day starts the calendar week. US/Twitch convention is Sunday;
+   *  ISO 8601 / most of Europe use Monday. */
+  weekStartsMonday: boolean;
   accentColor: string;
 };
 
 export const DEFAULT_CONFIG: ExtConfigV1 = {
   v: 1,
   tz: "UTC",
-  showGame: true,
+  use24Hour: false,
+  weekStartsMonday: false,
   accentColor: "#9146FF",
 };
 
@@ -66,7 +70,8 @@ export function parseConfig(content: string | null | undefined): ExtConfigV1 {
   return {
     v: 1,
     tz,
-    showGame: coerceBool(r.showGame, DEFAULT_CONFIG.showGame),
+    use24Hour: coerceBool(r.use24Hour, DEFAULT_CONFIG.use24Hour),
+    weekStartsMonday: coerceBool(r.weekStartsMonday, DEFAULT_CONFIG.weekStartsMonday),
     accentColor,
   };
 }

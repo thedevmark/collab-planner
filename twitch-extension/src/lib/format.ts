@@ -3,6 +3,27 @@ export interface FormatOptions {
   timeZone: string;
 }
 
+/** "7 PM" / "7:30 PM" / "19:00" / "19:30" depending on minute + use24.
+ *  Default minute is 0 so existing call sites that don't care about :30
+ *  precision render unchanged. */
+export function formatHour(hour: number, use24: boolean, minute: 0 | 30 = 0): string {
+  const hr = ((hour % 24) + 24) % 24;
+  const mm = minute === 30 ? "30" : "00";
+  if (use24) return `${hr.toString().padStart(2, "0")}:${mm}`;
+  const h12 = hr % 12 || 12;
+  const ampm = hr >= 12 ? "PM" : "AM";
+  if (minute === 0) return `${h12} ${ampm}`;
+  return `${h12}:${mm} ${ampm}`;
+}
+
+/** "7pm" or "19" depending on use24. Used for the calendar axis ticks. */
+export function formatHourCompact(hour: number, use24: boolean): string {
+  const hr = ((hour % 24) + 24) % 24;
+  if (use24) return hr.toString();
+  const h12 = hr % 12 || 12;
+  return `${h12}${hr >= 12 ? "pm" : "am"}`;
+}
+
 export interface FormattedSlot {
   day: string;
   time: string;

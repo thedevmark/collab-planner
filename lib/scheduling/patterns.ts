@@ -6,19 +6,22 @@ const DAY_NAME_TO_INDEX: Record<string, number> = {
   Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
 };
 
-function partsInTz(date: Date, timeZone: string): { dayIndex: number; hour: number } {
+function partsInTz(date: Date, timeZone: string): { dayIndex: number; hour: number; minute: number } {
   const fmt = new Intl.DateTimeFormat("en-US", {
     timeZone,
     weekday: "short",
     hour: "2-digit",
+    minute: "2-digit",
     hour12: false,
   });
   const parts = fmt.formatToParts(date);
   const weekday = parts.find((p) => p.type === "weekday")?.value ?? "Sun";
   const hourStr = parts.find((p) => p.type === "hour")?.value ?? "0";
+  const minStr = parts.find((p) => p.type === "minute")?.value ?? "0";
   let hour = parseInt(hourStr, 10);
   if (hour === 24) hour = 0; // Intl quirk: midnight is sometimes "24"
-  return { dayIndex: DAY_NAME_TO_INDEX[weekday] ?? 0, hour };
+  const minute = parseInt(minStr, 10);
+  return { dayIndex: DAY_NAME_TO_INDEX[weekday] ?? 0, hour, minute };
 }
 
 const DAY_NAME_TO_INDEX_FULL: Record<string, number> = {
@@ -88,6 +91,10 @@ export interface StreamingPattern {
   typicalDays: string[];
   /** Typical start hour in the timezone passed to analyzePatterns */
   startHours: { earliest: number; latest: number; median: number };
+  /** Half-hour-rounded minute of the median start time (0 or 30). Used
+   *  only by the "around 7:30 PM" support text — everything else uses
+   *  the whole-hour median. */
+  medianMinute: 0 | 30;
   /** Average session length in hours */
   avgDurationHours: number;
   /** Top games by frequency */
@@ -148,15 +155,19 @@ function analyzeFromHistory(
   const dayCounts = new Array(7).fill(0);
   const hourCounts = new Array(HOURS_PER_DAY).fill(0);
   const startHours: number[] = [];
+  /** Per-session start-minute-of-day (0-1439) — kept at full minute
+   *  precision so the support text can round to the nearest :30. */
+  const startMinutesOfDay: number[] = [];
   const gameCounts: Record<string, number> = {};
   let totalSec = 0;
 
   for (const s of sessions) {
     const weight = recencyWeight(s.startTime);
-    const { dayIndex, hour } = partsInTz(s.startTime, timezone);
+    const { dayIndex, hour, minute } = partsInTz(s.startTime, timezone);
     dayCounts[dayIndex] += weight;
     hourCounts[hour] += weight;
     startHours.push(hour);
+    startMinutesOfDay.push(hour * 60 + minute);
     if (s.gameName) gameCounts[s.gameName] = (gameCounts[s.gameName] ?? 0) + 1;
     totalSec += s.durationSec;
   }
@@ -184,6 +195,15 @@ function analyzeFromHistory(
   const medianHour = startHours[Math.floor(startHours.length / 2)];
   const earliest = Math.min(...startHours);
   const latest = Math.max(...startHours);
+  // Half-hour-rounded minute of the median start time, derived from the
+  // full minute precision of session start times. Surfaced only in the
+  // "around 7:30 PM" support text — every other consumer keeps the
+  // integer hour.
+  startMinutesOfDay.sort((a, b) => a - b);
+  const medianMinuteOfDay = startMinutesOfDay[Math.floor(startMinutesOfDay.length / 2)] ?? medianHour * 60;
+  const medianMinute = Math.round((medianMinuteOfDay % 60) / 30) * 30 === 60
+    ? 0   // rounded up past the hour boundary — treat as :00
+    : (Math.round((medianMinuteOfDay % 60) / 30) * 30) as 0 | 30;
 
   const consistency = circularStdDev(startHours);
 
@@ -212,6 +232,7 @@ function analyzeFromHistory(
     displayName,
     typicalDays: sortedDays,
     startHours: { earliest, latest, median: medianHour },
+    medianMinute: medianMinute as 0 | 30,
     avgDurationHours,
     topGames,
     confidence,
@@ -238,12 +259,14 @@ function analyzeFromSchedule(
   const durations: number[] = [];
   const hours: number[] = [];
 
+  const minutesOfDay: number[] = [];
   for (const h of hints) {
     const weight = h.isRecurring ? 2 : 1.2;
-    const { dayIndex, hour } = partsInTz(h.startTime, timezone);
+    const { dayIndex, hour, minute } = partsInTz(h.startTime, timezone);
     dayCounts[dayIndex] += weight;
     hourCounts[hour] += weight;
     hours.push(hour);
+    minutesOfDay.push(hour * 60 + minute);
     if (h.gameName) gameCounts[h.gameName] = (gameCounts[h.gameName] ?? 0) + weight;
     const dur = (h.endTime.getTime() - h.startTime.getTime()) / 3600000;
     if (dur > 0) durations.push(dur);
@@ -266,6 +289,10 @@ function analyzeFromSchedule(
 
   hours.sort((a, b) => a - b);
   const medianHour = hours[Math.floor(hours.length / 2)] ?? 20;
+  minutesOfDay.sort((a, b) => a - b);
+  const medianMinuteOfDay = minutesOfDay[Math.floor(minutesOfDay.length / 2)] ?? medianHour * 60;
+  const rawMinute = Math.round((medianMinuteOfDay % 60) / 30) * 30;
+  const medianMinute: 0 | 30 = rawMinute === 60 ? 0 : (rawMinute as 0 | 30);
   const avgDurationHours =
     durations.length > 0
       ? Math.round((durations.reduce((a, b) => a + b) / durations.length) * 10) / 10
@@ -297,6 +324,7 @@ function analyzeFromSchedule(
     displayName,
     typicalDays: sortedDays,
     startHours: { earliest: Math.min(...hours), latest: Math.max(...hours), median: medianHour },
+    medianMinute,
     avgDurationHours,
     topGames,
     confidence: "schedule",
@@ -326,6 +354,7 @@ function estimatedPattern(friendId: number, displayName: string): StreamingPatte
     displayName,
     typicalDays: ["Saturday", "Friday", "Sunday"],
     startHours: { earliest: 18, latest: 23, median: 20 },
+    medianMinute: 0,
     avgDurationHours: DEFAULT_DURATION_HOURS,
     topGames: [],
     confidence: "estimated",

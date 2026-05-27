@@ -1,35 +1,34 @@
 // Empty state — same eyebrow/hero/support shape as the live & schedule
-// surfaces, just with a dim em-dash hero so it reads as "intentionally blank,
-// not broken."
+// surfaces, just with a dim em-dash hero so it reads as "intentionally
+// blank, not broken." The copy hints at "could be timing, refresh in a
+// minute" because the most common cause is the prediction cache still
+// warming up on first viewer for this channel — not actual absence of
+// broadcast history.
 
-const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+const DAY_LETTERS = ["Sun", "Mon", "Tue", "Wed", "Th", "Fri", "Sat"];
 
 export function NoDataSkeleton() {
   return (
     <>
       <div className="schedule">
-        <div className="schedule-eyebrow">Predictions pending</div>
+        <div className="schedule-eyebrow">Forecast warming up</div>
         <div className="schedule-hero schedule-hero-dim">—</div>
-        <div className="schedule-support">Not enough broadcast history yet.</div>
+        <div className="schedule-support">
+          Crunching broadcast history. Try refreshing in a minute.
+        </div>
         <div className="schedule-secondary">
-          Once there are a few streams, this slot turns into a live-by-day forecast.
+          Predictions appear automatically once there are 3+ recent streams to learn from.
         </div>
       </div>
 
       <div className="weekcal skeleton">
-        <div className="weekcal-header">
-          <div className="weekcal-corner" />
+        <div className="weekcal-rows">
           {DAY_LETTERS.map((letter, i) => (
-            <div key={i} className="weekcal-day-label">{letter}</div>
+            <div key={i} className="weekcal-row">
+              <span className="weekcal-day weekcal-day-empty">{letter}</span>
+              <div className="weekcal-strip" />
+            </div>
           ))}
-        </div>
-        <div className="weekcal-body">
-          <div className="weekcal-row">
-            <div className="weekcal-hour-label">—</div>
-            {DAY_LETTERS.map((_, i) => (
-              <div key={i} className="weekcal-cell" />
-            ))}
-          </div>
         </div>
       </div>
     </>

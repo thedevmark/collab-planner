@@ -20,6 +20,8 @@ export type PanelResponse =
           durationHours: number;
           confidence: "high" | "low";
         }>;
+        sampleSize: number;                // # of VODs analyzed
+        medianMinute: 0 | 30;              // half-hour-rounded median minute (display only)
         broadcasterAvatar: string | null;  // Twitch profile image URL
         broadcasterName: string | null;    // Twitch display name
       };

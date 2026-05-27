@@ -36,6 +36,11 @@ export type PanelResponse =
           durationHours: number;
           confidence: "high" | "low";
         }>;
+        /** Number of historical VOD sessions used to compute this pattern. */
+        sampleSize: number;
+        /** Half-hour rounded minute of the median start time (0 or 30).
+         *  Surfaced only in the "around 7:30 PM" support text. */
+        medianMinute: 0 | 30;
         /** Broadcaster's Twitch profile image URL, or null if unknown. */
         broadcasterAvatar: string | null;
         /** Broadcaster's display name, or null if unknown. */
@@ -106,6 +111,8 @@ export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
       dayFrequency: pattern.dayFrequency,
       avgDurationHours: pattern.avgDurationHours,
       perDay: pattern.perDay,
+      sampleSize: pattern.sampleSize,
+      medianMinute: pattern.medianMinute,
       broadcasterAvatar,
       broadcasterName,
     },
