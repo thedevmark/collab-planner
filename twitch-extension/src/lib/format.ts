@@ -16,12 +16,14 @@ export function formatHour(hour: number, use24: boolean, minute: 0 | 30 = 0): st
   return `${h12}:${mm} ${ampm}`;
 }
 
-/** "7pm" or "19" depending on use24. Used for the calendar axis ticks. */
-export function formatHourCompact(hour: number, use24: boolean): string {
+/** "7pm" / "7:30pm" / "19" / "19:30" depending on use24 + minute.
+ *  Default minute 0 keeps axis ticks hour-aligned ("4pm", not "4:00pm"). */
+export function formatHourCompact(hour: number, use24: boolean, minute: 0 | 30 = 0): string {
   const hr = ((hour % 24) + 24) % 24;
-  if (use24) return hr.toString();
+  if (use24) return minute === 30 ? `${hr}:30` : hr.toString();
   const h12 = hr % 12 || 12;
-  return `${h12}${hr >= 12 ? "pm" : "am"}`;
+  const mm = minute === 30 ? ":30" : "";
+  return `${h12}${mm}${hr >= 12 ? "pm" : "am"}`;
 }
 
 export interface FormattedSlot {

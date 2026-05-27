@@ -242,31 +242,6 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
       {status === "saved" && <span className="saved-toast">Saved ✓</span>}
       {status === "error" && <span className="form-error">Couldn't save — try again.</span>}
 
-      {/* Roadmap surface — visible to broadcasters so they know what's
-          planned. Keep this list short; add items only after they're
-          designed enough to ship. */}
-      <div className="settings-roadmap">
-        <div className="settings-roadmap-label">Coming soon</div>
-        <ul>
-          <li>
-            <strong>Labels per forecasted stream</strong> — most schedules are
-            consistent (e.g. "Mondays: Apex ranked", "Wednesdays: Just
-            Chatting"). Two sources, in order of preference:
-            <ol>
-              <li>
-                <strong>Auto-pull from your posted Twitch schedule</strong> when
-                a matching slot exists. Free for broadcasters who already
-                maintain their Twitch schedule.
-              </li>
-              <li>
-                <strong>Override with a custom label per day</strong> right here
-                in settings. Wins when set, even if Twitch has a title for
-                that slot.
-              </li>
-            </ol>
-          </li>
-        </ul>
-      </div>
     </form>
   );
 }

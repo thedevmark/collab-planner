@@ -25,9 +25,9 @@ body {
 }
 .powered-by {
   margin-top: auto !important;
-  /* Breathing room above the footer so the axis "12am" tick doesn't
-     visually crowd "as of 10:08 PM EST" below it. */
-  padding-top: 18px;
+  /* Modest breathing room above the footer — enough that the axis
+     "12am" tick doesn't crowd "as of …" without leaving a gap. */
+  padding-top: 8px;
 }
 
 /* ── Next-live mini hero (top-right) ──────────────────────────────
@@ -90,16 +90,20 @@ body {
   font-size: 17px;
   font-weight: 500;
   letter-spacing: -0.005em;
-  line-height: 1.2;
+  line-height: 1.35;
   color: #adadb8;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 2px;
+  padding-bottom: 2px;
   /* Defensive: ultra-long broadcaster names can't push the panel
-     past its budget. Hard-cap at 2 lines, ellipsis the rest. */
-  max-height: calc(17px * 1.2 * 2);
+     past its budget. Hard-cap at 2 lines, ellipsis the rest. The
+     extra line-height + padding-bottom keep descenders ("g" in
+     "goes live") and the broadcaster-name's text-shadow from being
+     clipped by the overflow:hidden. */
+  max-height: calc(17px * 1.35 * 2 + 2px);
   overflow: hidden;
   word-break: break-word;
 }
@@ -126,9 +130,12 @@ body {
   letter-spacing: -0.035em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  margin: 0 0 4px;
+  /* Just enough padding-bottom to absorb descender depth (≈6px for
+     44px Inter "g"/"y"/"p"). Keeps the hero visually compact while
+     making sure overflow:hidden doesn't clip the bottom of letters. */
+  margin: 0;
+  padding-bottom: 6px;
   word-spacing: -0.04em;
-  /* Hero is always one line — never wrap, ellipsis if too long. */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -156,17 +163,15 @@ body {
     0 0 8px rgba(0, 0, 0, 0.35);
 }
 
-/* Support sentence — middle tier of the golden-ratio ramp. Sits
-   between eyebrow (17) and hero (44) at ~27px. Tighter line-height to
-   keep multi-line copy compact. */
 .schedule-support {
   font-size: 27px;
   font-weight: 400;
   color: #adadb8;
-  line-height: 1.15;
+  /* Loosened from 1.15 to 1.3 so descenders ("g", "y", "p" in
+     "Mondays", "Tuesdays") don't get clipped by the line-clamp. */
+  line-height: 1.3;
   letter-spacing: -0.02em;
-  /* Defensive: hard cap at 2 lines + ellipsis. Even ridiculous TZ
-     names or future copy can never push the calendar off-screen. */
+  padding-bottom: 2px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -200,33 +205,14 @@ body {
 }
 
 /* ── Live now state ───────────────────────────────────────────────
-   The live-state copy carries more variable-length info (broadcaster
-   name in the eyebrow, off-day phrases, "early/late" qualifiers) than
-   the schedule states, so it can't inherit the 27px golden-ratio
-   support font without overflowing the 500px panel. */
+   Inherits the same sizes as the schedule state (eyebrow 17 / hero 44
+   / support 27) so panel height is identical regardless of which
+   state is showing. The only overrides are for the live-dot pulse,
+   which the eyebrow's overflow:hidden defense would clip. */
 .live-hero .schedule-eyebrow {
-  font-size: 14px;
-  line-height: 1.3;
-  /* Dot anchors to the first line baseline; the rest wraps cleanly
-     below it without leaving an awkward centered gap on multi-line
-     eyebrows like "thedeutschmark is not usually live today". */
   align-items: baseline;
-  /* The pulse ring around the live-dot would otherwise get clipped by
-     the eyebrow's overflow:hidden defense — give it breathing room. */
   overflow: visible;
   max-height: none;
-}
-.live-hero .schedule-hero {
-  font-size: 32px;
-}
-.live-hero .schedule-support {
-  font-size: 16px;
-  line-height: 1.35;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .live-eyebrow { color: #ff8a8a; }
 /* Single flex item for the entire eyebrow sentence, so text flows
@@ -882,7 +868,10 @@ body {
   margin-top: 6px;
   padding-top: 8px;
   border-top: 1px solid #2a2a2e;
-  font-family: var(--font-mono, Consolas, "JetBrains Mono", monospace);
+  /* Monospace-flavored numerals — keeps the day labels + hour ticks
+     reading as data, not body copy. Refined system mono so it doesn't
+     feel terminal-y. */
+  font-family: ui-monospace, "JetBrains Mono", Consolas, "SF Mono", monospace;
   color: #6b6b75;
   /* Defensive: calendar can be compressed/hidden if everything above
      ever blows out, instead of pushing the footer off-screen. */
@@ -906,7 +895,8 @@ body {
 }
 .weekcal-row {
   display: grid;
-  grid-template-columns: 28px 1fr;
+  /* 34px column fits "Thur" comfortably in Inter without truncation. */
+  grid-template-columns: 34px 1fr;
   gap: 6px;
   align-items: center;
   min-height: 18px;
@@ -946,9 +936,8 @@ body {
   bottom: 1px;
   border-radius: 2px;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  padding: 0 5px 0 7px;
+  /* Empty pill — no in-pill labels anymore. Simpler reads cleaner;
+     the support sentence + tooltip carry the actual time. */
 }
 /* High confidence — projected: semi-transparent accent fill with a
    solid accent left-edge bar to anchor the start time. Reads as a
@@ -965,21 +954,44 @@ body {
   border-left: 2px dashed var(--accent);
   opacity: 0.85;
 }
-.weekcal-pill-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--accent) 50%, #fff);
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
-  white-space: nowrap;
+/* LIVE bar: red overlay inside today's strip from stream start → NOW.
+   z-index above the projected pill so the live signal wins visually
+   when both are present (today's projected window + currently live).
+   Pulsing dot at the leading edge mirrors the .live-dot used in the
+   footer "as of …" caption. */
+.weekcal-live-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(214, 85, 85, 0.55);
+  border-left: 2px solid #ff5555;
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(255, 85, 85, 0.45);
+  pointer-events: none;
+  z-index: 2;
+}
+.weekcal-live-dot {
+  position: absolute;
+  right: -3px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff5555;
+  box-shadow: 0 0 6px rgba(255, 85, 85, 0.9);
+  animation: weekcalLivePulse 1.6s ease-in-out infinite;
+}
+@keyframes weekcalLivePulse {
+  0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
+  50%      { opacity: 0.55; transform: translateY(-50%) scale(1.25); }
 }
 .weekcal-axis {
   display: grid;
-  grid-template-columns: 28px 1fr;
+  grid-template-columns: 34px 1fr;
   gap: 6px;
   margin-top: 4px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 .weekcal-axis-corner { }
 .weekcal-axis-track {

@@ -30,7 +30,10 @@ function StatusStrip({ state }: { state: State }) {
           Predictions are auto-built from this channel's recent broadcasts — no signup needed.
         </p>
         <p className="upgrade-note">
-          Sign in at Collab Planner to add planned collabs and sharper predictions.
+          <strong>Sign in at Collab Planner for sharper forecasts.</strong>
+          {" "}Connected accounts get longer broadcast history, smarter pattern
+          detection, and a public schedule even if your Twitch VODs are set
+          to private — the panel reads from our own sync, not Helix.
         </p>
         <p>
           <a className="cta-secondary" href={SIGN_IN} target="_blank" rel="noopener noreferrer">

@@ -55,12 +55,47 @@ const KILL_AUTOMARGIN_CSS = `
   .weekcal-thin-bar { margin-top: 12px !important; }
 `;
 
-async function capturePanel(previewMode, outName) {
+// Each screenshot showcases a different broadcaster's accent color
+// choice — drives home the "your color cascades through everything"
+// customization story.
+const ACCENT_FOR_SHOT = {
+  ok: "#00c8af",      // teal — screenshot-1 (thedeutschmark)
+  live: "#ff4d8a",    // hot pink — screenshot-2 (a1exzandra)
+  warming: "#a855f7", // violet — screenshot-3 (config view)
+};
+function accentOverride(color) {
+  return `:root { --accent: ${color} !important; }`;
+}
+
+/** Fake the system clock so screenshots are deterministic AND so the
+ *  NOW cursor lands inside an active stream window. Without this the
+ *  cursor only appears if you happen to capture during a streamer's
+ *  typical broadcast window. */
+async function fakeTime(page, isoString) {
+  const fakeMs = new Date(isoString).getTime();
+  await page.evaluateOnNewDocument((ms) => {
+    const RealDate = Date;
+    class FakeDate extends RealDate {
+      constructor(...args) {
+        if (args.length === 0) super(ms);
+        // @ts-ignore — pass through original Date constructor args
+        else super(...args);
+      }
+      static now() { return ms; }
+    }
+    // @ts-ignore — swap global Date
+    globalThis.Date = FakeDate;
+  }, fakeMs);
+}
+
+async function capturePanel(previewMode, outName, accent, fakeNowIso) {
   const page = await browser.newPage();
+  if (fakeNowIso) await fakeTime(page, fakeNowIso);
   await page.setViewport({ width: PANEL_W, height: PANEL_H, deviceScaleFactor: 2 });
   await page.goto(`${DEV_BASE}/panel.html?preview=${previewMode}`, { waitUntil: "networkidle0" });
-  // Override layout so footer sits right under calendar (no dead space).
+  // Override layout + accent color before capture.
   await page.addStyleTag({ content: KILL_AUTOMARGIN_CSS });
+  if (accent) await page.addStyleTag({ content: accentOverride(accent) });
   // Give the panel a beat for fonts + the style override to apply.
   await new Promise((r) => setTimeout(r, 1200));
   // Measure the actual content height so we don't capture trailing
@@ -79,10 +114,16 @@ async function capturePanel(previewMode, outName) {
   return { buf, width: PANEL_W, height: contentHeight };
 }
 
-async function captureConfig(outName) {
+async function captureConfig(outName, accent) {
   const page = await browser.newPage();
   await page.setViewport({ width: 380, height: 900, deviceScaleFactor: 2 });
   await page.goto(`${DEV_BASE}/config.html?preview=connected`, { waitUntil: "networkidle0" });
+  // Same layout-tightening as panel captures — without this, #root
+  // has flex: 1 and stretches to the full 900px viewport so the
+  // "natural" height measurement returns 900px of stretched body
+  // instead of the actual ~500px of form content.
+  await page.addStyleTag({ content: KILL_AUTOMARGIN_CSS });
+  if (accent) await page.addStyleTag({ content: accentOverride(accent) });
   await new Promise((r) => setTimeout(r, 1200));
   const contentHeight = await page.evaluate(() => {
     const root = document.getElementById("root");
@@ -97,11 +138,26 @@ async function captureConfig(outName) {
   return { buf, width: 380, height: contentHeight };
 }
 
-// ── Capture raw panel states ──────────────────────────────────────
-const panelOk = await capturePanel("ok", "_capture-panel-ok.png");
-await capturePanel("live", "_capture-panel-live.png");
-await capturePanel("warming", "_capture-panel-warming.png");
-const configCapture = await captureConfig("_capture-config.png");
+// ── Capture raw panel states (one per accent color) ─────────────
+// screenshot-1 uses panelOk(teal), screenshot-2 uses panelOkAmber,
+// screenshot-3 uses configCapture(violet) — three distinct accent
+// colors across the marketing kit so it shows the customization range.
+// Fake "now" for each capture so the NOW cursor lands inside an
+// active stream window. Both reference dates are picked to land on
+// the streamer's typical day at mid-window.
+// thedeutschmark streams Mon/Wed/Sat ~7:30 PM EST → fake "now" = Mon 8 PM EST
+// a1exzandra streams Wed/Fri/Sun ~2:30 PM EST → fake "now" = Wed 3 PM EST
+const FAKE_NOW_OK = "2026-05-26T00:00:00Z"; // Mon 8 PM EDT
+const FAKE_NOW_OK2 = "2026-05-27T19:00:00Z"; // Wed 3 PM EDT
+
+const panelOk = await capturePanel("ok", "_capture-panel-ok.png", ACCENT_FOR_SHOT.ok, FAKE_NOW_OK);
+// screenshot-2 uses a SECOND distinct streamer mock (a1exzandra,
+// Wed/Fri/Sun at 2 PM) so the marketing kit shows the panel with
+// different broadcaster contexts, not the same thedeutschmark twice.
+const panelOkAnatomy = await capturePanel("ok2", "_capture-panel-ok2-pink.png", ACCENT_FOR_SHOT.live, FAKE_NOW_OK2);
+await capturePanel("live", "_capture-panel-live.png", ACCENT_FOR_SHOT.live, FAKE_NOW_OK);
+await capturePanel("warming", "_capture-panel-warming.png", ACCENT_FOR_SHOT.warming);
+const configCapture = await captureConfig("_capture-config.png", ACCENT_FOR_SHOT.warming);
 
 // Aspect ratio of the trimmed capture — used so the marketing display
 // sizes preserve real proportions instead of stretching.
@@ -184,33 +240,41 @@ const screenshot1Svg = `<?xml version="1.0" encoding="UTF-8"?>
   </defs>
   ${bg(SHOT_W, SHOT_H)}
 
-  <!-- Left caption -->
+  <!-- Left caption — denser, larger type, bullets fill the column -->
   <g font-family="Inter, Segoe UI, sans-serif" fill="#efeff1">
-    <text x="80" y="190" font-size="56" font-weight="800" letter-spacing="-1.8">Schedule</text>
-    <text x="80" y="252" font-size="56" font-weight="800" letter-spacing="-1.8" fill="#9147ff">Forecast</text>
-    <text x="80" y="296" font-size="18" font-weight="500" fill="#adadb8">When this streamer is likely live —</text>
-    <text x="80" y="320" font-size="18" font-weight="500" fill="#adadb8">predicted from real broadcast history.</text>
+    <text x="80" y="140" font-size="72" font-weight="800" letter-spacing="-2.4">Schedule</text>
+    <text x="80" y="216" font-size="72" font-weight="800" letter-spacing="-2.4" fill="${ACCENT_FOR_SHOT.ok}">Forecast</text>
+    <text x="80" y="266" font-size="22" font-weight="500" fill="#adadb8">When this streamer is likely live —</text>
+    <text x="80" y="296" font-size="22" font-weight="500" fill="#adadb8">predicted from real broadcast history.</text>
 
-    <g font-size="14" fill="#efeff1">
-      <g transform="translate(80, 400)">
-        <circle cx="5" cy="5" r="5" fill="#9147ff"/>
-        <text x="22" y="10">Plain-English "Tomorrow at 7 PM" forecast</text>
+    <g font-size="17" fill="#efeff1" font-weight="500">
+      <g transform="translate(80, 380)">
+        <circle cx="6" cy="6" r="6" fill="${ACCENT_FOR_SHOT.ok}"/>
+        <text x="26" y="11">Plain-English "Tomorrow at 7 PM" forecast</text>
       </g>
-      <g transform="translate(80, 432)">
-        <circle cx="5" cy="5" r="5" fill="#9147ff"/>
-        <text x="22" y="10">Weekly calendar with NOW cursor on today</text>
+      <g transform="translate(80, 418)">
+        <circle cx="6" cy="6" r="6" fill="${ACCENT_FOR_SHOT.ok}"/>
+        <text x="26" y="11">Weekly calendar with live NOW cursor</text>
       </g>
-      <g transform="translate(80, 464)">
-        <circle cx="5" cy="5" r="5" fill="#9147ff"/>
-        <text x="22" y="10">Auto-builds — no setup for streamers</text>
+      <g transform="translate(80, 456)">
+        <circle cx="6" cy="6" r="6" fill="${ACCENT_FOR_SHOT.ok}"/>
+        <text x="26" y="11">Auto-builds — zero setup for streamers</text>
       </g>
-      <g transform="translate(80, 496)">
-        <circle cx="5" cy="5" r="5" fill="#9147ff"/>
-        <text x="22" y="10">Works on every channel</text>
+      <g transform="translate(80, 494)">
+        <circle cx="6" cy="6" r="6" fill="${ACCENT_FOR_SHOT.ok}"/>
+        <text x="26" y="11">Real-time live indicator via Helix</text>
+      </g>
+      <g transform="translate(80, 532)">
+        <circle cx="6" cy="6" r="6" fill="${ACCENT_FOR_SHOT.ok}"/>
+        <text x="26" y="11">Honest provenance — see VOD count</text>
+      </g>
+      <g transform="translate(80, 570)">
+        <circle cx="6" cy="6" r="6" fill="${ACCENT_FOR_SHOT.ok}"/>
+        <text x="26" y="11">Works on every channel, no signup needed</text>
       </g>
     </g>
 
-    <text x="80" y="700" font-size="13" fill="#6b6b75">collab.deutschmark.online</text>
+    <text x="80" y="690" font-size="15" font-weight="600" fill="${ACCENT_FOR_SHOT.ok}">collab.deutschmark.online</text>
   </g>
 
   <!-- Panel shadow plate (real panel is composited on top via sharp) -->
@@ -248,39 +312,41 @@ const screenshot2Svg = `<?xml version="1.0" encoding="UTF-8"?>
   ${bg(SHOT_W, SHOT_H)}
 
   <g font-family="Inter, Segoe UI, sans-serif" fill="#efeff1">
-    <text x="520" y="120" font-size="40" font-weight="700" letter-spacing="-1.2">Built from</text>
-    <text x="520" y="166" font-size="40" font-weight="700" letter-spacing="-1.2">broadcast history.</text>
-    <text x="520" y="208" font-size="16" font-weight="500" fill="#adadb8">Each element comes from this streamer's actual VODs —</text>
-    <text x="520" y="230" font-size="16" font-weight="500" fill="#adadb8">no aspirational schedule, no manual setup.</text>
+    <text x="520" y="100" font-size="52" font-weight="800" letter-spacing="-1.6">Built from</text>
+    <text x="520" y="158" font-size="52" font-weight="800" letter-spacing="-1.6">broadcast history.</text>
+    <text x="520" y="204" font-size="18" font-weight="500" fill="#adadb8">Every element comes from real VODs —</text>
+    <text x="520" y="230" font-size="18" font-weight="500" fill="#adadb8">no aspirational schedule, no manual setup.</text>
 
-    <g font-size="14">
+    <g>
       <g transform="translate(520, 290)">
-        <text font-weight="700" fill="#efeff1">deutschmark goes live</text>
-        <text y="22" font-size="13" fill="#adadb8">Personalized lead — the streamer's name</text>
-        <text y="40" font-size="13" fill="#adadb8">subtly glows for the human anchor.</text>
+        <text font-size="17" font-weight="700" fill="#efeff1">a1exzandra goes live</text>
+        <text y="26" font-size="15" fill="#adadb8">Streamer name glows softly as the human anchor.</text>
       </g>
-      <g transform="translate(520, 370)">
-        <text font-weight="700" fill="#9147ff">Tomorrow / Wednesday</text>
-        <text y="22" font-size="13" fill="#adadb8">Hero answers WHEN. Calm day-name when</text>
-        <text y="40" font-size="13" fill="#adadb8">far off; live countdown inside 12 hours.</text>
+      <g transform="translate(520, 360)">
+        <text font-size="17" font-weight="700" fill="${ACCENT_FOR_SHOT.live}">Tomorrow / Wednesday / Live for 2h 14m</text>
+        <text y="26" font-size="15" fill="#adadb8">Hero auto-swaps: day name → countdown → live timer.</text>
       </g>
-      <g transform="translate(520, 450)">
-        <text font-weight="700" fill="#efeff1">Weekly calendar</text>
-        <text y="22" font-size="13" fill="#adadb8">7 day-rows with pills at each day's typical</text>
-        <text y="40" font-size="13" fill="#adadb8">start time. NOW cursor on today only.</text>
+      <g transform="translate(520, 430)">
+        <text font-size="17" font-weight="700" fill="#efeff1">Weekly calendar with NOW cursor</text>
+        <text y="26" font-size="15" fill="#adadb8">Pills at each day's typical hour; today only carries the cursor.</text>
       </g>
-      <g transform="translate(520, 530)">
-        <text font-weight="700" fill="#efeff1">Honest data line</text>
-        <text y="22" font-size="13" fill="#adadb8">"as of" tick with timezone, pulsing dot</text>
-        <text y="40" font-size="13" fill="#adadb8">when posted Twitch schedule backs it.</text>
+      <g transform="translate(520, 500)">
+        <text font-size="17" font-weight="700" fill="#efeff1">Honest provenance line</text>
+        <text y="26" font-size="15" fill="#adadb8">"as of" tick in broadcaster's tz, pulsing dot for posted schedules.</text>
+      </g>
+      <g transform="translate(520, 570)">
+        <text font-size="17" font-weight="700" fill="#efeff1">Built-in confidence tiers</text>
+        <text y="26" font-size="15" fill="#adadb8">Solid pill = certain. Dashed = sparse data. Empty = no signal.</text>
       </g>
     </g>
+
+    <text x="520" y="690" font-size="13" font-weight="500" fill="#6b6b75">Auto-built from up to 60 days of broadcast history</text>
   </g>
 
   <rect x="${panel2X}" y="${panel2Y}" width="${PANEL2_W}" height="${PANEL2_H}" rx="6" fill="#18181b" filter="url(#panel-shadow2)"/>
 </svg>`;
 
-const panelOkSized2 = await sharp(panelOk.buf).resize(PANEL2_W, PANEL2_H).png().toBuffer();
+const panelOkSized2 = await sharp(panelOkAnatomy.buf).resize(PANEL2_W, PANEL2_H).png().toBuffer();
 await renderSvgWithPanelComposite(
   screenshot2Svg,
   panelOkSized2,
@@ -311,33 +377,35 @@ const screenshot3Svg = `<?xml version="1.0" encoding="UTF-8"?>
 
   <rect x="${cfgX}" y="${cfgY}" width="${CFG_W}" height="${CFG_H}" rx="6" fill="#18181b" filter="url(#card-shadow)"/>
 
-  <!-- Right-side caption -->
+  <!-- Right-side caption — denser bullets fill the column -->
   <g font-family="Inter, Segoe UI, sans-serif" fill="#efeff1">
-    <text x="430" y="180" font-size="42" font-weight="700" letter-spacing="-1.2">Zero setup</text>
-    <text x="430" y="222" font-size="42" font-weight="700" letter-spacing="-1.2" fill="#9147ff">for streamers.</text>
-    <text x="430" y="266" font-size="16" font-weight="500" fill="#adadb8">Install the extension. The panel populates automatically.</text>
-    <text x="430" y="290" font-size="16" font-weight="500" fill="#adadb8">Three optional knobs if you want to fine-tune the display.</text>
+    <text x="430" y="140" font-size="56" font-weight="800" letter-spacing="-1.8">Zero setup</text>
+    <text x="430" y="200" font-size="56" font-weight="800" letter-spacing="-1.8" fill="${ACCENT_FOR_SHOT.warming}">for streamers.</text>
+    <text x="430" y="248" font-size="20" font-weight="500" fill="#adadb8">Install the extension — the panel populates</text>
+    <text x="430" y="276" font-size="20" font-weight="500" fill="#adadb8">automatically from your broadcast history.</text>
+    <text x="430" y="318" font-size="16" font-weight="500" fill="#6b6b75">Four optional knobs if you want to fine-tune:</text>
 
-    <g font-size="14" fill="#efeff1">
-      <g transform="translate(430, 360)">
-        <circle cx="5" cy="5" r="5" fill="#9147ff"/>
-        <text x="22" y="10"><tspan font-weight="700">Timezone</tspan> — set to your stream tz</text>
+    <g font-size="17" fill="#efeff1" font-weight="500">
+      <g transform="translate(430, 372)">
+        <circle cx="6" cy="6" r="6" fill="${ACCENT_FOR_SHOT.warming}"/>
+        <text x="26" y="11"><tspan font-weight="700">Timezone</tspan> — match your stream's local timezone</text>
       </g>
-      <g transform="translate(430, 392)">
-        <circle cx="5" cy="5" r="5" fill="#9147ff"/>
-        <text x="22" y="10"><tspan font-weight="700">24-hour time</tspan> — toggle 7 PM vs 19:00</text>
+      <g transform="translate(430, 410)">
+        <circle cx="6" cy="6" r="6" fill="${ACCENT_FOR_SHOT.warming}"/>
+        <text x="26" y="11"><tspan font-weight="700">24-hour time</tspan> — show 19:00 instead of 7 PM</text>
       </g>
-      <g transform="translate(430, 424)">
-        <circle cx="5" cy="5" r="5" fill="#9147ff"/>
-        <text x="22" y="10"><tspan font-weight="700">Week starts on Monday</tspan> — ISO vs US</text>
+      <g transform="translate(430, 448)">
+        <circle cx="6" cy="6" r="6" fill="${ACCENT_FOR_SHOT.warming}"/>
+        <text x="26" y="11"><tspan font-weight="700">Calendar starts Monday</tspan> — ISO vs US first-day</text>
       </g>
-      <g transform="translate(430, 456)">
-        <circle cx="5" cy="5" r="5" fill="#9147ff"/>
-        <text x="22" y="10"><tspan font-weight="700">Accent color</tspan> — auto from your Twitch profile</text>
+      <g transform="translate(430, 486)">
+        <circle cx="6" cy="6" r="6" fill="${ACCENT_FOR_SHOT.warming}"/>
+        <text x="26" y="11"><tspan font-weight="700">Accent color</tspan> — auto-pulled from your Twitch profile</text>
       </g>
     </g>
 
-    <text x="430" y="600" font-size="13" fill="#6b6b75">Twitch dashboard → Extensions → Config</text>
+    <text x="430" y="600" font-size="14" font-weight="500" fill="#6b6b75">Twitch dashboard → Extensions → Schedule Forecast → Config</text>
+    <text x="430" y="624" font-size="13" fill="#6b6b75">Settings save instantly. Panel updates next refresh.</text>
   </g>
 </svg>`;
 

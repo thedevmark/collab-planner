@@ -8,6 +8,10 @@ type Summary = Extract<PanelResponse, { status: "ok" }>["summary"];
 interface Props {
   summary: Summary;
   use24Hour?: boolean;
+  /** When true, the broadcaster is currently live — skip today as a
+   *  candidate for "next stream" so the panel points at the NEXT
+   *  typical stream after this current one ends. */
+  skipToday?: boolean;
 }
 
 const DAY_NAMES_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -19,7 +23,7 @@ const DAY_NAMES_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const TODAY_GRACE_HOURS = 3;
 
 /** Find the precise Date of the next likely live slot (viewer's local clock). */
-export function nextLikelyLiveDate(topDays: string[], medianHour: number): Date | null {
+export function nextLikelyLiveDate(topDays: string[], medianHour: number, skipToday = false): Date | null {
   if (topDays.length === 0) return null;
   const activeDows = topDays
     .map((d) => DAY_NAMES_SHORT.indexOf(d))
@@ -28,7 +32,10 @@ export function nextLikelyLiveDate(topDays: string[], medianHour: number): Date 
 
   const now = new Date();
   const graceMs = TODAY_GRACE_HOURS * 3600_000;
-  for (let i = 0; i < 14; i++) {
+  // When broadcaster is currently live we want the NEXT typical day
+  // after today, not the current ongoing stream — start from i=1.
+  const startI = skipToday ? 1 : 0;
+  for (let i = startI; i < 14; i++) {
     const candidate = new Date(now);
     candidate.setDate(candidate.getDate() + i);
     candidate.setHours(medianHour, 0, 0, 0);
@@ -61,7 +68,7 @@ export function formatCountdown(target: Date | null, nowMs: number): string {
   return `${parts[0]} and ${parts[1]}`;
 }
 
-function nextLikelyRelative(topDays: string[], medianHour: number): { dayLabel: string; fullDay: string; relative: string } | null {
+function nextLikelyRelative(topDays: string[], medianHour: number, skipToday = false): { dayLabel: string; fullDay: string; relative: string } | null {
   if (topDays.length === 0) return null;
   const activeDows = topDays.map((d) => DAY_NAMES_SHORT.indexOf(d)).filter((i) => i !== -1);
   if (activeDows.length === 0) return null;
@@ -69,8 +76,10 @@ function nextLikelyRelative(topDays: string[], medianHour: number): { dayLabel: 
   const now = new Date();
   const todayDow = now.getDay();
   const currentHour = now.getHours();
+  // Same skip-today behavior as nextLikelyLiveDate for the live state.
+  const startI = skipToday ? 1 : 0;
 
-  for (let i = 0; i < 7; i++) {
+  for (let i = startI; i < 7; i++) {
     const checkDow = (todayDow + i) % 7;
     if (!activeDows.includes(checkDow)) continue;
     if (i === 0 && currentHour >= medianHour + TODAY_GRACE_HOURS) continue;
@@ -166,10 +175,10 @@ function buildVariant(args: {
   };
 }
 
-export function ScheduleSummary({ summary, use24Hour = false }: Props) {
+export function ScheduleSummary({ summary, use24Hour = false, skipToday = false }: Props) {
   const { topDays, medianHour, avgDurationHours, isEstimate } = summary;
-  const next = nextLikelyRelative(topDays, medianHour);
-  const nextDate = nextLikelyLiveDate(topDays, medianHour);
+  const next = nextLikelyRelative(topDays, medianHour, skipToday);
+  const nextDate = nextLikelyLiveDate(topDays, medianHour, skipToday);
   const nowMs = useMinuteTick();
   const countdown = formatCountdown(nextDate, nowMs);
   const hoursUntilNext = nextDate ? (nextDate.getTime() - nowMs) / 3600_000 : null;

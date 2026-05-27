@@ -15,6 +15,8 @@ import type { PanelResponse } from "../lib/types";
 
 type Summary = Extract<PanelResponse, { status: "ok" }>["summary"];
 
+type OkResponse = Extract<PanelResponse, { status: "ok" }>;
+
 interface Props {
   perDay: Summary["perDay"] | undefined;
   tz: string;
@@ -22,12 +24,21 @@ interface Props {
   hasPostedSchedule?: boolean;
   use24Hour?: boolean;
   weekStartsMonday?: boolean;
+  /** Half-hour-rounded minute for pill labels, so they read "2:30pm"
+   *  when the support sentence says "around 2:30 PM" (consistent). */
+  medianMinute?: 0 | 30;
+  /** When set, today's strip gets a red live-progress bar from the
+   *  stream's start hour to the NOW cursor — the visual signal that
+   *  the broadcaster is currently live. The schedule text above stays
+   *  identical regardless, since the viewer's primary question is still
+   *  "when's the NEXT stream." */
+  liveNow?: OkResponse["liveNow"] | null;
 }
 
-// 3-char abbreviations with "Th" for Thursday (disambiguates from Tue
-// and matches common calendar conventions).
-const DAY_LETTERS_SUN = ["Sun", "Mon", "Tue", "Wed", "Th", "Fri", "Sat"];   // dow order 0..6
-const DAY_LETTERS_MON = ["Mon", "Tue", "Wed", "Th", "Fri", "Sat", "Sun"];   // dow order 1,2,3,4,5,6,0
+// 3-char abbreviations with "Thur" for Thursday (disambiguates from
+// Tue and reads as a recognizable word, not an abbreviation).
+const DAY_LETTERS_SUN = ["Sun", "Mon", "Tue", "Wed", "Thur", "Fri", "Sat"];   // dow order 0..6
+const DAY_LETTERS_MON = ["Mon", "Tue", "Wed", "Thur", "Fri", "Sat", "Sun"];   // dow order 1,2,3,4,5,6,0
 const DAY_ORDER_SUN = [0, 1, 2, 3, 4, 5, 6];
 const DAY_ORDER_MON = [1, 2, 3, 4, 5, 6, 0];
 const DOW_BY_SHORT: Record<string, number> = {
@@ -70,8 +81,12 @@ function nowDowInTz(tz: string, nowMs: number): number {
   return DOW_BY_SHORT[w] ?? 0;
 }
 
-export function Heatmap({ perDay, tz, sampleSize, hasPostedSchedule, use24Hour = false, weekStartsMonday = false }: Props) {
-  const fmtHour = (h: number) => formatHourCompact(h, use24Hour);
+export function Heatmap({ perDay, tz, sampleSize, hasPostedSchedule, use24Hour = false, weekStartsMonday = false, medianMinute = 0, liveNow = null }: Props) {
+  // Axis ticks always render on the hour ("4pm", "6pm" — no :30).
+  // Pill labels use the broadcaster's medianMinute so they read
+  // "7:30pm" when the support sentence says "around 7:30 PM".
+  const fmtAxisHour = (h: number) => formatHourCompact(h, use24Hour, 0);
+  const fmtPillHour = (h: number) => formatHourCompact(h, use24Hour, medianMinute);
   const nowMs = useMinuteTick();
   const dayLetters = weekStartsMonday ? DAY_LETTERS_MON : DAY_LETTERS_SUN;
   const dayOrder = weekStartsMonday ? DAY_ORDER_MON : DAY_ORDER_SUN;
@@ -96,6 +111,23 @@ export function Heatmap({ perDay, tz, sampleSize, hasPostedSchedule, use24Hour =
   const nowH = nowHourInTz(tz, nowMs);
   const nowInRange = nowH >= startHour && nowH < endHour;
   const nowPct = nowInRange ? ((nowH - startHour) / spanH) * 100 : -1;
+
+  // Live-progress bar: stream-start hour (in tz) → now. Clamped to the
+  // visible axis so a stream that started before the axis window still
+  // shows a bar from the left edge. Hidden entirely if the stream
+  // started in the future (clock skew) or after the axis ends.
+  const liveStartH = liveNow ? nowHourInTz(tz, new Date(liveNow.startedAt).getTime()) : null;
+  const liveBar = (() => {
+    if (!liveNow || liveStartH == null) return null;
+    // Clamp start to axis window; if start>now (shouldn't happen), hide.
+    const s = Math.max(startHour, Math.min(liveStartH, nowH));
+    const e = Math.max(s, Math.min(endHour, nowH));
+    if (e <= s) return null;
+    return {
+      leftPct: ((s - startHour) / spanH) * 100,
+      widthPct: ((e - s) / spanH) * 100,
+    };
+  })();
 
   // Build axis tick labels every 2 hours, including the start.
   const ticks: Array<{ hour: number; pct: number }> = [];
@@ -133,18 +165,35 @@ export function Heatmap({ perDay, tz, sampleSize, hasPostedSchedule, use24Hour =
                 {isToday && nowInRange && (
                   <span className="weekcal-now-line" style={{ left: `${nowPct}%` }} />
                 )}
-                {entry && (
+                {/* Live-progress bar: red bar inside today's strip
+                    from stream start to NOW. Sits ABOVE the typical
+                    pill (z-index in CSS) so the live signal wins
+                    visually when both are present. */}
+                {isToday && liveBar && (
                   <span
-                    className={`weekcal-pill weekcal-pill-${entry.confidence}`}
-                    style={{
-                      left: `${((entry.startHour - startHour) / spanH) * 100}%`,
-                      width: `${(entry.durationHours / spanH) * 100}%`,
-                    }}
-                    title={`${fmtHour(entry.startHour)}–${fmtHour(entry.startHour + entry.durationHours)}${entry.confidence === "low" ? " (projected — low confidence)" : " (projected)"}`}
+                    className="weekcal-live-bar"
+                    style={{ left: `${liveBar.leftPct}%`, width: `${liveBar.widthPct}%` }}
+                    title="Live right now"
                   >
-                    <span className="weekcal-pill-label">{fmtHour(entry.startHour)}</span>
+                    <span className="weekcal-live-dot" aria-hidden />
                   </span>
                 )}
+                {entry && (() => {
+                  // Pill visual position respects the half-hour offset so a
+                  // 2:30 PM start lands halfway between the "2pm" and "3pm"
+                  // axis ticks (instead of pinning to the 2pm gridline and
+                  // contradicting the "around 2:30 PM" support text).
+                  const minuteOffset = medianMinute / 60;
+                  const leftPct = ((entry.startHour + minuteOffset - startHour) / spanH) * 100;
+                  const widthPct = (entry.durationHours / spanH) * 100;
+                  return (
+                    <span
+                      className={`weekcal-pill weekcal-pill-${entry.confidence}`}
+                      style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                      title={`${fmtPillHour(entry.startHour)}–${fmtPillHour(entry.startHour + entry.durationHours)}${entry.confidence === "low" ? " (projected — low confidence)" : " (projected)"}`}
+                    />
+                  );
+                })()}
               </div>
             </div>
           );
@@ -157,7 +206,7 @@ export function Heatmap({ perDay, tz, sampleSize, hasPostedSchedule, use24Hour =
         <div className="weekcal-axis-track">
           {ticks.map((t) => (
             <span key={t.hour} className="weekcal-axis-tick" style={{ left: `${t.pct}%` }}>
-              {fmtHour(t.hour)}
+              {fmtAxisHour(t.hour)}
             </span>
           ))}
         </div>
