@@ -110,7 +110,15 @@ export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
       hourDistribution: pattern.hourDistribution,
       dayFrequency: pattern.dayFrequency,
       avgDurationHours: pattern.avgDurationHours,
-      perDay: pattern.perDay,
+      // Single source of truth for "typical start time": every per-day
+      // entry's startHour is forced to medianHour before the panel sees
+      // it, so the calendar pill positions can never drift from the
+      // "around X PM" text in ScheduleSummary. Per-day medians were
+      // computed independently before, which let e.g. Saturday's pill
+      // sit at 9pm while the hero text said "around 8pm". The panel
+      // bundle is already published, so the only place we can guarantee
+      // consistency is here, in the response shaper.
+      perDay: pattern.perDay.map((d) => ({ ...d, startHour: medianHour })),
       sampleSize: pattern.sampleSize,
       medianMinute: pattern.medianMinute,
       broadcasterAvatar,

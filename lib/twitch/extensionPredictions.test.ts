@@ -160,7 +160,10 @@ describe("shapeConnectedPanelResponse perDay", () => {
     };
   }
 
-  it("passes perDay through to the summary", () => {
+  it("forces every perDay.startHour to medianHour (single source of truth)", () => {
+    // Input has a Sunday session at 15 (different from medianHour=19).
+    // The shaper must override Sunday's startHour to 19 so the calendar
+    // pill can never drift from the "around X PM" text in the panel.
     const result = shapeConnectedPanelResponse({
       pattern: pattern([
         { dow: 0, startHour: 15, durationHours: 4, confidence: "high" },
@@ -168,17 +171,20 @@ describe("shapeConnectedPanelResponse perDay", () => {
         { dow: 3, startHour: 19, durationHours: 4, confidence: "high" },
       ]),
       postedSchedule: [],
-      // upcomingCollabs removed
       timezone: "America/New_York",
       lastStream: null,
     });
     expect(result.status).toBe("ok");
     if (result.status === "ok") {
       expect(result.summary.perDay).toEqual([
-        { dow: 0, startHour: 15, durationHours: 4, confidence: "high" },
+        { dow: 0, startHour: 19, durationHours: 4, confidence: "high" },
         { dow: 1, startHour: 19, durationHours: 4, confidence: "high" },
         { dow: 3, startHour: 19, durationHours: 4, confidence: "high" },
       ]);
+      // All pills sit at medianHour, no drift possible.
+      for (const d of result.summary.perDay) {
+        expect(d.startHour).toBe(result.summary.medianHour);
+      }
     }
   });
 });

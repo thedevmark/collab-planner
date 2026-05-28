@@ -220,18 +220,18 @@ function analyzeFromHistory(
     .map((d) => d.day);
 
   startHours.sort((a, b) => a - b);
-  const medianHour = startHours[Math.floor(startHours.length / 2)];
   const earliest = Math.min(...startHours);
   const latest = Math.max(...startHours);
-  // Half-hour-rounded minute of the median start time, derived from the
-  // full minute precision of session start times. Surfaced only in the
-  // "around 7:30 PM" support text — every other consumer keeps the
-  // integer hour.
+  // medianHour and medianMinute are derived from the SAME minute-of-day
+  // median, rounded to the nearest :30. This guarantees the hour and the
+  // minute can't disagree (e.g. a 20:55 session must read as "9:00 PM",
+  // not "8:00 PM" — flooring the hour while rounding the minute caused
+  // the panel text to drift one hour from the live-bar's actual start).
   startMinutesOfDay.sort((a, b) => a - b);
-  const medianMinuteOfDay = startMinutesOfDay[Math.floor(startMinutesOfDay.length / 2)] ?? medianHour * 60;
-  const medianMinute = Math.round((medianMinuteOfDay % 60) / 30) * 30 === 60
-    ? 0   // rounded up past the hour boundary — treat as :00
-    : (Math.round((medianMinuteOfDay % 60) / 30) * 30) as 0 | 30;
+  const medianMinuteOfDay = startMinutesOfDay[Math.floor(startMinutesOfDay.length / 2)] ?? 20 * 60;
+  const roundedMedianMinutes = Math.round(medianMinuteOfDay / 30) * 30;
+  const medianHour = (Math.floor(roundedMedianMinutes / 60)) % 24;
+  const medianMinute = (roundedMedianMinutes % 60) as 0 | 30;
 
   const consistency = circularStdDev(startHours);
 
@@ -321,11 +321,14 @@ function analyzeFromSchedule(
     .map((d) => d.day);
 
   hours.sort((a, b) => a - b);
-  const medianHour = hours[Math.floor(hours.length / 2)] ?? 20;
+  // Single source of truth: round the minute-of-day median to nearest
+  // :30 and derive both medianHour and medianMinute from it, so they
+  // can't disagree (see analyzeFromHistory for the full reasoning).
   minutesOfDay.sort((a, b) => a - b);
-  const medianMinuteOfDay = minutesOfDay[Math.floor(minutesOfDay.length / 2)] ?? medianHour * 60;
-  const rawMinute = Math.round((medianMinuteOfDay % 60) / 30) * 30;
-  const medianMinute: 0 | 30 = rawMinute === 60 ? 0 : (rawMinute as 0 | 30);
+  const medianMinuteOfDay = minutesOfDay[Math.floor(minutesOfDay.length / 2)] ?? 20 * 60;
+  const roundedMedianMinutes = Math.round(medianMinuteOfDay / 30) * 30;
+  const medianHour = (Math.floor(roundedMedianMinutes / 60)) % 24;
+  const medianMinute = (roundedMedianMinutes % 60) as 0 | 30;
   const avgDurationHours =
     durations.length > 0
       ? Math.round((durations.reduce((a, b) => a + b) / durations.length) * 10) / 10
