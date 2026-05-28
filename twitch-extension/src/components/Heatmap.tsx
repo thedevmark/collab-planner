@@ -11,6 +11,7 @@ import { useMemo, type CSSProperties } from "react";
 import { computeAxisRange } from "../lib/calendarAxis";
 import { formatHourCompact } from "../lib/format";
 import { useMinuteTick } from "../lib/useMinuteTick";
+import { pickNextStream } from "../lib/nextStream";
 import type { PanelResponse } from "../lib/types";
 
 type Summary = Extract<PanelResponse, { status: "ok" }>["summary"];
@@ -19,6 +20,10 @@ type OkResponse = Extract<PanelResponse, { status: "ok" }>;
 
 interface Props {
   perDay: Summary["perDay"] | undefined;
+  /** Same array ScheduleSummary uses to pick the hero day word, so the
+   *  highlighted pill here always matches the hero word above. */
+  topDays: Summary["topDays"];
+  medianHour: Summary["medianHour"];
   tz: string;
   sampleSize?: number;
   hasPostedSchedule?: boolean;
@@ -81,7 +86,7 @@ function nowDowInTz(tz: string, nowMs: number): number {
   return DOW_BY_SHORT[w] ?? 0;
 }
 
-export function Heatmap({ perDay, tz, sampleSize, hasPostedSchedule, use24Hour = false, weekStartsMonday = false, medianMinute = 0, liveNow = null }: Props) {
+export function Heatmap({ perDay, topDays, medianHour, tz, sampleSize, hasPostedSchedule, use24Hour = false, weekStartsMonday = false, medianMinute = 0, liveNow = null }: Props) {
   // Axis ticks always render on the hour ("4pm", "6pm" — no :30).
   // Pill labels use the broadcaster's medianMinute so they read
   // "7:30pm" when the support sentence says "around 7:30 PM".
@@ -108,20 +113,36 @@ export function Heatmap({ perDay, tz, sampleSize, hasPostedSchedule, use24Hour =
   const { startHour, endHour } = computeAxisRange(perDay);
   const spanH = endHour - startHour;
   const todayDow = nowDowInTz(tz, nowMs);
-  const nowH = nowHourInTz(tz, nowMs);
+  const nowHRaw = nowHourInTz(tz, nowMs);
+  // Past-midnight reframe: when the axis extends past 24h (broadcaster
+  // streams into the early hours), early-morning clock hours (e.g.
+  // 12:23 AM → 0.39) are really hour 24.39 on the continued-day axis.
+  // Without this, the NOW cursor disappears every night between
+  // midnight and ~3 AM even though it's clearly inside the visible
+  // axis range.
+  const nowH = (endHour > 24 && nowHRaw < endHour - 24) ? nowHRaw + 24 : nowHRaw;
   const nowInRange = nowH >= startHour && nowH < endHour;
   const nowPct = nowInRange ? ((nowH - startHour) / spanH) * 100 : -1;
 
-  // Live-progress bar: stream-start hour (in tz) → now. Clamped to the
-  // visible axis so a stream that started before the axis window still
-  // shows a bar from the left edge. Hidden entirely if the stream
-  // started in the future (clock skew) or after the axis ends.
-  const liveStartH = liveNow ? nowHourInTz(tz, new Date(liveNow.startedAt).getTime()) : null;
+  // Live-progress bar: rendered on the day the stream STARTED
+  // (not necessarily today). When a stream crosses midnight, today's
+  // row is empty (stream is really yesterday's session) and rendering
+  // the bar on today would visually misalign with the rest of the
+  // schedule. Anchoring to the start-day lets the typical axis stay
+  // put — Mon/Wed/Sat pills stay where they belong and the live bar
+  // overlays the actual day it started.
+  //
+  // liveStartHourOfDay is hour-of-day on the start day (0..24).
+  // liveElapsedH is hours since stream began — used for bar width
+  // independent of midnight crossings.
+  const liveStartMs = liveNow ? new Date(liveNow.startedAt).getTime() : null;
+  const liveStartDow = liveStartMs != null ? nowDowInTz(tz, liveStartMs) : -1;
+  const liveStartHourOfDay = liveStartMs != null ? nowHourInTz(tz, liveStartMs) : 0;
+  const liveElapsedH = liveStartMs != null ? (nowMs - liveStartMs) / 3600_000 : 0;
   const liveBar = (() => {
-    if (!liveNow || liveStartH == null) return null;
-    // Clamp start to axis window; if start>now (shouldn't happen), hide.
-    const s = Math.max(startHour, Math.min(liveStartH, nowH));
-    const e = Math.max(s, Math.min(endHour, nowH));
+    if (!liveNow || liveStartMs == null) return null;
+    const s = Math.max(startHour, Math.min(liveStartHourOfDay, endHour));
+    const e = Math.max(s, Math.min(endHour, liveStartHourOfDay + liveElapsedH));
     if (e <= s) return null;
     return {
       leftPct: ((s - startHour) / spanH) * 100,
@@ -129,9 +150,22 @@ export function Heatmap({ perDay, tz, sampleSize, hasPostedSchedule, use24Hour =
     };
   })();
 
-  // Build axis tick labels every 2 hours, including the start.
+  // NEXT-projected day highlight. Uses the shared pickNextStream so
+  // the highlighted pill is GUARANTEED to match the hero word above
+  // (no chance of drift between perDay-based logic here and
+  // topDays-based logic in ScheduleSummary). Skip today only when
+  // the live stream actually started today.
+  const liveStartedToday = liveStartDow === todayDow;
+  const nextPick = pickNextStream(topDays, medianHour, tz, nowMs, !!liveNow && liveStartedToday);
+  const nextDow = nextPick ? nextPick.dow : -1;
+
+  // Tick interval is adaptive: every 2h for typical-sized axes (≤10h)
+  // and every 4h for wider ones — keeps the ruler dense enough to read
+  // a 4pm-12am window at "4 6 8 10 12" without crowding when the axis
+  // is wider (e.g. for late-night streamers running past 3 AM).
+  const tickStep = spanH <= 10 ? 2 : 4;
   const ticks: Array<{ hour: number; pct: number }> = [];
-  for (let h = Math.ceil(startHour / 2) * 2; h < endHour; h += 2) {
+  for (let h = Math.ceil(startHour / tickStep) * tickStep; h < endHour; h += tickStep) {
     ticks.push({ hour: h, pct: ((h - startHour) / spanH) * 100 });
   }
 
@@ -162,23 +196,46 @@ export function Heatmap({ perDay, tz, sampleSize, hasPostedSchedule, use24Hour =
                 {/* NOW line lives ONLY inside today's strip — "current
                     time" only applies to today, not to other days of
                     the week. */}
-                {isToday && nowInRange && (
-                  <span className="weekcal-now-line" style={{ left: `${nowPct}%` }} />
+                {/* White NOW cursor only when NOT live — when live,
+                    the red cursor below takes over and renders at the
+                    leading edge of the live bar (which may be on a
+                    different row if the stream crossed midnight). */}
+                {!liveNow && isToday && nowInRange && (
+                  <span
+                    className="weekcal-now-line"
+                    style={{ left: `${nowPct}%` }}
+                  />
                 )}
-                {/* Live-progress bar: red bar inside today's strip
-                    from stream start to NOW. Sits ABOVE the typical
-                    pill (z-index in CSS) so the live signal wins
-                    visually when both are present. */}
-                {isToday && liveBar && (
+                {/* Live-progress bar renders on the day the stream
+                    STARTED (handles midnight crossings — see liveStartDow
+                    comment above). Sits above the typical pill via
+                    z-index so the live signal wins visually.
+                    The pulsing cursor lives INSIDE the bar (anchored to
+                    its right edge in CSS) so it automatically tracks
+                    the bar's visible width — including the min-width
+                    floor that keeps the first 30 min looking like a
+                    readable chip instead of a 2px stub. The "LIVE NOW"
+                    text is gated by a CSS container query: hidden when
+                    the bar is narrow, fades in once there's room. */}
+                {dow === liveStartDow && liveBar && (
                   <span
                     className="weekcal-live-bar"
-                    style={{ left: `${liveBar.leftPct}%`, width: `${liveBar.widthPct}%` }}
+                    style={{
+                      left: `${liveBar.leftPct}%`,
+                      width: `${liveBar.widthPct}%`,
+                    }}
                     title="Live right now"
                   >
-                    <span className="weekcal-live-dot" aria-hidden />
+                    <span className="weekcal-live-text">LIVE NOW</span>
+                    <span className="weekcal-now-line weekcal-now-line-live" />
                   </span>
                 )}
-                {entry && (() => {
+                {entry && !(dow === liveStartDow && liveBar) && (() => {
+                  // Suppress the projected pill on the live bar's row —
+                  // the LIVE NOW bar takes over the slot entirely so we
+                  // don't render both overlapping. Future days still
+                  // show their normal projected pills (incl. the
+                  // accent-highlighted next-up day).
                   // Pill visual position respects the half-hour offset so a
                   // 2:30 PM start lands halfway between the "2pm" and "3pm"
                   // axis ticks (instead of pinning to the 2pm gridline and
@@ -186,9 +243,14 @@ export function Heatmap({ perDay, tz, sampleSize, hasPostedSchedule, use24Hour =
                   const minuteOffset = medianMinute / 60;
                   const leftPct = ((entry.startHour + minuteOffset - startHour) / spanH) * 100;
                   const widthPct = (entry.durationHours / spanH) * 100;
+                  // Next-up day gets the strong accent treatment to
+                  // visually match the hero text ("Tomorrow" / day name);
+                  // every other projected day stays glassy/muted so the
+                  // next-up reads as the headline.
+                  const isNext = dow === nextDow;
                   return (
                     <span
-                      className={`weekcal-pill weekcal-pill-${entry.confidence}`}
+                      className={`weekcal-pill weekcal-pill-${entry.confidence}${isNext ? " weekcal-pill-next" : ""}`}
                       style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
                       title={`${fmtPillHour(entry.startHour)}–${fmtPillHour(entry.startHour + entry.durationHours)}${entry.confidence === "low" ? " (projected — low confidence)" : " (projected)"}`}
                     />
@@ -215,7 +277,7 @@ export function Heatmap({ perDay, tz, sampleSize, hasPostedSchedule, use24Hour =
       {(sampleSize ?? 0) > 0 && (
         <div
           className="weekcal-thin-bar"
-          title={`Auto-built from ${sampleSize} ${sampleSize === 1 ? "VOD" : "VODs"}${hasPostedSchedule ? " + posted schedule" : ""}`}
+          title={`Built from ${sampleSize} ${sampleSize === 1 ? "stream" : "streams"}`}
         />
       )}
     </div>

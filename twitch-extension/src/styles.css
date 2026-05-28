@@ -132,8 +132,11 @@ body {
   font-variant-numeric: tabular-nums;
   /* Just enough padding-bottom to absorb descender depth (≈6px for
      44px Inter "g"/"y"/"p"). Keeps the hero visually compact while
-     making sure overflow:hidden doesn't clip the bottom of letters. */
-  margin: 0;
+     making sure overflow:hidden doesn't clip the bottom of letters.
+     Negative margin-top tightens the gap to the eyebrow above so the
+     hero word feels more anchored to the broadcaster's name — buys
+     back ~6px for the calendar at the bottom without changing sizes. */
+  margin: -6px 0 0 0;
   padding-bottom: 6px;
   word-spacing: -0.04em;
   white-space: nowrap;
@@ -464,6 +467,14 @@ body {
 @keyframes posted-dot-pulse {
   0%, 100% { opacity: 0.45; }
   50%      { opacity: 1; }
+}
+/* Live variant: red instead of white, same gentle pulse — echoes the
+   LIVE NOW bar's red treatment in the calendar above. */
+.powered-by-posted-dot-live {
+  background: #ff6e6e;
+  box-shadow:
+    0 0 6px rgba(255, 110, 110, 0.5),
+    0 0 2px rgba(255, 110, 110, 0.4);
 }
 .powered-by a {
   color: #6b6b75;
@@ -890,7 +901,7 @@ body {
 .weekcal-rows {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   position: relative;
 }
 .weekcal-row {
@@ -899,7 +910,7 @@ body {
   grid-template-columns: 34px 1fr;
   gap: 6px;
   align-items: center;
-  min-height: 18px;
+  min-height: 16px;
 }
 .weekcal-day {
   font-size: 11px;
@@ -939,52 +950,88 @@ body {
   /* Empty pill — no in-pill labels anymore. Simpler reads cleaner;
      the support sentence + tooltip carry the actual time. */
 }
-/* High confidence — projected: semi-transparent accent fill with a
-   solid accent left-edge bar to anchor the start time. Reads as a
-   forecast block, not a solid commitment. */
+/* High confidence — projected: glassy muted accent fill, no border.
+   The previous solid left-edge competed with the next-up highlight;
+   now the non-next pills sit back as a quiet rhythm of "this is what
+   they usually do," and the next-up pill carries the visual punch. */
 .weekcal-pill-high {
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
-  border-left: 2px solid var(--accent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+  backdrop-filter: blur(2px);
 }
-/* Low confidence — same projected look, but dashed left edge + softer
-   fill to communicate uncertainty. */
+/* Low confidence — same projected look, even more muted. */
 .weekcal-pill-low {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border-left: 2px dashed var(--accent);
-  opacity: 0.85;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent);
+  opacity: 0.7;
+  backdrop-filter: blur(2px);
+}
+/* NEXT-UP pill: the projected day that matches the hero text
+   ("Tomorrow" / "Wednesday"). Strong accent fill + accent-colored
+   glow so it visually rhymes with the big hero word. Overrides the
+   muted look of .weekcal-pill-high / -low when both classes are
+   applied (combinator wins via specificity from chained classes). */
+.weekcal-pill.weekcal-pill-next {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+  opacity: 1;
+  backdrop-filter: none;
 }
 /* LIVE bar: red overlay inside today's strip from stream start → NOW.
    z-index above the projected pill so the live signal wins visually
    when both are present (today's projected window + currently live).
    Pulsing dot at the leading edge mirrors the .live-dot used in the
    footer "as of …" caption. */
+/* Same box shape as .weekcal-pill (top 1px, bottom 1px, radius 2px,
+   inset 1px ring border) — a "live variant" of the projected pill
+   rather than a different visual language. Color is the only thing
+   that changes: red ring + soft red fill instead of accent. */
 .weekcal-live-bar {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  background: rgba(214, 85, 85, 0.55);
-  border-left: 2px solid #ff5555;
+  top: 1px;
+  bottom: 1px;
+  /* Floor the visible width to a readable chip so the first ~30 min
+     of a stream don't render as a 2-pixel sliver. The natural width
+     (driven by elapsed time) keeps growing past this floor, and the
+     pulsing cursor — anchored to the bar's right edge via CSS below
+     — stays in lockstep with whatever the bar's actual rendered width
+     is, min-width or not. */
+  min-width: 26px;
+  background: rgba(214, 85, 85, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 85, 85, 0.55);
   border-radius: 2px;
-  box-shadow: 0 0 6px rgba(255, 85, 85, 0.45);
   pointer-events: none;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* Container query context so .weekcal-live-text can react to the
+     bar's actual rendered width without needing JS layout reads. */
+  container-type: inline-size;
 }
-.weekcal-live-dot {
-  position: absolute;
-  right: -3px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #ff5555;
-  box-shadow: 0 0 6px rgba(255, 85, 85, 0.9);
-  animation: weekcalLivePulse 1.6s ease-in-out infinite;
+/* "LIVE NOW" caption centered inside the red bar. Tiny uppercase
+   tabular monospace — pure white with a soft glow so it sits cleanly
+   on top of the red fill without being aggressive.
+   Hidden by default; container query below shows it once the bar is
+   wide enough to render the full word without clipping. */
+.weekcal-live-text {
+  display: none;
+  font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #fff;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.45);
+  padding: 0 8px 0 4px;
+  white-space: nowrap;
 }
-@keyframes weekcalLivePulse {
-  0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
-  50%      { opacity: 0.55; transform: translateY(-50%) scale(1.25); }
+@container (min-width: 58px) {
+  .weekcal-live-text {
+    display: inline;
+  }
 }
 .weekcal-axis {
   display: grid;
@@ -1031,6 +1078,36 @@ body {
   );
   border-radius: 1px;
   box-shadow: 0 0 4px rgba(255, 255, 255, 0.35);
+  z-index: 3; /* above the live bar so the leading edge stays crisp */
+}
+/* When live, the NOW cursor swaps to red AND shrinks vertically to
+   exactly match the live-now box's height (top: 1px / bottom: 1px,
+   same as .weekcal-live-bar) — so the cursor looks like the right
+   edge / leading face of the bar that's actively being pulled into
+   existence. Solid red (no fade gradient) since it's now a bar edge,
+   not a column-spanning playhead. */
+.weekcal-now-line-live {
+  /* The cursor lives INSIDE the live-bar (a child, not a sibling) so it
+     automatically tracks the bar's visible right edge — including when
+     the bar is min-width-pinned for narrow first-30-min streams. Anchor
+     to the bar's right edge and let it span the bar's full height. */
+  left: auto;
+  right: -1px;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 110, 110, 0.95);
+  box-shadow: 0 0 5px rgba(255, 110, 110, 0.55);
+  animation: weekcalNowLivePulse 3.2s ease-in-out infinite;
+}
+@keyframes weekcalNowLivePulse {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(255, 110, 110, 0.45);
+    opacity: 0.9;
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(255, 110, 110, 0.95), 0 0 18px rgba(255, 110, 110, 0.45);
+    opacity: 1;
+  }
 }
 /* Thin accent gradient bar in place of the old provenance footnote.
    Fades to transparent at both ends. The full data attribution is
@@ -1049,5 +1126,141 @@ body {
   );
   opacity: 0.35;
   cursor: help;
+}
+
+/* ── Light theme ─────────────────────────────────────────────────
+   Activated by `data-theme="light"` on <html>. Targeted overrides
+   only — every other selector inherits its dark-mode color and
+   inverts via the cascade. Goal: same layout, same accent treatment,
+   readable on a pale background. */
+[data-theme="light"] {
+  color-scheme: light;
+}
+[data-theme="light"] body {
+  background: #f7f7f9;
+  color: #18181b;
+}
+[data-theme="light"] .schedule-eyebrow,
+[data-theme="light"] .schedule-support,
+[data-theme="light"] .weekcal-day,
+[data-theme="light"] .weekcal-axis-tick {
+  color: #4b4b56;
+}
+[data-theme="light"] .broadcaster-name {
+  color: #18181b;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+[data-theme="light"] .schedule-hero-accent {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6),
+    0 0 6px rgba(255, 255, 255, 0.5);
+}
+[data-theme="light"] .weekcal {
+  border-top-color: #d8d8df;
+}
+[data-theme="light"] .weekcal-strip {
+  background: rgba(0, 0, 0, 0.045);
+}
+[data-theme="light"] .weekcal-gridline {
+  background: rgba(0, 0, 0, 0.06);
+}
+[data-theme="light"] .weekcal-now-line {
+  /* The white gradient cursor becomes a near-black one on light bg
+     so it stays visible against the strip. */
+  background: linear-gradient(
+    180deg,
+    rgba(24, 24, 27, 0) 0%,
+    rgba(24, 24, 27, 0.85) 25%,
+    rgba(24, 24, 27, 0.85) 75%,
+    rgba(24, 24, 27, 0) 100%
+  );
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+[data-theme="light"] .weekcal-thin-bar {
+  opacity: 0.45;
+}
+[data-theme="light"] .powered-by,
+[data-theme="light"] .powered-by-tick {
+  color: #6b6b75;
+}
+[data-theme="light"] .powered-by a {
+  color: var(--accent);
+}
+/* Live bar stays red regardless of theme — the red signal is
+   independent of light/dark and shouldn't shift hue. */
+
+/* ── Settings: theme radio group ─────────────────────────────── */
+.theme-toggle {
+  border: 1px solid #2a2a2e;
+  border-radius: 6px;
+  padding: 10px 12px 12px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.theme-toggle legend {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #adadb8;
+  padding: 0 6px;
+}
+.theme-toggle .radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+[data-theme="light"] .theme-toggle {
+  border-color: #d8d8df;
+}
+[data-theme="light"] .theme-toggle legend {
+  color: #4b4b56;
+}
+
+/* ── Connected-account "Advanced features enabled" badge ─────────
+   Sits below the "Account detected" line in the config view. Reads
+   as a confirmation that the broadcaster's Collab Planner account
+   is unlocking extras (persistent VOD sync, cross-session forecasts)
+   without making the page feel like a marketing pitch. Pulsing
+   green dot signals "active" without competing with the red live
+   signal in the panel above. */
+.advanced-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  margin: 8px 0 14px;
+  border-radius: 999px;
+  background: rgba(58, 217, 130, 0.1);
+  border: 1px solid rgba(58, 217, 130, 0.35);
+  color: #5fe09c;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.advanced-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #5fe09c;
+  box-shadow:
+    0 0 6px rgba(95, 224, 156, 0.6),
+    0 0 2px rgba(95, 224, 156, 0.4);
+  animation: posted-dot-pulse 3.4s ease-in-out infinite;
+}
+[data-theme="light"] .advanced-badge {
+  background: rgba(34, 160, 90, 0.1);
+  border-color: rgba(34, 160, 90, 0.35);
+  color: #1f7a44;
+}
+[data-theme="light"] .advanced-badge-dot {
+  background: #22a05a;
+  box-shadow:
+    0 0 6px rgba(34, 160, 90, 0.5),
+    0 0 2px rgba(34, 160, 90, 0.4);
 }
 
