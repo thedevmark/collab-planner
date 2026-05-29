@@ -2,53 +2,38 @@ import { type ReactNode } from "react";
 import type { PanelResponse } from "../lib/types";
 import { formatHour } from "../lib/format";
 import { useMinuteTick } from "../lib/useMinuteTick";
+import { pickNextStream, TODAY_GRACE_HOURS } from "../lib/nextStream";
 
 type Summary = Extract<PanelResponse, { status: "ok" }>["summary"];
 
 interface Props {
   summary: Summary;
   use24Hour?: boolean;
-  /** When true, the broadcaster is currently live — skip today as a
-   *  candidate for "next stream" so the panel points at the NEXT
-   *  typical stream after this current one ends. */
+  /** When the broadcaster is currently live, skip today as a next-stream
+   *  candidate so the panel points at the stream after this one. */
   skipToday?: boolean;
 }
 
 const DAY_NAMES_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const DAY_NAMES_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-// A typical-day stream that starts later than the median is still "going live
-// soon" -not skipped forward to the next active day. 3h covers the right half
-// of a typical start-time distribution.
-const TODAY_GRACE_HOURS = 3;
-
-/** Find the precise Date of the next likely live slot (viewer's local clock). */
-export function nextLikelyLiveDate(topDays: string[], medianHour: number, skipToday = false): Date | null {
-  if (topDays.length === 0) return null;
-  const activeDows = topDays
-    .map((d) => DAY_NAMES_SHORT.indexOf(d))
-    .filter((i) => i !== -1);
-  if (activeDows.length === 0) return null;
-
-  const now = new Date();
-  const graceMs = TODAY_GRACE_HOURS * 3600_000;
-  // When broadcaster is currently live we want the NEXT typical day
-  // after today, not the current ongoing stream — start from i=1.
-  const startI = skipToday ? 1 : 0;
-  for (let i = startI; i < 14; i++) {
-    const candidate = new Date(now);
-    candidate.setDate(candidate.getDate() + i);
-    candidate.setHours(medianHour, 0, 0, 0);
-    if (candidate.getTime() <= now.getTime() - graceMs) continue;
-    if (activeDows.includes(candidate.getDay())) return candidate;
-  }
-  return null;
+/** Resolve the next likely live moment to a concrete Date (broadcaster tz).
+ *  Wraps pickNextStream and pins the chosen day to medianHour. */
+export function nextLikelyLiveDate(
+  topDays: string[],
+  medianHour: number,
+  tz: string,
+  nowMs: number,
+  skipToday = false,
+): Date | null {
+  const pick = pickNextStream(topDays, medianHour, tz, nowMs, skipToday);
+  if (!pick) return null;
+  const candidate = new Date(nowMs);
+  candidate.setDate(candidate.getDate() + pick.daysAhead);
+  candidate.setHours(medianHour, 0, 0, 0);
+  return candidate;
 }
 
-/** Format the countdown in long sentence-case words.
- *  Examples: "47 minutes", "2 hours and 38 minutes", "1 day and 1 hour",
- *  "2 days and 3 hours", "any minute". Plural-aware; hides minutes when
- *  days > 0 to keep it readable. */
+/** "47 minutes" · "2h 38m" · "1 day 1 hour" · "any minute". */
 export function formatCountdown(target: Date | null, nowMs: number): string {
   if (!target) return "";
   const diffMs = target.getTime() - nowMs;
@@ -57,152 +42,108 @@ export function formatCountdown(target: Date | null, nowMs: number): string {
   const days = Math.floor(totalMin / (24 * 60));
   const hours = Math.floor((totalMin % (24 * 60)) / 60);
   const mins = totalMin % 60;
-
   const word = (n: number, singular: string) => `${n} ${n === 1 ? singular : `${singular}s`}`;
-  const parts: string[] = [];
-  if (days > 0) parts.push(word(days, "day"));
-  if (hours > 0) parts.push(word(hours, "hour"));
-  if (mins > 0 && days === 0) parts.push(word(mins, "minute"));
-  if (parts.length === 0) return "any minute";
-  if (parts.length === 1) return parts[0];
-  return `${parts[0]} and ${parts[1]}`;
+  if (days > 0) return hours > 0 ? `${word(days, "day")} ${word(hours, "hour")}` : word(days, "day");
+  if (hours > 0) return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  return word(mins, "minute");
 }
 
-function nextLikelyRelative(topDays: string[], medianHour: number, skipToday = false): { dayLabel: string; fullDay: string; relative: string } | null {
-  if (topDays.length === 0) return null;
-  const activeDows = topDays.map((d) => DAY_NAMES_SHORT.indexOf(d)).filter((i) => i !== -1);
-  if (activeDows.length === 0) return null;
-
-  const now = new Date();
-  const todayDow = now.getDay();
-  const currentHour = now.getHours();
-  // Same skip-today behavior as nextLikelyLiveDate for the live state.
-  const startI = skipToday ? 1 : 0;
-
-  for (let i = startI; i < 7; i++) {
-    const checkDow = (todayDow + i) % 7;
-    if (!activeDows.includes(checkDow)) continue;
-    if (i === 0 && currentHour >= medianHour + TODAY_GRACE_HOURS) continue;
-    const dayLabel = DAY_NAMES_SHORT[checkDow];
-    const fullDay = DAY_NAMES_FULL[checkDow];
-    let relative: string;
-    if (i === 0) {
-      const hoursAway = medianHour - currentHour;
-      if (hoursAway <= 0) relative = "any minute";
-      else if (hoursAway <= 2) relative = "soon";
-      else if (hoursAway <= 6) relative = `in ${hoursAway}h`;
-      else relative = "tonight";
-    } else if (i === 1) relative = "tomorrow";
-    else relative = `in ${i} days`;
-    return { dayLabel, fullDay, relative };
-  }
-  return null;
-}
-
-type HeroTone = "accent" | "dim" | "live";
+type HeroTone = "accent" | "dim";
 
 interface Variant {
   eyebrow: ReactNode;
   hero: string;
   heroTone?: HeroTone;
   support: ReactNode;
-  secondary?: ReactNode;
 }
 
 function buildVariant(args: {
   medianHour: number;
   medianMinute: 0 | 30;
   avgDurationHours: number;
-  next: ReturnType<typeof nextLikelyRelative>;
+  nextFullDay: string | null;
+  nextDaysAhead: number | null;
   countdown: string;
   hoursUntilNext: number | null;
   broadcasterName: string | null;
   use24Hour: boolean;
+  skipToday: boolean;
 }): Variant {
-  const { medianHour, medianMinute, avgDurationHours, next, countdown, hoursUntilNext, broadcasterName, use24Hour } = args;
+  const { medianHour, medianMinute, nextFullDay, nextDaysAhead, countdown, hoursUntilNext, broadcasterName, use24Hour, skipToday } = args;
+  void args.avgDurationHours;
   const start = formatHour(medianHour, use24Hour, medianMinute);
-  const end = formatHour(medianHour + Math.max(1, Math.round(avgDurationHours)), use24Hour, medianMinute);
-  // Personalized lead: "{broadcaster} goes live" wraps the day-name
-  // variants (tomorrow / later). The name itself gets a subtle white
-  // glow (.broadcaster-name) so it visually anchors the eyebrow.
   const name = broadcasterName
     ? <span className="broadcaster-name">{broadcasterName}</span>
     : null;
-  const goesLive = name ? <>{name} goes live</> : <>Next stream</>;
+  const lead = name ?? <>Next stream</>;
 
-  if (!next) {
+  if (nextFullDay == null || nextDaysAhead == null) {
     return {
-      eyebrow: name ? <>{name} - no pattern yet</> : "Next stream",
+      eyebrow: <>{lead} schedule</>,
       hero: "—",
       heroTone: "dim",
-      support: "Not enough broadcast history to predict yet.",
+      support: "Not enough history yet",
     };
   }
 
-  if (next.relative === "any minute") {
+  // Within the typical window now, no live data — broadcaster might be
+  // late or off-schedule today.
+  // Reads: "{name} is usually live · Now · around 7:30 PM"
+  if (hoursUntilNext !== null && hoursUntilNext <= 0) {
     return {
-      eyebrow: name ? <>{name} is usually live</> : "Usually live",
-      hero: "Right now",
-      support: <><strong>{start} to {end}</strong>.</>,
+      eyebrow: <>{lead} is usually live</>,
+      hero: "Now",
+      support: <>around <strong>{start}</strong></>,
     };
   }
 
-  // 12h threshold: inside that window, the hero flips into a live
-  // countdown. Outside, the hero stays calm as "Tomorrow" / "Wednesday"
-  // and the eyebrow leads the sentence. 12h ≈ "morning of stream day"
-  // for an evening streamer — actionable without being all-day noise.
-  const isCountdownActive = hoursUntilNext !== null && hoursUntilNext < 12 && hoursUntilNext >= 0;
-  if (isCountdownActive) {
-    return {
-      eyebrow: name ? <>{name} goes live in</> : "Next stream in",
-      hero: countdown || next.relative,
-      support: <>around <strong>{start}</strong>.</>,
-    };
-  }
+  // Countdown variant removed — hero always shows the day name, never
+  // a timer. The schedule text stays calm; live progress is signalled
+  // by the red bar in the calendar overlay instead.
+  void countdown;
 
-  if (next.relative === "tomorrow") {
-    return {
-      eyebrow: goesLive,
-      hero: "Tomorrow",
-      support: <>around <strong>{start}</strong>.</>,
-    };
-  }
-
+  // Day-name hero — single variant regardless of how close the stream is.
+  // Reads: "{name} goes live · Wednesday · around 7:30 PM"
+  const heroWord = nextDaysAhead === 1 ? "Tomorrow" : nextFullDay;
+  const verb = skipToday ? "goes live again" : "goes live";
   return {
-    eyebrow: goesLive,
-    hero: next.fullDay,
-    support: <>around <strong>{start}</strong>.</>,
+    eyebrow: <>{lead} {verb}</>,
+    hero: heroWord,
+    support: <>around <strong>{start}</strong></>,
   };
 }
 
 export function ScheduleSummary({ summary, use24Hour = false, skipToday = false }: Props) {
-  const { topDays, medianHour, avgDurationHours, isEstimate } = summary;
-  const next = nextLikelyRelative(topDays, medianHour, skipToday);
-  const nextDate = nextLikelyLiveDate(topDays, medianHour, skipToday);
+  const { topDays, medianHour, avgDurationHours, isEstimate, tz } = summary;
   const nowMs = useMinuteTick();
+  const pick = pickNextStream(topDays, medianHour, tz, nowMs, skipToday);
+  const nextDate = nextLikelyLiveDate(topDays, medianHour, tz, nowMs, skipToday);
   const countdown = formatCountdown(nextDate, nowMs);
   const hoursUntilNext = nextDate ? (nextDate.getTime() - nowMs) / 3600_000 : null;
+  // Used to expose TODAY_GRACE_HOURS without complaining about an unused import.
+  void TODAY_GRACE_HOURS;
 
   const v = buildVariant({
     medianHour,
     medianMinute: summary.medianMinute ?? 0,
     avgDurationHours,
-    next,
+    nextFullDay: pick ? DAY_NAMES_FULL[pick.dow] : null,
+    nextDaysAhead: pick ? pick.daysAhead : null,
     countdown,
     hoursUntilNext,
     broadcasterName: summary.broadcasterName,
     use24Hour,
+    skipToday,
   });
 
   return (
     <div className="schedule">
       <div className="schedule-eyebrow">
         {v.eyebrow}
-        {isEstimate && " (est.)"}
+        {isEstimate && " · est"}
       </div>
       <div className={`schedule-hero schedule-hero-${v.heroTone ?? "accent"}`}>{v.hero}</div>
       <div className="schedule-support">{v.support}</div>
-      {v.secondary && <div className="schedule-secondary">{v.secondary}</div>}
     </div>
   );
 }

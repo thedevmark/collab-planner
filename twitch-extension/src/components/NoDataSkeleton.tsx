@@ -11,10 +11,9 @@ export function NoDataSkeleton() {
   return (
     <>
       <div className="schedule skeleton-schedule">
-        <div className="schedule-eyebrow">Forecast warming up</div>
+        <div className="schedule-eyebrow">Building forecast</div>
         <div className="schedule-hero schedule-hero-dim">—</div>
-        <div className="schedule-support">Crunching broadcast history.</div>
-        <div className="schedule-secondary">Refresh in a minute.</div>
+        <div className="schedule-support">Check back in a minute</div>
       </div>
 
       <div className="weekcal skeleton">

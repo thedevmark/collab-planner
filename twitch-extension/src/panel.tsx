@@ -15,6 +15,23 @@ import { NoDataSkeleton } from "./components/NoDataSkeleton";
 
 const WARMING_RETRY_MS = 5_000;
 
+/** A stream that started yesterday and is still running into today
+ *  is NOT "today's stream" — today's typical window is still an
+ *  upcoming, separate stream. Only skip today as a next-stream
+ *  candidate when the current live stream actually started today
+ *  (in the broadcaster's timezone). Without this guard, a midnight-
+ *  crossing stream incorrectly bumps the next-stream prediction past
+ *  today's typical slot (e.g. "next: Saturday" when today's Wednesday
+ *  evening stream is still ahead). */
+function liveStartedToday(
+  liveNow: { startedAt: string } | null | undefined,
+  tz: string,
+): boolean {
+  if (!liveNow) return false;
+  const fmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" });
+  return fmt.format(new Date(liveNow.startedAt)) === fmt.format(new Date());
+}
+
 function Panel() {
   const [state, setState] = useState<
     | { kind: "loading" }
@@ -52,22 +69,33 @@ function Panel() {
           ? {
               status: "ok",
               summary: {
-                topDays: ["Wed", "Fri", "Sun"],
-                medianHour: 14, // 2 PM local — afternoon streamer
+                // Mon/Thu/Sat evening streamer — distinct day pattern
+                // AND time from the main thedeutschmark mock, so the
+                // marketing kit shows real variety across broadcasters.
+                topDays: ["Thu", "Sat", "Sun"],
+                // Afternoon streamer — Thursday is the next-up day from
+                // Mon evening fake-now (deutschmark covers Wed already
+                // in the other panel, so a1exzandra picks up Thu/Sat/
+                // Sun for visual variety in the marketing kit).
+                medianHour: 13,
                 tz: "America/New_York",
                 topGame: "Just Chatting",
                 topGames: ["Just Chatting", "Pokemon Scarlet", "Cooking"],
                 isEstimate: false,
                 hasPostedSchedule: true,
-                hourDistribution: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.3, 0.85, 1.0, 0.95, 0.7, 0.3, 0, 0, 0, 0, 0, 0],
-                dayFrequency: [0.85, 0.2, 0.2, 0.95, 0.3, 0.9, 0.2],
-                avgDurationHours: 4,
+                hourDistribution: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0.95, 1.0, 0.95, 0.6, 0.3, 0, 0, 0, 0, 0, 0],
+                dayFrequency: [0.85, 0.2, 0.2, 0.2, 0.95, 0.2, 0.9],
+                avgDurationHours: 5,
+                // startHour values are pre-shifted by -0.5h because the
+                // Heatmap adds medianMinute (=30 → +0.5h) as a global
+                // offset. Pre-shifting lets each day render at its true
+                // intended start: Thu at 13:30, Sat at 14:30, Sun at 12:30.
                 perDay: [
-                  { dow: 3, startHour: 14, durationHours: 4, confidence: "high" },
-                  { dow: 5, startHour: 14, durationHours: 4, confidence: "high" },
-                  { dow: 0, startHour: 13, durationHours: 5, confidence: "high" },
+                  { dow: 4, startHour: 13, durationHours: 5, confidence: "high" },
+                  { dow: 6, startHour: 14, durationHours: 5, confidence: "high" },
+                  { dow: 0, startHour: 12, durationHours: 5, confidence: "high" },
                 ],
-                sampleSize: 38,
+                sampleSize: 42,
                 medianMinute: 30,
                 broadcasterAvatar: null,
                 broadcasterName: "a1exzandra",
@@ -95,7 +123,7 @@ function Panel() {
                   { dow: 6, startHour: 18, durationHours: 5, confidence: "high" },
                 ],
                 sampleSize: 30,
-                medianMinute: 30,
+                medianMinute: 0,
                 broadcasterAvatar: "https://static-cdn.jtvnw.net/jtv_user_pictures/54c170ef-e1d0-463d-adda-922e751ef6b8-profile_image-300x300.png",
                 broadcasterName: "thedeutschmark",
               },
@@ -103,7 +131,12 @@ function Panel() {
               liveNow:
                 previewMode === "live"
                   ? {
-                      startedAt: new Date(Date.now() - 2 * 3600_000 - 14 * 60_000).toISOString(),
+                      // 3h17m elapsed — odd elapsed time so the bar's
+                      // leading edge lands at an off-hour minute on the
+                      // axis (10:17 PM vs the tick at 10 PM), reading
+                      // as a real in-progress stream instead of a staged
+                      // round-hour snapshot.
+                      startedAt: new Date(Date.now() - 3 * 3600_000 - 17 * 60_000).toISOString(),
                       gameName: "Fortnite",
                       title: "ranked grind to masters w/ friends",
                     }
@@ -138,6 +171,7 @@ function Panel() {
         const cfg = parseConfig(rawCfg);
         document.documentElement.style.setProperty("--accent", cfg.accentColor);
         document.documentElement.style.setProperty("--accent-text", pickTextColor(cfg.accentColor));
+        document.documentElement.dataset.theme = cfg.theme;
         setConfig(cfg);
         // Surface auth to the live-poll effect — it needs channelId,
         // helixToken, and clientId to hit Helix directly from the panel.
@@ -202,10 +236,12 @@ function Panel() {
       <ScheduleSummary
         summary={state.data.summary}
         use24Hour={config.use24Hour}
-        skipToday={!!state.data.liveNow}
+        skipToday={liveStartedToday(state.data.liveNow, state.data.summary.tz)}
       />
       <Heatmap
         perDay={state.data.summary.perDay}
+        topDays={state.data.summary.topDays}
+        medianHour={state.data.summary.medianHour}
         tz={state.data.summary.tz}
         sampleSize={state.data.summary.sampleSize}
         hasPostedSchedule={state.data.summary.hasPostedSchedule}
@@ -220,6 +256,7 @@ function Panel() {
         hasPostedSchedule={state.data.summary.hasPostedSchedule}
         tz={state.data.summary.tz}
         use24Hour={config.use24Hour}
+        isLive={!!state.data.liveNow}
       />
     </>
   );

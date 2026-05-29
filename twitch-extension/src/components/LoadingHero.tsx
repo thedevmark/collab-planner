@@ -8,13 +8,10 @@
 import { useEffect, useState } from "react";
 
 const MESSAGES = [
-  "scanning VOD history",
-  "binning by day of week",
-  "computing median start time",
-  "inferring typical duration",
-  "cross-checking posted schedule",
-  "compiling weekly forecast",
-  "smoothing recency curve",
+  "reading VODs",
+  "finding patterns",
+  "weighting recent streams",
+  "building forecast",
 ];
 
 interface Props {

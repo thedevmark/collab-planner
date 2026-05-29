@@ -69,6 +69,7 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
   const [use24Hour, setUse24Hour] = useState(initial.use24Hour);
   const [weekStartsMonday, setWeekStartsMonday] = useState(initial.weekStartsMonday);
   const [accentColor, setAccentColor] = useState(initial.accentColor);
+  const [theme, setTheme] = useState(initial.theme);
   const [hexInput, setHexInput] = useState(initial.accentColor);
   const [hexCopied, setHexCopied] = useState(false);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -131,6 +132,7 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
       use24Hour,
       weekStartsMonday,
       accentColor,
+      theme,
     };
   }
 
@@ -175,23 +177,47 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
 
       <label className="checkbox">
         <input type="checkbox" checked={use24Hour} onChange={(e) => setUse24Hour(e.target.checked)} />
-        <span>24-hour time</span>
+        <span>24-hour clock</span>
         <span
           className="info-tip"
-          data-tip="Display times as 19:00 instead of 7 PM throughout the panel."
+          data-tip="Show times as 19:00 instead of 7 PM."
           aria-label="What does this do?"
         >ⓘ</span>
       </label>
 
       <label className="checkbox">
         <input type="checkbox" checked={weekStartsMonday} onChange={(e) => setWeekStartsMonday(e.target.checked)} />
-        <span>Week starts on Monday</span>
+        <span>Start week on Monday</span>
         <span
           className="info-tip"
-          data-tip="Calendar shows Mon–Sun instead of Sun–Sat. ISO 8601 / European convention."
+          data-tip="Calendar runs Mon–Sun instead of Sun–Sat."
           aria-label="What does this do?"
         >ⓘ</span>
       </label>
+
+      <fieldset className="theme-toggle">
+        <legend>Theme</legend>
+        <label className="radio">
+          <input
+            type="radio"
+            name="theme"
+            value="dark"
+            checked={theme === "dark"}
+            onChange={() => setTheme("dark")}
+          />
+          <span>Dark</span>
+        </label>
+        <label className="radio">
+          <input
+            type="radio"
+            name="theme"
+            value="light"
+            checked={theme === "light"}
+            onChange={() => setTheme("light")}
+          />
+          <span>Light</span>
+        </label>
+      </fieldset>
 
       <label>
         <span>Accent color</span>

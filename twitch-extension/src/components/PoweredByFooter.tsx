@@ -14,6 +14,9 @@ interface Props {
   tz?: string;
   /** When true, show the "as of" clock as 24-hour ("19:42" not "7:42 PM"). */
   use24Hour?: boolean;
+  /** When true, the broadcaster is currently live — the footer dot flips
+   *  to red so the "live now" signal echoes the calendar's LIVE NOW bar. */
+  isLive?: boolean;
 }
 
 function formatClock(ms: number, tz?: string, use24Hour?: boolean): string {
@@ -40,7 +43,7 @@ function getTzShort(tz: string): string {
   }
 }
 
-export function PoweredByFooter({ campaign, generatedAt, hasPostedSchedule, tz, use24Hour }: Props) {
+export function PoweredByFooter({ campaign, generatedAt, hasPostedSchedule, tz, use24Hour, isLive = false }: Props) {
   const href = `https://collab.deutschmark.online/?utm_source=twitch_ext&utm_medium=panel&utm_campaign=${campaign}`;
 
   const nowMs = useMinuteTick();
@@ -49,11 +52,14 @@ export function PoweredByFooter({ campaign, generatedAt, hasPostedSchedule, tz, 
     <footer className="powered-by">
       {generatedAt && (
         <span className="powered-by-tick" title={`Data refreshed ${formatClock(new Date(generatedAt).getTime(), tz, use24Hour)}`}>
-          {hasPostedSchedule && (
-            <span className="powered-by-posted-dot" aria-hidden="true" title="Broadcaster has a posted Twitch schedule" />
+          {(hasPostedSchedule || isLive) && (
+            <span
+              className={`powered-by-posted-dot${isLive ? " powered-by-posted-dot-live" : ""}`}
+              aria-hidden="true"
+              title={isLive ? "Live right now" : "Broadcaster has a posted Twitch schedule"}
+            />
           )}
-          as of {formatClock(nowMs, tz, use24Hour)}
-          {tz && <> {getTzShort(tz)}</>}
+          {formatClock(nowMs, tz, use24Hour)}{tz && <> {getTzShort(tz)}</>}
         </span>
       )}
       <a href={href} target="_blank" rel="noopener noreferrer">

@@ -9,6 +9,8 @@
 
 // SCHEMA_BODY_START
 
+export type ExtTheme = "dark" | "light";
+
 export type ExtConfigV1 = {
   v: 1;
   tz: string;
@@ -17,6 +19,7 @@ export type ExtConfigV1 = {
    *  ISO 8601 / most of Europe use Monday. */
   weekStartsMonday: boolean;
   accentColor: string;
+  theme: ExtTheme;
 };
 
 export const DEFAULT_CONFIG: ExtConfigV1 = {
@@ -25,6 +28,7 @@ export const DEFAULT_CONFIG: ExtConfigV1 = {
   use24Hour: false,
   weekStartsMonday: false,
   accentColor: "#9146FF",
+  theme: "dark",
 };
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
@@ -47,6 +51,10 @@ function coerceBool(value: unknown, fallback: boolean): boolean {
   }
   if (typeof value === "number") return value !== 0;
   return fallback;
+}
+
+function coerceTheme(value: unknown, fallback: ExtTheme): ExtTheme {
+  return value === "light" || value === "dark" ? value : fallback;
 }
 
 export function parseConfig(content: string | null | undefined): ExtConfigV1 {
@@ -73,6 +81,7 @@ export function parseConfig(content: string | null | undefined): ExtConfigV1 {
     use24Hour: coerceBool(r.use24Hour, DEFAULT_CONFIG.use24Hour),
     weekStartsMonday: coerceBool(r.weekStartsMonday, DEFAULT_CONFIG.weekStartsMonday),
     accentColor,
+    theme: coerceTheme(r.theme, DEFAULT_CONFIG.theme),
   };
 }
 
