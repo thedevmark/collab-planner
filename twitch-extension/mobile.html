@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Collab Planner — Mobile</title>
+    <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <!-- Mobile shows behind the chat area. It renders the same schedule-forecast
+         SPA as the panel view (/src/panel.tsx) — identical data, one bundle, no
+         duplicated logic. Pure HTML5, so it satisfies Apple Review Guideline 4.7. -->
+    <div id="root"></div>
+    <script type="module" src="/src/panel.tsx"></script>
+  </body>
+</html>

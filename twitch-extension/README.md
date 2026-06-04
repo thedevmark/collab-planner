@@ -30,18 +30,22 @@ under "Files".
 
 When submitting a new version for review:
 
-1. **Test channel must be live during review.** Use a CP-connected test account
-   that is actively broadcasting at submission time.
-2. **Hosted Test → ensure the panel loads and renders a predictions list within
-   5 seconds.** Confirm the footer link opens `collab.deutschmark.online` in a
-   new tab.
+1. **Paste `REVIEW-NOTES.md` into the console's Review Instructions field**, with the
+   test-account credentials filled in. The forecast is built from the channel's own
+   VOD history, so a reviewer testing on an empty channel sees nothing — the test
+   account is what makes the panel populate. (This is what caused the 1.3 failure.)
+   The channel does **not** need to be live during review; panels render offline too.
+2. **Hosted Test → ensure the panel + mobile views load and render the forecast within
+   5 seconds.** Confirm the footer link opens `collab.deutschmark.online` in a new tab.
 3. **Declared URLs:** in the Asset Hosting form, list only:
    - `https://collab.deutschmark.online/api/extension/channel/*` (fetch)
    - `https://collab.deutschmark.online/` (link)
-4. **Description copy:**
-   > Surfaces this streamer's most likely upcoming live times based on broadcast
-   > history, plus any scheduled collabs they've planned.
-5. **Required env on the backend:**
+4. **Description copy** (no ads/sponsorship anywhere in copy or screenshots — see 4.4):
+   > Predicts when this streamer goes live, built automatically from their Twitch
+   > broadcast history. No setup required.
+5. **Views configured in the console:** panel → `panel.html`, config → `config.html`,
+   mobile → `mobile.html`.
+6. **Required env on the backend:**
    - `TWITCH_EXTENSION_SECRET` (base64, from the extension dashboard)
    - `TWITCH_EXTENSION_CLIENT_ID`
 

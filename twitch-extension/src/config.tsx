@@ -47,8 +47,8 @@ function StatusStrip({ state }: { state: State }) {
   if (state.kind === "no_data") {
     return (
       <>
-        <h1>Collab Planner ✓</h1>
-        <p>Account detected. Predictions will populate as your broadcast history syncs.</p>
+        <h1>Panel is live ✓</h1>
+        <p>The forecast builds automatically from this channel's broadcast history — it'll populate as recent streams sync. No setup needed.</p>
       </>
     );
   }

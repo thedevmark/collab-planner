@@ -21,6 +21,8 @@ export default defineConfig({
       input: {
         panel: resolve(__dirname, "panel.html"),
         config: resolve(__dirname, "config.html"),
+        // Mobile reuses panel.tsx; see mobile.html for why.
+        mobile: resolve(__dirname, "mobile.html"),
       },
     },
     minify: false,
