@@ -62,10 +62,9 @@ history, so no configuration is required to see populated data.
 3. Scroll **below the video player** to the panel area.
 4. Within ~5 seconds the **Schedule Forecast** panel renders and shows:
    - a hero line predicting the next likely stream (e.g. *"Next stream likely Wed around 7 PM"*),
-   - a 7-day calendar/heatmap of the channel's typical stream days and times,
-   - a "Powered by Collab Planner" footer that opens `collab.deutschmark.online` in a new tab.
+   - a 7-day calendar/heatmap of the channel's typical stream days and times.
 5. **Config view:** Creator Dashboard → Extensions → Schedule Forecast → **Configure**.
-   - The status card reads **"Collab Planner ✓ — Account detected. Streams <days>."**
+   - The status card reads **"Panel is live ✓ — Forecasting from this channel's broadcasts — usually live <days>."**
    - Change any cosmetic setting and click **Save** → a **"Saved ✓"** confirmation appears.
    - Reload the panel to confirm the setting persisted (e.g. 24-hour clock).
 
