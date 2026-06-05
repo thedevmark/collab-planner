@@ -6,7 +6,7 @@ export const metadata = {
   description: "Terms of Service for Collab Planner: who can use it, acceptable use, third-party platform compliance, disclaimers, and dispute resolution.",
 };
 
-const LAST_UPDATED = "May 23, 2026";
+const LAST_UPDATED = "June 4, 2026";
 const CONTACT_EMAIL = "deutschmarkonline@gmail.com";
 const APP_URL = "https://collab.deutschmark.online";
 
@@ -170,10 +170,9 @@ export default function TermsPage() {
 
             <SubSection title="7.1 What the panel shows">
               <p className="text-sm leading-relaxed">
-                The panel surfaces a blended list of predicted streaming times (computed from the
-                broadcaster&apos;s public Twitch VOD history) and any posted Twitch schedule
-                entries that match those windows. Channels whose broadcaster has a Collab Planner
-                account also see upcoming scheduled collabs with co-streamer names and avatars.
+                The panel surfaces predicted streaming times computed from the broadcaster&apos;s
+                public Twitch VOD history, plus any posted Twitch schedule entries that match those
+                windows. It is a forecast, not a list of individual scheduled events or collabs.
                 Predictions are heuristic estimates, not commitments — the broadcaster may go live
                 outside predicted windows or skip them entirely.
               </p>
@@ -184,9 +183,7 @@ export default function TermsPage() {
                 Viewing the panel does not require a Collab Planner account and does not collect or
                 transmit your Twitch identity (only an opaque per-channel viewer ID supplied by
                 Twitch, which the Service does not store). Use of the panel is governed by the
-                Twitch Terms of Service, the Twitch Extension policies, and these Terms. The
-                footer link opens collab.deutschmark.online in a new tab — at that point the
-                Privacy Policy and these Terms apply.
+                Twitch Terms of Service, the Twitch Extension policies, and these Terms.
               </p>
             </SubSection>
 

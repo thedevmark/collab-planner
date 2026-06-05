@@ -6,7 +6,7 @@ export const metadata = {
   description: "How Collab Planner collects, uses, and protects your data — Twitch + Discord OAuth scopes, retention, your rights.",
 };
 
-const LAST_UPDATED = "May 23, 2026";
+const LAST_UPDATED = "June 4, 2026";
 const CONTACT_EMAIL = "deutschmarkonline@gmail.com";
 const APP_URL = "https://collab.deutschmark.online";
 
@@ -171,13 +171,13 @@ export default function PrivacyPage() {
                 <li>No cookies are set by the panel; no analytics, fingerprinting, or advertising trackers are loaded.</li>
                 <li>Each request the panel makes carries a short-lived JWT signed by Twitch that identifies only the channel the panel is rendering on. We verify that signature before returning data.</li>
                 <li>Standard server access logs (IP, user agent, request path) apply per Section 1 — retained up to 30 days for security/abuse investigation.</li>
-                <li>The footer contains a single off-site link to <ExternalLink href="https://collab.deutschmark.online">collab.deutschmark.online</ExternalLink>, tagged with UTM parameters so we can measure how many viewers click through. No personal data is sent in that link.</li>
+                <li>The panel contains no off-site links and performs no outbound navigation.</li>
               </ul>
             </SubSection>
 
             <SubSection title="The broadcaster the panel is rendering on">
               <ul>
-                <li>If the broadcaster already has a Collab Planner account, the panel surfaces the data described in Sections 1 and 2 (predicted streaming windows, posted Twitch schedule, upcoming planned collabs with co-streamer names and avatars).</li>
+                <li>If the broadcaster already has a Collab Planner account, the panel surfaces predicted streaming windows computed from their broadcast history and any posted Twitch schedule. It is a forecast — it does not list individual planned events or collabs.</li>
                 <li>If the broadcaster does <strong>not</strong> have a Collab Planner account, the panel still works: we fetch their public Twitch VOD history on demand via the Twitch Helix API, compute predicted streaming windows, and cache the result for up to 24 hours in our database (the <code>ExtensionPredictionCache</code> table). No other personal data is collected, no account is created on their behalf, and only data Twitch already exposes publicly via Helix is read.</li>
                 <li>Broadcasters can opt out at any time by emailing <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#9147ff] hover:underline">{CONTACT_EMAIL}</a>. We delete the cache entry and add the channel to a no-fetch list within 7 days.</li>
               </ul>
@@ -185,9 +185,9 @@ export default function PrivacyPage() {
 
             <SubSection title="Broadcaster config view">
               <p className="text-muted-foreground text-sm">
-                The Twitch dashboard config view is broadcaster-only and read-only. It tells the
-                broadcaster whether their Collab Planner account is detected and links to their
-                dashboard. No data is collected from this view beyond the standard JWT verification.
+                The Twitch dashboard config view is broadcaster-only. It confirms the panel is live
+                and lets the broadcaster set display preferences (timezone, clock format, theme,
+                accent color). No data is collected from this view beyond the standard JWT verification.
               </p>
             </SubSection>
           </Section>
