@@ -1,8 +1,8 @@
 // Single shared minute-boundary clock for the whole panel.
 //
-// Why: pre-optimization the panel had FOUR independent setIntervals — one
-// each in LiveNowHero, ScheduleSummary, PoweredByFooter, and Heatmap —
-// all firing every ~60s but on different (mount-time-anchored) cadences.
+// Why: pre-optimization the panel had several independent setIntervals —
+// one each in ScheduleSummary, Heatmap, and others — all firing every ~60s
+// but on different (mount-time-anchored) cadences.
 // That meant 4× the timer overhead and 4× the React re-renders, plus the
 // "as of" clock drifted up to a full minute behind the real wall clock
 // because nothing was aligned to actual :00 seconds.

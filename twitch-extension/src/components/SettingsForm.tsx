@@ -108,12 +108,17 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
 
   async function fetchTwitchColor() {
     setColorFetchStatus("loading");
+    // The fetch usually returns near-instantly, so the "Fetching…" state
+    // flickers by too fast to read as a deliberate action. Hold the
+    // loading state for at least 1s so the click feels acknowledged.
+    const minDelay = new Promise((r) => setTimeout(r, 1000));
     try {
       const res = await fetch(
         `${API_BASE}/api/extension/channel/${channelId}/twitch-color`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const body = await res.json();
+      await minDelay;
       if (body.color) {
         setAccentColor(body.color);
         setColorFetchStatus("idle");
@@ -121,6 +126,7 @@ export function SettingsForm({ initialRaw, channelId, token }: Props) {
         setColorFetchStatus("none");
       }
     } catch {
+      await minDelay;
       setColorFetchStatus("none");
     }
   }

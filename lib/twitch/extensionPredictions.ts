@@ -15,10 +15,6 @@ export type PanelResponse =
         medianHour: number;
         /** IANA timezone used for binning. */
         tz: string;
-        /** Top game by frequency, or null if unknown. (Kept for back-compat; new code uses topGames[].) */
-        topGame: string | null;
-        /** Top up-to-5 games by frequency, most-played first. Empty array if unknown. */
-        topGames: string[];
         /** True when sample size is too small for confident prediction. */
         isEstimate: boolean;
         /** True when one or more posted Twitch schedule slots exist within the next 14 days. */
@@ -92,8 +88,6 @@ export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
 
   const topDays = shortenDays(pattern.typicalDays).slice(0, 3);
   const medianHour = pattern.startHours.median;
-  const topGame = pattern.topGames[0] ?? null;
-  const topGames = pattern.topGames.slice(0, 5);
   const isEstimate = pattern.confidence === "estimated" || pattern.sampleSize < 3;
   const hasPostedSchedule = postedSchedule.length > 0;
 
@@ -103,8 +97,6 @@ export function shapeConnectedPanelResponse(inputs: Inputs): PanelResponse {
       topDays,
       medianHour,
       tz: timezone,
-      topGame,
-      topGames,
       isEstimate,
       hasPostedSchedule,
       hourDistribution: pattern.hourDistribution,

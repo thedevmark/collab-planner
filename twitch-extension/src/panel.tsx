@@ -8,7 +8,6 @@ import { resolveViewerLocale, resolveViewerTimeZone, type FormatOptions } from "
 import { parseConfig, DEFAULT_CONFIG, type ExtConfigV1 } from "./lib/configSchema";
 import { pickTextColor } from "./lib/contrast";
 import { ScheduleSummary } from "./components/ScheduleSummary";
-import { PoweredByFooter } from "./components/PoweredByFooter";
 import { Heatmap } from "./components/Heatmap";
 import { LoadingHero } from "./components/LoadingHero";
 import { NoDataSkeleton } from "./components/NoDataSkeleton";
@@ -79,8 +78,6 @@ function Panel() {
                 // Sun for visual variety in the marketing kit).
                 medianHour: 13,
                 tz: "America/New_York",
-                topGame: "Just Chatting",
-                topGames: ["Just Chatting", "Pokemon Scarlet", "Cooking"],
                 isEstimate: false,
                 hasPostedSchedule: true,
                 hourDistribution: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0.95, 1.0, 0.95, 0.6, 0.3, 0, 0, 0, 0, 0, 0],
@@ -110,8 +107,6 @@ function Panel() {
                 topDays: ["Mon", "Wed", "Sat"],
                 medianHour: 19,
                 tz: "America/New_York",
-                topGame: "Fortnite",
-                topGames: ["Fortnite", "Just Chatting", "League of Legends"],
                 isEstimate: false,
                 hasPostedSchedule: true,
                 hourDistribution: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.4, 0.9, 1.0, 0.9, 0.6, 0.3],
@@ -219,13 +214,7 @@ function Panel() {
   if (state.kind === "loading") return <LoadingHero />;
   if (state.kind === "warming") return <LoadingHero />;
   if (state.kind === "error") return <p className="error">Unable to load panel.</p>;
-  if (state.kind === "no_data")
-    return (
-      <>
-        <NoDataSkeleton />
-        <PoweredByFooter campaign="panel_empty" />
-      </>
-    );
+  if (state.kind === "no_data") return <NoDataSkeleton />;
 
   return (
     <>
@@ -249,14 +238,6 @@ function Panel() {
         weekStartsMonday={config.weekStartsMonday}
         medianMinute={state.data.summary.medianMinute}
         liveNow={state.data.liveNow}
-      />
-      <PoweredByFooter
-        campaign="panel_footer"
-        generatedAt={state.data.generatedAt}
-        hasPostedSchedule={state.data.summary.hasPostedSchedule}
-        tz={state.data.summary.tz}
-        use24Hour={config.use24Hour}
-        isLive={!!state.data.liveNow}
       />
     </>
   );

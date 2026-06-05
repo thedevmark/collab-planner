@@ -34,7 +34,6 @@ describe("shapeConnectedPanelResponse", () => {
     if (resp.status !== "ok") return;
     expect(resp.summary.topDays).toEqual(["Tue", "Thu", "Sat"]);
     expect(resp.summary.medianHour).toBe(20);
-    expect(resp.summary.topGame).toBe("Apex Legends");
     expect(resp.summary.isEstimate).toBe(false);
     expect(resp.summary.hasPostedSchedule).toBe(false);
   });
@@ -89,19 +88,6 @@ describe("shapeConnectedPanelResponse", () => {
       lastStream: null,
     });
     expect(resp.status).toBe("no_data");
-  });
-
-  it("returns null topGame when topGames is empty", () => {
-    const noGames: StreamingPattern = { ...basePattern, topGames: [] };
-    const resp = shapeConnectedPanelResponse({
-      pattern: noGames,
-      postedSchedule: [],
-      // upcomingCollabs removed
-      timezone: "UTC",
-      lastStream: null,
-    });
-    if (resp.status !== "ok") throw new Error("expected ok");
-    expect(resp.summary.topGame).toBeNull();
   });
 
   it("includes timezone in the summary", () => {

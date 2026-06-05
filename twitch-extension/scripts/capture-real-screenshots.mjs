@@ -336,7 +336,6 @@ const cfgY = Math.floor((SHOT_H - CFG_H) / 2);
 // Map the captured field y-centers (in capture pixels) to display
 // pixels in the final marketing image. Scale factor = display_width /
 // capture_width, applied to capture-y plus the card's top offset.
-const cfgScale = CFG_W / configCapture.width;
 const fieldData = configCapture.fieldData || [];
 const labelByNeedle = {
   Timezone: { name: "Timezone", desc: "match the streamer's local clock" },
@@ -345,13 +344,19 @@ const labelByNeedle = {
   Theme: { name: "Theme", desc: "dark or light" },
   Accent: { name: "Accent color", desc: "Twitch profile, hex, or color picker" },
 };
-const cardRight = cfgX + CFG_W;
-const lineEndX = 600;           // where each connector terminates
-const textStartX = lineEndX + 18; // small gap, then the label text
-const connectorRows = fieldData.map((f) => {
-  const y = Math.round(cfgY + f.center * cfgScale);
+const lineEndX = 600;              // right end of each leader (dot + text anchor)
+const lineLen = 113;               // half the previous full-width span
+const lineStartX = lineEndX - lineLen;
+const textStartX = lineEndX + 18;  // small gap, then the label text
+// Leaders are decorative (detached from the form rows), sitting in the
+// center-right of the frame — so the five labels get an even vertical
+// rhythm centered against the card rather than each mapping to its
+// captured field y.
+const blockTop = 256;
+const rowGap = 64;
+const connectorRows = fieldData.map((f, i) => {
   const meta = labelByNeedle[f.needle] || { name: f.needle, desc: "" };
-  return { y, name: meta.name, desc: meta.desc };
+  return { y: blockTop + i * rowGap, name: meta.name, desc: meta.desc };
 });
 
 const screenshot3Svg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -375,8 +380,8 @@ const screenshot3Svg = `<?xml version="1.0" encoding="UTF-8"?>
 
   <!-- Connector lines + labels (one per field) -->
   ${connectorRows.map((row) => `
-    <line x1="${cardRight + 4}" y1="${row.y}" x2="${lineEndX}" y2="${row.y}" stroke="${ACCENT_FOR_SHOT.warming}" stroke-width="1" stroke-opacity="0.55"/>
-    <circle cx="${cardRight + 4}" cy="${row.y}" r="2.5" fill="${ACCENT_FOR_SHOT.warming}"/>
+    <line x1="${lineStartX}" y1="${row.y}" x2="${lineEndX}" y2="${row.y}" stroke="${ACCENT_FOR_SHOT.warming}" stroke-width="1" stroke-opacity="0.55"/>
+    <circle cx="${lineStartX}" cy="${row.y}" r="2.5" fill="${ACCENT_FOR_SHOT.warming}"/>
     <circle cx="${lineEndX}" cy="${row.y}" r="3" fill="${ACCENT_FOR_SHOT.warming}"/>
     <text x="${textStartX}" y="${row.y + 5}" font-family="Inter, Segoe UI, sans-serif" font-size="17" font-weight="500" fill="#efeff1"><tspan font-weight="700">${row.name}</tspan> — ${row.desc}</text>
   `).join("\n")}

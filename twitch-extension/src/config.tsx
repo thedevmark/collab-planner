@@ -14,10 +14,6 @@ type State =
   | { kind: "not_in_cp" }
   | { kind: "error"; message: string };
 
-const DASHBOARD = "https://collab.deutschmark.online";
-const SIGN_IN = `${DASHBOARD}/?utm_source=twitch_ext&utm_medium=config_view&utm_campaign=not_in_cp`;
-const OPEN_DASH = `${DASHBOARD}/?utm_source=twitch_ext&utm_medium=config_view&utm_campaign=connected`;
-
 function StatusStrip({ state }: { state: State }) {
   if (state.kind === "loading") return <p className="loading">Loading…</p>;
   if (state.kind === "error") return <p className="error">Unable to load config.</p>;
@@ -27,18 +23,7 @@ function StatusStrip({ state }: { state: State }) {
       <>
         <h1>Panel is live ✓</h1>
         <p>
-          Predictions are auto-built from this channel's recent broadcasts — no signup needed.
-        </p>
-        <p className="upgrade-note">
-          <strong>Sign in at Collab Planner for sharper forecasts.</strong>
-          {" "}Connected accounts get persistent VOD sync, more reliable
-          cross-session predictions, and a public schedule even when your
-          Twitch VODs are unlisted.
-        </p>
-        <p>
-          <a className="cta-secondary" href={SIGN_IN} target="_blank" rel="noopener noreferrer">
-            Sign in (optional) ↗
-          </a>
+          Predictions are auto-built from this channel's recent broadcasts — no setup needed.
         </p>
       </>
     );
@@ -56,27 +41,18 @@ function StatusStrip({ state }: { state: State }) {
   if (state.kind === "warming") {
     return (
       <>
-        <h1>Collab Planner ✓</h1>
-        <p>Account detected. Analyzing your recent broadcasts — panel will populate within a few minutes.</p>
+        <h1>Panel is live ✓</h1>
+        <p>Building the forecast from this channel's recent broadcasts — it'll populate within a few minutes.</p>
       </>
     );
   }
 
-  // connected
+  // connected — channel has broadcast history; confirm the detected pattern
   return (
     <>
-      <h1>Collab Planner ✓</h1>
+      <h1>Panel is live ✓</h1>
       <p>
-        Account detected. Streams {state.topDays.join(", ") || "various days"}.
-      </p>
-      <div className="advanced-badge">
-        <span className="advanced-badge-dot" aria-hidden="true" />
-        Advanced features enabled
-      </div>
-      <p>
-        <a className="cta" href={OPEN_DASH} target="_blank" rel="noopener noreferrer">
-          Open dashboard ↗
-        </a>
+        Forecasting from this channel's broadcasts — usually live {state.topDays.join(", ") || "various days"}.
       </p>
     </>
   );

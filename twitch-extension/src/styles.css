@@ -23,12 +23,6 @@ body {
   min-height: 0;
   position: relative;
 }
-.powered-by {
-  margin-top: auto !important;
-  /* Modest breathing room above the footer — enough that the axis
-     "12am" tick doesn't crowd "as of …" without leaving a gap. */
-  padding-top: 8px;
-}
 
 /* ── Next-live mini hero (top-right) ──────────────────────────────
    Typography-only countdown that mirrors the main schedule hero's
@@ -425,65 +419,6 @@ body {
   line-height: 1;
 }
 
-/* ── Footer — minimal, no border ────────────────────────────────── */
-.powered-by {
-  margin-top: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 10px;
-}
-.powered-by-tick {
-  color: #3a3a3d;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-  cursor: help;
-  display: inline-flex;
-  /* Align the dot to the text's x-height (visual center of lowercase),
-     not its bounding-box center — feels properly centered with "as of". */
-  align-items: baseline;
-  gap: 8px;
-  line-height: 1;
-}
-/* Subtle pulsing dot in front of "as of …" — uses the same white-glow
-   vocabulary as the NOW bar in today's strip and the broadcaster-name
-   glow in the eyebrow, since all three are "live signal" indicators
-   in the same visual language. */
-.powered-by-posted-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #efeff1;
-  box-shadow:
-    0 0 6px rgba(255, 255, 255, 0.4),
-    0 0 2px rgba(255, 255, 255, 0.3);
-  animation: posted-dot-pulse 4.4s ease-in-out infinite;
-  flex-shrink: 0;
-  /* Nudge up slightly so the optical center of the glowing orb aligns
-     with the x-height of the "as of" text, not its baseline. */
-  transform: translateY(-1px);
-}
-@keyframes posted-dot-pulse {
-  0%, 100% { opacity: 0.45; }
-  50%      { opacity: 1; }
-}
-/* Live variant: red instead of white, same gentle pulse — echoes the
-   LIVE NOW bar's red treatment in the calendar above. */
-.powered-by-posted-dot-live {
-  background: #ff6e6e;
-  box-shadow:
-    0 0 6px rgba(255, 110, 110, 0.5),
-    0 0 2px rgba(255, 110, 110, 0.4);
-}
-.powered-by a {
-  color: #6b6b75;
-  text-decoration: none;
-  letter-spacing: 0.02em;
-}
-.powered-by a:hover {
-  color: #adadb8;
-}
 
 /* ── Skeleton state (no_data) ─────────────────────────────────── */
 .skeleton .weekcal-day-label { color: #3a3a3d; }
@@ -548,29 +483,6 @@ body {
 .cta:hover {
   background: #7a3fd9;
 }
-/* Secondary CTA — outline button for optional actions (e.g. "Sign in
-   (optional)"). Used when the panel is already working without sign-in
-   so we don't shout the upgrade. */
-.cta-secondary {
-  display: inline-block;
-  background: transparent;
-  color: #efeff1;
-  padding: 7px 13px;
-  border-radius: 4px;
-  border: 1px solid #3a3a3d;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 12px;
-}
-.cta-secondary:hover {
-  background: #1f1f23;
-  border-color: #4a4a4d;
-}
-.upgrade-note {
-  color: #adadb8;
-  font-size: 12px;
-  margin-top: 6px;
-}
 
 /* ── Accent color via Twitch ext config ───────────────────────── */
 :root {
@@ -581,11 +493,6 @@ body {
 .day-chip-active { background: var(--accent); color: var(--accent-text); }
 .cta { background: var(--accent); color: var(--accent-text); }
 .cta:hover { filter: brightness(0.88); }
-.powered-by a {
-  color: var(--accent);
-  /* Soft dark halo so the link stays legible regardless of accent choice. */
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-}
 
 /* ── Settings form (config view) ──────────────────────────────── */
 .settings-form {
@@ -862,16 +769,6 @@ body {
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 8px;
-}
-.settings-form .accent-twitch-btn::before {
-  content: "";
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #9146FF;
-  margin-right: 6px;
-  vertical-align: middle;
 }
 
 /* ── Week calendar — horizontal timeline layout ────────────────────── */
@@ -1150,10 +1047,17 @@ body {
   color: #18181b;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
 }
+/* The hero fill is already solid var(--accent) (no gradient). The only
+   light-mode issue is the halo: a white glow softens the accent's edges
+   into the pale background. Swap it for a subtle dark halo so any accent
+   — including a deep navy — keeps crisp, readable edges. */
 [data-theme="light"] .schedule-hero-accent {
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.6),
-    0 0 6px rgba(255, 255, 255, 0.5);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+}
+/* The "8 PM" time is wrapped in <strong>, which is near-white for the
+   dark theme — invisible on a light background. Force it dark. */
+[data-theme="light"] .schedule-support strong {
+  color: #18181b;
 }
 [data-theme="light"] .weekcal {
   border-top-color: #d8d8df;
@@ -1178,13 +1082,6 @@ body {
 }
 [data-theme="light"] .weekcal-thin-bar {
   opacity: 0.45;
-}
-[data-theme="light"] .powered-by,
-[data-theme="light"] .powered-by-tick {
-  color: #6b6b75;
-}
-[data-theme="light"] .powered-by a {
-  color: var(--accent);
 }
 /* Live bar stays red regardless of theme — the red signal is
    independent of light/dark and shouldn't shift hue. */
@@ -1221,46 +1118,4 @@ body {
   color: #4b4b56;
 }
 
-/* ── Connected-account "Advanced features enabled" badge ─────────
-   Sits below the "Account detected" line in the config view. Reads
-   as a confirmation that the broadcaster's Collab Planner account
-   is unlocking extras (persistent VOD sync, cross-session forecasts)
-   without making the page feel like a marketing pitch. Pulsing
-   green dot signals "active" without competing with the red live
-   signal in the panel above. */
-.advanced-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  margin: 8px 0 14px;
-  border-radius: 999px;
-  background: rgba(58, 217, 130, 0.1);
-  border: 1px solid rgba(58, 217, 130, 0.35);
-  color: #5fe09c;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-.advanced-badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #5fe09c;
-  box-shadow:
-    0 0 6px rgba(95, 224, 156, 0.6),
-    0 0 2px rgba(95, 224, 156, 0.4);
-  animation: posted-dot-pulse 3.4s ease-in-out infinite;
-}
-[data-theme="light"] .advanced-badge {
-  background: rgba(34, 160, 90, 0.1);
-  border-color: rgba(34, 160, 90, 0.35);
-  color: #1f7a44;
-}
-[data-theme="light"] .advanced-badge-dot {
-  background: #22a05a;
-  box-shadow:
-    0 0 6px rgba(34, 160, 90, 0.5),
-    0 0 2px rgba(34, 160, 90, 0.4);
-}
 
